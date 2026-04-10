@@ -16,7 +16,7 @@ export default function CtaSection() {
     staleTime: 60000,
   });
   const features = settingsList[0]?.features_enabled || {};
-  const showSection = features.show_app_install_section !== false;
+  const showSection = features.show_app_install_section !== false; // Show by default
 
   if (!showSection) return null;
 

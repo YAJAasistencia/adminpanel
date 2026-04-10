@@ -78,6 +78,20 @@ export default function useLandingConfig(): LandingConfig {
 
         // Return landing config with defaults
         return {
+          // Hero section
+          hero_badge: "🚗 Servicio 24/7",
+          hero_title: "Transporte seguro y confiable",
+          hero_title_highlight: "en tu ciudad",
+          hero_subtitle: "Conectamos conductores verificados con pasajeros que necesitan llegar a su destino de manera segura y eficiente.",
+          hero_badge1: "Disponible 24/7",
+          hero_badge2: "GPS en tiempo real",
+          hero_badge3: "Pagos seguros",
+          hero_cta_primary_label: "Solicitar viaje",
+          hero_cta_primary_url: "/app",
+          hero_cta_secondary_label: "Soy conductor",
+          hero_cta_secondary_url: "/driver-app",
+
+          // Benefits section
           benefits_label: "BENEFICIOS",
           benefits_title: "Por qué elegir",
           benefits_title_highlight: "YAJA",
@@ -106,12 +120,63 @@ export default function useLandingConfig(): LandingConfig {
               desc: "Atención al cliente disponible todo el día."
             }
           ],
+
+          // Services section
+          services_title: "Nuestros",
+          services_subtitle: "servicios",
+          services_description: "Ofrecemos diferentes tipos de transporte adaptados a tus necesidades.",
+          services: [
+            {
+              title: "Transporte Ejecutivo",
+              desc: "Servicio premium con vehículos de alta gama y conductores profesionales."
+            },
+            {
+              title: "Transporte Compartido",
+              desc: "Viajes económicos compartiendo el costo con otros pasajeros."
+            },
+            {
+              title: "Transporte de Carga",
+              desc: "Transporte seguro de paquetes y mercancías de cualquier tamaño."
+            }
+          ],
+
+          // CTA section
+          cta_title: "Únete a nuestra",
+          cta_title_highlight: "flota de conductores",
+          cta_subtitle: "Conviértete en conductor verificado y comienza a generar ingresos extra con tu vehículo.",
+          cta_button_label: "Registrarme como conductor",
+          cta_button_url: "/driver-app",
+          cta_note: "Proceso de verificación en menos de 24 horas",
+
+          // Footer
+          brand_name: "YAJA",
+          footer_links: [
+            { label: "Sobre nosotros", url: "/about" },
+            { label: "Contacto", url: "/contact" },
+            { label: "Términos", url: "/terms" },
+            { label: "Privacidad", url: "/privacy" }
+          ],
+
           ...settings.landing_config,
         } as LandingConfig;
       } catch (error) {
         console.warn("Failed to load landing config, using defaults:", error);
         // Return default config
         return {
+          // Hero section
+          hero_badge: "🚗 Servicio 24/7",
+          hero_title: "Transporte seguro y confiable",
+          hero_title_highlight: "en tu ciudad",
+          hero_subtitle: "Conectamos conductores verificados con pasajeros que necesitan llegar a su destino de manera segura y eficiente.",
+          hero_badge1: "Disponible 24/7",
+          hero_badge2: "GPS en tiempo real",
+          hero_badge3: "Pagos seguros",
+          hero_cta_primary_label: "Solicitar viaje",
+          hero_cta_primary_url: "/app",
+          hero_cta_secondary_label: "Soy conductor",
+          hero_cta_secondary_url: "/driver-app",
+
+          // Benefits section
           benefits_label: "BENEFICIOS",
           benefits_title: "Por qué elegir",
           benefits_title_highlight: "YAJA",
@@ -139,6 +204,42 @@ export default function useLandingConfig(): LandingConfig {
               title: "Soporte 24/7",
               desc: "Atención al cliente disponible todo el día."
             }
+          ],
+
+          // Services section
+          services_title: "Nuestros",
+          services_subtitle: "servicios",
+          services_description: "Ofrecemos diferentes tipos de transporte adaptados a tus necesidades.",
+          services: [
+            {
+              title: "Transporte Ejecutivo",
+              desc: "Servicio premium con vehículos de alta gama y conductores profesionales."
+            },
+            {
+              title: "Transporte Compartido",
+              desc: "Viajes económicos compartiendo el costo con otros pasajeros."
+            },
+            {
+              title: "Transporte de Carga",
+              desc: "Transporte seguro de paquetes y mercancías de cualquier tamaño."
+            }
+          ],
+
+          // CTA section
+          cta_title: "Únete a nuestra",
+          cta_title_highlight: "flota de conductores",
+          cta_subtitle: "Conviértete en conductor verificado y comienza a generar ingresos extra con tu vehículo.",
+          cta_button_label: "Registrarme como conductor",
+          cta_button_url: "/driver-app",
+          cta_note: "Proceso de verificación en menos de 24 horas",
+
+          // Footer
+          brand_name: "YAJA",
+          footer_links: [
+            { label: "Sobre nosotros", url: "/about" },
+            { label: "Contacto", url: "/contact" },
+            { label: "Términos", url: "/terms" },
+            { label: "Privacidad", url: "/privacy" }
           ],
         } as LandingConfig;
       }
