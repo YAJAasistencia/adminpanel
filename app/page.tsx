@@ -1,40 +1,45 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-
 export default function Home() {
-  const [data, setData] = useState<any[] | null>(null)
-  const [error, setError] = useState<any>(null)
-
-  useEffect(() => {
-    async function fetchAdminUsers() {
-      try {
-        const result = await supabase.from('admin_users').select('*')
-        setData(result.data)
-        setError(result.error)
-      } catch (err) {
-        setError(err)
-      }
-    }
-
-    fetchAdminUsers()
-  }, [])
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <div className="max-w-3xl w-full bg-white/90 dark:bg-zinc-900/90 rounded-3xl border border-gray-200 dark:border-zinc-700 p-8 shadow-xl">
-        <h1 className="text-3xl font-bold mb-4">Probando Supabase</h1>
-        <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">Consulta `admin_users` desde el cliente.</p>
-        <div className="mb-4">
-          <strong>Datos:</strong>
-          <pre className="mt-2 rounded-lg border border-gray-200 bg-gray-100 p-4 text-xs text-gray-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100">{JSON.stringify(data, null, 2)}</pre>
+    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
+      <nav className="border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
-        <div>
-          <strong>Error:</strong>
-          <pre className="mt-2 rounded-lg border border-gray-200 bg-gray-100 p-4 text-xs text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-red-400">{JSON.stringify(error, null, 2)}</pre>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold mb-6">Bienvenido al Admin Panel</h2>
+          <p className="text-xl text-gray-400 mb-8">
+            Gestiona tu negocio desde aquí. Una plataforma completa para administrar usuarios, servicios y más.
+          </p>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold">
+            Comenzar
+          </button>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+          <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
+            <h3 className="text-xl font-bold mb-3">Usuarios</h3>
+            <p className="text-gray-400">Gestiona y administra todos los usuarios del sistema.</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
+            <h3 className="text-xl font-bold mb-3">Servicios</h3>
+            <p className="text-gray-400">Configura y personaliza los servicios disponibles.</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
+            <h3 className="text-xl font-bold mb-3">Reportes</h3>
+            <p className="text-gray-400">Visualiza estadísticas y reportes del sistema.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-gray-800 bg-black/50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400">
+          <p>&copy; 2026 Admin Panel. Todos los derechos reservados.</p>
         </div>
-      </div>
-    </main>
-  )
+      </footer>
+    </div>
+  );
 }
+
