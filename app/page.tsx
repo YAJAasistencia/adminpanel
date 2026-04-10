@@ -1,12 +1,20 @@
+'use client'
+
+import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Home() {
-  async function test() {
-    const { data, error } = await supabase.from('admin_users').select('*')
-    console.log(data, error)
-  }
+  useEffect(() => {
+    async function test() {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
 
-  test()
+      console.log(data, error)
+    }
+
+    test()
+  }, [])
 
   return (
     <main>
