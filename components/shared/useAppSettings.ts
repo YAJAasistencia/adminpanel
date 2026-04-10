@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/lib/api/base44Client";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 export interface AppSettings {
   company_name?: string;
@@ -18,8 +18,8 @@ export default function useAppSettings() {
     queryKey: ["app-settings"],
     queryFn: async () => {
       try {
-        // Try to get settings from API
-        const result = await base44.entities.Settings.list();
+        // Try to get settings from Supabase
+        const result = await supabaseApi.settings.list();
         return result?.[0] || {};
       } catch (error) {
         console.warn("Failed to load app settings, using defaults:", error);

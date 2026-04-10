@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/lib/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabaseApi } from "@/lib/supabaseApi";
 import type { AppSettings } from "./useAppSettings";
 
 interface City {
@@ -23,14 +23,13 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
     try {
       // Get pending rides
-      const pendingRides = await base44.entities.RideRequest.list({
-        status: "pending",
-        limit: 10 // Process in batches
+      const pendingRides = await supabaseApi.rideRequests.list({
+        status: "pending"
       });
 
       for (const ride of pendingRides) {
         // Find available drivers in the area
-        const availableDrivers = await base44.entities.Driver.list({
+        const availableDrivers = await supabaseApi.drivers.list({
           status: "available",
           service_type_id: ride.service_type_id,
           city_id: ride.city_id
@@ -41,14 +40,14 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           const selectedDriver = availableDrivers[0];
 
           // Update ride with assigned driver
-          await base44.entities.RideRequest.update(ride.id, {
+          await supabaseApi.rideRequests.update(ride.id, {
             ...ride,
             driver_id: selectedDriver.id,
             status: "assigned"
           });
 
           // Update driver status
-          await base44.entities.Driver.update(selectedDriver.id, {
+          await supabaseApi.drivers.update(selectedDriver.id, {
             ...selectedDriver,
             status: "busy"
           });

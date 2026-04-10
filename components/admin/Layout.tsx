@@ -18,7 +18,7 @@ import { ALL_PAGES, DEFAULT_NAV_CONFIG } from "@/components/shared/navPages";
 import useAdminBadges from "@/components/shared/useAdminBadges";
 import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/lib/api/base44Client";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 // ─── Update PWA title per app context ────────────────────────────────────────
 // The static /public/manifest.json handles the full PWA definition.
@@ -59,7 +59,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   // ── Load cities for geofence checks used by auto-assign ──────────────────
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: () => base44.entities.City.list(),
+    queryFn: () => supabaseApi.cities.list(),
     staleTime: 5 * 60 * 1000,
     enabled: !!session, // only when logged in
   });

@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { base44 } from "@/lib/api/base44Client"
+import { supabaseApi } from "@/lib/supabaseApi"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Star,
@@ -218,7 +218,7 @@ export default function AssignDriverDialog({
   // Load GeoZones
   const { data: geoZones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: () => base44.entities.GeoZone.list(),
+    queryFn: () => supabaseApi.geoZones.list(),
     enabled: open,
     staleTime: 60000,
   })
@@ -329,7 +329,7 @@ export default function AssignDriverDialog({
 
     const previousDriverId = ride?.driver_id
     if (previousDriverId && previousDriverId !== selectedDriverId) {
-      await base44.entities.Driver.update(previousDriverId, {
+      await supabaseApi.drivers.update(String(previousDriverId), {
         status: "available",
       })
     }
@@ -342,8 +342,8 @@ export default function AssignDriverDialog({
       auction_driver_ids: [],
     }
 
-    await base44.entities.RideRequest.update(ride.id, updatedRide)
-    await base44.entities.Driver.update(selectedDriverId, { status: "busy" })
+    await supabaseApi.rideRequests.update(String(ride.id), updatedRide)
+    await supabaseApi.drivers.update(String(selectedDriverId), { status: "busy" })
     queryClient.invalidateQueries({ queryKey: ["rides"] })
     queryClient.invalidateQueries({ queryKey: ["drivers"] })
     setSaving(false)

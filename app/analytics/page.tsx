@@ -1,8 +1,19 @@
-export default function analyticsPage() {
+import Layout from "@/components/admin/Layout";
+
+export default function AnalyticsPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white p-8">
-      <h1 className="text-3xl font-bold mb-4">Analytics</h1>
-      {/* Componentes para Analytics irán aquí */}
-    </div>
+    <Layout currentPageName="Analytics">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
+          <p className="text-slate-600">Gestión de Analytics</p>
+        </div>
+
+        {/* Contenido de la página aquí */}
+        <div className="bg-white rounded-lg p-6 border border-slate-200">
+          <p className="text-slate-500">Contenido pendiente de implementar</p>
+        </div>
+      </div>
+    </Layout>
   );
 }
