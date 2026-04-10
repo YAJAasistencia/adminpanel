@@ -24,12 +24,12 @@ export default function CtaSection() {
 
   const renderButton = (btn: any, i: number) => {
     const baseClass = "inline-flex items-center gap-2 px-8 py-3 rounded-full font-semibold text-base transition-all duration-200";
-    const styles = {
+    const styles: Record<string, string> = {
       primary: `${baseClass} bg-gradient-to-r from-[#0ea5e9] to-[#6366f1] text-white hover:opacity-90 shadow-xl shadow-blue-500/20`,
       secondary: `${baseClass} border border-white/20 text-white/70 hover:text-white hover:border-white/40`,
       outline: `${baseClass} border border-[#0ea5e9]/40 text-[#0ea5e9] hover:bg-[#0ea5e9]/10`,
     };
-    const cls = styles[btn.style] || styles.secondary;
+    const cls = styles[btn.style as string] || styles.secondary;
     return isExternal(btn.url)
       ? <a key={i} href={btn.url} target="_blank" rel="noreferrer" className={cls}>{btn.label}</a>
       : <a key={i} href={btn.url} className={cls}>{btn.label}</a>;
