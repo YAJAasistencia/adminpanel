@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 const DEFAULT_LANDING = {
   brand_name: "YAJA",
@@ -59,7 +59,14 @@ const DEFAULT_LANDING = {
 export function useLandingConfig() {
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: () => base44.entities.AppSettings.list(),
+    queryFn: async () => {
+      try {
+        return await supabaseApi.settings.list();
+      } catch (error) {
+        console.error("Error loading landing config from Supabase:", error);
+        return [];
+      }
+    },
     staleTime: 60000,
   });
   const saved = settingsList[0]?.landing_config || {};
