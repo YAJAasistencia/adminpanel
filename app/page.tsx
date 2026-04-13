@@ -1,3 +1,5 @@
+"use client";
+
 import LandingNav from "@/components/landing/LandingNav";
 import HeroSection from "@/components/landing/HeroSection";
 import BenefitsSection from "@/components/landing/BenefitsSection";

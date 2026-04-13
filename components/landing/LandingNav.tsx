@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Menu, X, Zap } from "lucide-react";
-import useLandingConfig from "@/components/shared/useLandingConfig";
+import { useLandingConfig } from "@/hooks/useLandingConfig";
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Layout from "@/components/admin/Layout";
 
 export default function ServiceTypesPage() {

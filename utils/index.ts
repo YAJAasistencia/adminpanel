@@ -1,14 +1,24 @@
 // Utility to create page URLs for Next.js routing
 export function createPageUrl(pageName: string): string {
-  // Convert PascalCase to kebab-case
-  const kebabCase = pageName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-
-  // Handle special cases
+  // Handle special cases where kebab conversion doesn't match folder names
   const specialCases: Record<string, string> = {
-    'admin-login': '/admin-login',
-    'road-assist-app': '/road-assist-app',
-    'driver-app': '/driver-app',
+    'AdminLogin': '/admin-login',
+    'RoadAssistApp': '/road-assist-app',
+    'DriverApp': '/driver-app',
+    'Notificaciones': '/notificaciones',
+    'PaymentMethods': '/payment-methods',
+    'SOSAlerts': '/sos-alerts',
+    'RoadAssist': '/road-assist-app',
+    'RoadAssistAdmin': '/road-assist-app',
   };
 
-  return specialCases[kebabCase] || `/${kebabCase}`;
+  if (specialCases[pageName]) return specialCases[pageName];
+
+  // Convert PascalCase to kebab-case
+  const kebab = pageName
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
+
+  return '/' + kebab.replace(/^-+/, '');
 }

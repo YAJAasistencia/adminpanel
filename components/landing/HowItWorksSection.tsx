@@ -1,5 +1,3 @@
-"use client"
-
 import React from "react";
 import { PhoneCall, MapPin, UserCheck, CheckCircle2 } from "lucide-react";
 

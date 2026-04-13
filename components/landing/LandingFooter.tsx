@@ -1,8 +1,6 @@
-"use client"
-
 import React from "react";
 import { Zap } from "lucide-react";
-import useLandingConfig from "@/components/shared/useLandingConfig";
+import { useLandingConfig } from "@/hooks/useLandingConfig";
 
 export default function LandingFooter() {
   const lc = useLandingConfig();

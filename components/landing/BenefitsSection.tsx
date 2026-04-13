@@ -1,7 +1,5 @@
-"use client"
-
 import React from "react";
-import useLandingConfig from "@/components/shared/useLandingConfig";
+import { useLandingConfig } from "@/hooks/useLandingConfig";
 
 export default function BenefitsSection() {
   const lc = useLandingConfig();

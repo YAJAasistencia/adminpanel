@@ -1,69 +1,83 @@
 import {
-  LayoutDashboard, Users, Car, ShieldAlert, Settings, Menu, X,
-  ChevronRight, Share2, TrendingUp, CreditCard, MapPin, MessageCircle,
-  Siren, Scissors, UserCog, Layers, Building2, LogOut, MessageSquare,
-  Wifi, ChevronDown, Lock, UserCheck, ClipboardList, FileText,
-  Calendar, Bell, BarChart3, DollarSign, Map, AlertTriangle,
-  CheckCircle, Clock, Phone, Mail, Globe, Zap, Target, PieChart
+  LayoutDashboard,
+  Users,
+  Car,
+  ShieldAlert,
+  Settings,
+  TrendingUp,
+  CreditCard,
+  MapPin,
+  MessageCircle,
+  Siren,
+  Scissors,
+  UserCog,
+  Layers,
+  Building2,
+  MessageSquare,
+  Wifi,
+  UserCheck,
+  ClipboardList,
+  FileText,
+  BellRing,
+  Trophy,
+  BarChart3,
+  Megaphone,
+  Lock,
+  Phone,
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
 export interface NavPage {
   page: string;
   name: string;
-  icon: any;
+  icon: LucideIcon;
   live?: boolean;
   alert?: boolean;
 }
 
 export const ALL_PAGES: NavPage[] = [
-  { page: "Dashboard", name: "Dashboard", icon: LayoutDashboard, live: true },
-  { page: "Analytics", name: "Analytics", icon: BarChart3 },
-  { page: "Users", name: "Usuarios", icon: Users },
-  { page: "Drivers", name: "Conductores", icon: Car },
-  { page: "Passengers", name: "Pasajeros", icon: UserCheck },
-  { page: "LiveDrivers", name: "Conductores en vivo", icon: MapPin, live: true },
-  { page: "Rides", name: "Viajes", icon: Map },
-  { page: "Earnings", name: "Ganancias", icon: DollarSign },
+  { name: "Panel de control", page: "Dashboard", icon: LayoutDashboard },
+  { name: "Analíticas", page: "Analytics", icon: BarChart3 },
+  { name: "EN VIVO", page: "LiveDrivers", icon: Wifi, live: true },
+  { name: "Conductores", page: "Drivers", icon: Users },
+  { name: "Clientes / Pasajeros", page: "Passengers", icon: UserCheck },
+  { name: "Chats", page: "Chats", icon: MessageCircle },
+  { name: "Alertas SOS", page: "SOSAlerts", icon: Siren, alert: true },
+  { name: "Tickets de soporte", page: "SupportTickets", icon: MessageSquare },
+  { name: "Notificaciones", page: "Notificaciones", icon: BellRing },
+  { name: "Anuncios", page: "Anuncios", icon: Megaphone },
   { page: "DriverEarnings", name: "Ganancias conductores", icon: TrendingUp },
-  { page: "Payments", name: "Pagos", icon: CreditCard },
-  { page: "Invoices", name: "Facturas", icon: FileText },
-  { page: "SupportTickets", name: "Tickets soporte", icon: MessageSquare, alert: true },
-  { page: "Chats", name: "Chats", icon: MessageCircle, alert: true },
-  { page: "Notifications", name: "Notificaciones", icon: Bell },
-  { page: "SosAlerts", name: "Alertas SOS", icon: Siren, alert: true },
-  { page: "GeoZones", name: "Zonas geográficas", icon: MapPin },
-  { page: "RedZones", name: "Zonas rojas", icon: AlertTriangle },
-  { page: "Cities", name: "Ciudades", icon: Globe },
-  { page: "ServiceTypes", name: "Tipos de servicio", icon: Zap },
-  { page: "Companies", name: "Empresas", icon: Building2 },
-  { page: "Settings", name: "Configuración", icon: Settings },
+  { page: "Earnings", name: "Ganancias plataforma", icon: TrendingUp },
+  { page: "CashCutoff", name: "Corte de caja", icon: Scissors },
+  { page: "Liquidaciones", name: "Liquidaciones", icon: FileText },
+  { page: "Invoices", name: "Facturación", icon: FileText },
+  { page: "Bonos", name: "Bonos por desempeño", icon: Trophy },
+  { page: "Cities", name: "Ciudades", icon: MapPin },
+  { page: "ServiceTypes", name: "Tipos de servicio", icon: Car },
+  { page: "CancellationPolicies", name: "Cancelaciones", icon: ShieldAlert },
+  { page: "PaymentMethods", name: "Métodos de pago", icon: CreditCard },
+  { page: "GeoZones", name: "Zonas tarifarias", icon: Layers },
+  { page: "RedZones", name: "Zonas rojas", icon: ShieldAlert },
+  { page: "Companies", name: "Empresas (B2B)", icon: Building2 },
   { page: "Surveys", name: "Encuestas", icon: ClipboardList },
-  { page: "CancellationPolicies", name: "Políticas cancelación", icon: FileText },
-  { page: "CashCutoff", name: "Corte de caja", icon: DollarSign },
-  { page: "Liquidaciones", name: "Liquidaciones", icon: CheckCircle },
-  { page: "Anuncios", name: "Anuncios", icon: Target },
-  { page: "Bonos", name: "Bonos", icon: DollarSign },
   { page: "AdminUsers", name: "Usuarios admin", icon: UserCog },
+  { page: "Settings", name: "Configuración", icon: Settings },
   { page: "AdminLogin", name: "Login admin", icon: Lock },
-  { page: "RoadAssistApp", name: "App pasajero", icon: Phone },
+  { page: "RoadAssistAdmin", name: "Asistencia vial", icon: Phone },
   { page: "DriverApp", name: "App conductor", icon: Car },
 ];
 
 export const DEFAULT_NAV_CONFIG = [
   {
-    label: "Principal",
-    pages: ["Dashboard", "Analytics", "Users", "Drivers", "Passengers", "LiveDrivers"]
+    label: "Operaciones",
+    pages: ["Dashboard", "Analytics", "LiveDrivers", "Drivers", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "Notificaciones", "Anuncios"],
   },
   {
-    label: "Operaciones",
-    pages: ["Rides", "Earnings", "DriverEarnings", "Payments", "Invoices", "SupportTickets", "Chats", "Notifications", "SosAlerts"]
+    label: "Finanzas",
+    pages: ["DriverEarnings", "Earnings", "CashCutoff", "Liquidaciones", "Invoices", "Bonos"],
   },
   {
     label: "Configuración",
-    pages: ["GeoZones", "RedZones", "Cities", "ServiceTypes", "Companies", "Settings", "Surveys", "CancellationPolicies", "CashCutoff", "Liquidaciones", "Anuncios", "Bonos"]
+    pages: ["Cities", "ServiceTypes", "CancellationPolicies", "PaymentMethods", "GeoZones", "RedZones", "Companies", "Surveys", "AdminUsers", "Settings"],
   },
-  {
-    label: "Sistema",
-    pages: ["AdminUsers", "AdminLogin", "RoadAssistApp", "DriverApp"]
-  }
 ];

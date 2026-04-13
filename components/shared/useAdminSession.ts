@@ -1,117 +1,124 @@
-"use client"
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createPageUrl } from "@/utils";
+import { supabase } from "@/lib/supabase";
 
 export interface AdminSession {
   id: string;
   email: string;
   full_name?: string;
   role?: string;
-  permissions?: string[];
+  allowed_pages?: string[];
+  is_active?: boolean;
   [key: string]: any;
 }
 
-export const PUBLIC_PAGES = ["AdminLogin", "RoadAssistApp", "DriverApp"];
+export const ADMIN_SESSION_KEY = "admin_session_id";
+export const PUBLIC_PAGES = ["AdminLogin", "DriverApp", "RoadAssistApp"];
+export const ADMIN_ROLE = "admin";
+export const BASE_ALLOWED_PAGES = ["Dashboard"];
+
+export function getStoredSession(): AdminSession | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem(ADMIN_SESSION_KEY);
+    return raw ? (JSON.parse(raw) as AdminSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSession() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ADMIN_SESSION_KEY);
+}
 
 export function useAdminSession() {
-  const [session, setSession] = useState<AdminSession | null>(null);
+  const [session, setSession] = useState<AdminSession | null>(getStoredSession);
   const [validated, setValidated] = useState(false);
-  const router = useRouter();
 
-  // Check if user has permission for a page
-  const isAllowed = useCallback((pageName: string) => {
-    if (!session) return false;
-    if (PUBLIC_PAGES.includes(pageName)) return true;
-
-    // Admin role has access to everything
-    if (session.role === 'admin' || session.role === 'super_admin') return true;
-
-    // Check specific permissions
-    const pagePermissions: Record<string, string[]> = {
-      Dashboard: ['read_dashboard'],
-      Users: ['read_users'],
-      Drivers: ['read_drivers'],
-      Settings: ['read_settings'],
-      // Add more page permissions as needed
-    };
-
-    const requiredPerms = pagePermissions[pageName];
-    if (!requiredPerms) return true; // Default allow if no specific permissions defined
-
-    return requiredPerms.every(perm => session.permissions?.includes(perm));
-  }, [session]);
-
-  // Logout function
-  const logout = useCallback(async () => {
-    try {
-      // Clear session
-      setSession(null);
-      setValidated(true);
-
-      // Clear local storage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('admin-session');
-        localStorage.removeItem('admin-token');
+  useEffect(() => {
+    const revalidateSession = async () => {
+      const stored = getStoredSession();
+      if (!stored?.email) {
+        setSession(null);
+        setValidated(true);
+        return;
       }
 
-      // Redirect to login
-      router.push(createPageUrl("AdminLogin"));
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  }, [router]);
-
-  // Validate session on mount
-  useEffect(() => {
-    const validateSession = async () => {
       try {
-        if (typeof window === 'undefined') return;
+        const { data, error } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("email", stored.email)
+          .limit(1);
 
-        const token = localStorage.getItem('admin-token');
-        const storedSession = localStorage.getItem('admin-session');
+        if (error) throw error;
 
-        if (!token || !storedSession) {
-          setValidated(true);
+        const user = data?.[0];
+        if (!user || user.is_active === false) {
+          clearSession();
+          setSession(null);
+          if (typeof window !== "undefined") {
+            window.location.href = createPageUrl("AdminLogin");
+          }
           return;
         }
 
-        const parsedSession = JSON.parse(storedSession);
+        const fresh: AdminSession = {
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          role: user.role,
+          allowed_pages: user.allowed_pages || [],
+          is_active: user.is_active,
+        };
 
-        // Here you would typically validate the token with your API
-        // For now, we'll just check if it exists and hasn't expired
-        const now = Date.now();
-        const expiresAt = parsedSession.expires_at;
-
-        if (expiresAt && now > expiresAt) {
-          // Token expired
-          logout();
-          return;
+        if (typeof window !== "undefined") {
+          localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(fresh));
         }
-
-        setSession(parsedSession);
+        setSession(fresh);
       } catch (error) {
-        console.error("Session validation error:", error);
-        logout();
+        console.warn("Session revalidation failed:", error);
       } finally {
         setValidated(true);
       }
     };
 
-    validateSession();
-  }, [logout]);
+    revalidateSession();
+  }, []);
+
+  const isAllowed = useCallback((page: string) => {
+    if (PUBLIC_PAGES.includes(page)) return true;
+    if (!session) return false;
+    if (BASE_ALLOWED_PAGES.includes(page)) return true;
+    if (session.role === ADMIN_ROLE) return true;
+    return (session.allowed_pages || []).includes(page);
+  }, [session]);
+
+  const logout = useCallback(() => {
+    clearSession();
+    setSession(null);
+    if (typeof window !== "undefined") {
+      window.location.href = createPageUrl("AdminLogin");
+    }
+  }, []);
 
   return {
     session,
     validated,
     isAllowed,
     logout,
-    setSession: (newSession: AdminSession | null) => {
-      setSession(newSession);
-      if (newSession && typeof window !== 'undefined') {
-        localStorage.setItem('admin-session', JSON.stringify(newSession));
+    setSession: (nextSession: AdminSession | null) => {
+      setSession(nextSession);
+      if (typeof window === "undefined") return;
+      if (nextSession) {
+        localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(nextSession));
+      } else {
+        clearSession();
       }
-    }
+    },
   };
 }

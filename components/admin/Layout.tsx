@@ -223,7 +223,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                     {item.page === "Chats" && badges.unreadChats > 0 && (
                       <span className="bg-blue-500 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 flex-shrink-0">{badges.unreadChats}</span>
                     )}
-                    {item.page === "SosAlerts" && badges.activeAlerts > 0 && (
+                    {item.page === "SOSAlerts" && badges.activeAlerts > 0 && (
                       <span className="bg-red-500 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 flex-shrink-0">{badges.activeAlerts}</span>
                     )}
                   </Link>
@@ -234,20 +234,22 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         </nav>
 
         {/* User section */}
+        {session && (
         <div className="p-3 border-t border-slate-100">
           <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: accentColor }}>
-              {(session.full_name || session.email || "?").charAt(0).toUpperCase()}
+              {((session?.full_name) || (session?.email) || "?").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-800 truncate">{session.full_name || session.email}</p>
-              <p className="text-[10px] text-slate-400 capitalize">{session.role || "admin"}</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">{session?.full_name || session?.email}</p>
+              <p className="text-[10px] text-slate-400 capitalize">{session?.role || "admin"}</p>
             </div>
             <Button variant="outline" size="sm" className="h-7 w-7 text-slate-400 hover:text-red-500 flex-shrink-0" onClick={logout} title="Cerrar sesión">
               <LogOut className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
+        )}
       </aside>
 
       {/* Main content */}

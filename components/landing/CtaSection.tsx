@@ -1,10 +1,8 @@
-"use client"
-
 import React from "react";
 import { ArrowRight, Smartphone } from "lucide-react";
-import useLandingConfig from "@/components/shared/useLandingConfig";
+import { useLandingConfig } from "@/hooks/useLandingConfig";
 import { useQuery } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
+import { supabase } from "@/lib/supabase";
 
 export default function CtaSection() {
   const lc = useLandingConfig();
@@ -12,24 +10,33 @@ export default function CtaSection() {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: () => supabaseApi.settings.list(),
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
+        if (error) throw error;
+        return data || [];
+      } catch (err) {
+        console.error("Error fetching AppSettings:", err);
+        return [];
+      }
+    },
     staleTime: 60000,
   });
   const features = settingsList[0]?.features_enabled || {};
-  const showSection = features.show_app_install_section !== false; // Show by default
+  const showSection = features.show_app_install_section !== false;
 
   if (!showSection) return null;
 
-  const isExternal = (url: string | undefined) => url?.startsWith("http");
+  const isExternal = (url) => url?.startsWith("http");
 
-  const renderButton = (btn: any, i: number) => {
+  const renderButton = (btn, i) => {
     const baseClass = "inline-flex items-center gap-2 px-8 py-3 rounded-full font-semibold text-base transition-all duration-200";
-    const styles: Record<string, string> = {
+    const styles = {
       primary: `${baseClass} bg-gradient-to-r from-[#0ea5e9] to-[#6366f1] text-white hover:opacity-90 shadow-xl shadow-blue-500/20`,
       secondary: `${baseClass} border border-white/20 text-white/70 hover:text-white hover:border-white/40`,
       outline: `${baseClass} border border-[#0ea5e9]/40 text-[#0ea5e9] hover:bg-[#0ea5e9]/10`,
     };
-    const cls = styles[btn.style as string] || styles.secondary;
+    const cls = styles[btn.style] || styles.secondary;
     return isExternal(btn.url)
       ? <a key={i} href={btn.url} target="_blank" rel="noreferrer" className={cls}>{btn.label}</a>
       : <a key={i} href={btn.url} className={cls}>{btn.label}</a>;

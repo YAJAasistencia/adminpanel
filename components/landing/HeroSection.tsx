@@ -1,13 +1,11 @@
-"use client"
-
 import React from "react";
 import { ArrowRight, Shield, Clock, MapPin } from "lucide-react";
-import useLandingConfig from "@/components/shared/useLandingConfig";
+import { useLandingConfig } from "@/hooks/useLandingConfig";
 
 export default function HeroSection() {
   const lc = useLandingConfig();
 
-  const isExternal = (url: string | undefined) => url?.startsWith("http");
+  const isExternal = (url) => url?.startsWith("http");
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#0a0a0f]">

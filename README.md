@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+**Admin Panel YAJA - Next.js + Supabase**
 
-## Getting Started
+Este proyecto es un panel de administración construido con Next.js, TypeScript, TailwindCSS y Supabase.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun run dev
-```
+## 🚀 Instalación y uso local
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Clona el repositorio:
+	```bash
+	git clone <url-del-repo>
+	cd adminpanel
+	```
+2. Instala las dependencias:
+	```bash
+	npm install
+	```
+3. Crea un archivo `.env.local` en la raíz con tus claves de Supabase:
+	```env
+	NEXT_PUBLIC_SUPABASE_URL=tu_url_supabase
+	NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
+	```
+4. Inicia el servidor de desarrollo:
+	```bash
+	npm run dev
+	```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Accede a la app en [http://localhost:3301](http://localhost:3301)
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Nota:
+- El proyecto usa por defecto el puerto `3301` para `dev` y `start`.
+- Si necesitas otro puerto, puedes sobrescribirlo con `PORT`.
+	```bash
+	PORT=3000 npm run dev
+	```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tecnologías principales
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Next.js 13+
+- TypeScript
+- Supabase (auth, base de datos, storage)
+- TailwindCSS
+- React Query
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 📦 Despliegue
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Puedes desplegar este panel en Vercel, Netlify o cualquier plataforma compatible con Next.js. Solo asegúrate de configurar las variables de entorno de Supabase en el dashboard de tu proveedor.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### Accesos principales (producción y local)
+
+- Landing principal: `/`
+- Login administrador: `/admin-login`
+- Panel (dashboard): `/dashboard`
+- App conductor: `/driver-app`
+- App pasajero: `/road-assist-app`
+
+### Accesos amigables configurados
+
+- `/admin` → `/admin-login`
+- `/panel` → `/dashboard`
+- `/conductor` → `/driver-app`
+- `/pasajero` → `/road-assist-app`
+
+### Vercel (variables requeridas)
+
+Configura estas variables en Project Settings > Environment Variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Vercel con correo (CLI)
+
+Si quieres publicar usando tu cuenta de Vercel por correo:
+
+1. Login con correo:
+	```bash
+	npx vercel login tu-correo@dominio.com
+	```
+2. Vincula el proyecto:
+	```bash
+	npx vercel link
+	```
+3. Sube variables al entorno de producción:
+	```bash
+	npx vercel env add NEXT_PUBLIC_SUPABASE_URL production
+	npx vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
+	```
+4. Despliega a producción:
+	```bash
+	npx vercel --prod
+	```
+
+Luego despliega y verifica:
+
+1. `https://tu-dominio/` (landing)
+2. `https://tu-dominio/admin` (login admin)
+3. `https://tu-dominio/panel` (dashboard)
+4. `https://tu-dominio/conductor` (app conductor)
+5. `https://tu-dominio/pasajero` (app pasajero)
+
+---
+
+## 📄 Documentación
+
+- [Supabase Docs](https://supabase.com/docs)
+- [Next.js Docs](https://nextjs.org/docs)
+- [TailwindCSS Docs](https://tailwindcss.com/docs)
+
+---
+
+## 🆘 Soporte
+
+Para soporte, abre un issue en este repositorio o contacta al equipo de YAJA Asistencia.

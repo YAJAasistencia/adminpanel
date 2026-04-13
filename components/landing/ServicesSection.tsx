@@ -1,7 +1,5 @@
-"use client"
-
 import React from "react";
-import useLandingConfig from "@/components/shared/useLandingConfig";
+import { useLandingConfig } from "@/hooks/useLandingConfig";
 
 const COLORS = [
   { color: "from-yellow-400 to-orange-500", glow: "shadow-yellow-500/20" },
