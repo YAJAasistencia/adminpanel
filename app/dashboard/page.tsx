@@ -3,24 +3,18 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Plus, MapPin, MessageSquare, Alert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import DashboardStats from "@/components/admin/DashboardStats";
 import RideTable from "@/components/admin/RideTable";
-import AssignDriverDialog from "@/components/admin/AssignDriverDialog";
-import CreateRideDialog from "@/components/admin/CreateRideDialog";
-import useAppSettings from "@/components/shared/useAppSettings";
 import { todayCDMX } from "@/components/shared/dateUtils";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(todayCDMX());
-  const [showCreateRide, setShowCreateRide] = useState(false);
-  const [showAssignDriver, setShowAssignDriver] = useState(false);
-  const [selectedRide, setSelectedRide] = useState(null);
+  const [selectedDate] = useState(todayCDMX());
 
   // Fetch rides
   const { data: rides = [] } = useQuery({
@@ -56,7 +50,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const tickets = await supabaseApi.supportTickets.list() || [];
-        return tickets.filter(t => t.status === "open").length;
+        return tickets.filter((t: any) => t.status === "open").length;
       } catch {
         return 0;
       }
@@ -70,7 +64,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const chats = await supabaseApi.chats.list() || [];
-        return chats.filter(c => c.unread).length;
+        return chats.filter((c: any) => c.unread).length;
       } catch {
         return 0;
       }
@@ -91,7 +85,7 @@ export default function Dashboard() {
     staleTime: 30000,
   });
 
-  const pendingRides = rides.filter(r => r.status === "pending" || r.status === "auction");
+  const pendingRides = rides.filter((r: any) => r.status === "pending" || r.status === "auction");
 
   return (
     <Layout currentPageName="Dashboard">
@@ -102,12 +96,6 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
             <p className="text-sm text-slate-500 mt-1">Panel de control en tiempo real</p>
           </div>
-          <Button 
-            onClick={() => setShowCreateRide(true)}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" /> Crear Viaje
-          </Button>
         </div>
 
         {/* Quick Stats */}
@@ -174,30 +162,11 @@ export default function Dashboard() {
 
         {/* Pending Rides */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">
-              Viajes Pendientes ({pendingRides.length})
-            </h2>
-            {pendingRides.length > 0 && (
-              <Button 
-                size="sm"
-                onClick={() => setShowAssignDriver(true)}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" /> Asignar
-              </Button>
-            )}
-          </div>
-
+          <h2 className="text-xl font-bold text-slate-900">
+            Viajes Pendientes ({pendingRides.length})
+          </h2>
           {pendingRides.length > 0 ? (
-            <RideTable 
-              rides={pendingRides} 
-              drivers={drivers}
-              onSelectRide={(ride) => {
-                setSelectedRide(ride);
-                setShowAssignDriver(true);
-              }}
-            />
+            <RideTable rides={pendingRides} drivers={drivers} />
           ) : (
             <div className="p-8 bg-white rounded-lg border border-slate-200 text-center">
               <p className="text-slate-500">✓ No hay viajes pendientes</p>
@@ -207,33 +176,15 @@ export default function Dashboard() {
 
         {/* All Rides Table */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-slate-900">Todos los Viajes</h2>
-          <RideTable 
-            rides={rides.slice(0, 20)} 
-            drivers={drivers}
-            onSelectRide={(ride) => {
-              setSelectedRide(ride);
-            }}
-          />
+          <h2 className="text-xl font-bold text-slate-900">Últimos Viajes ({rides.length})</h2>
+          {rides.length > 0 ? (
+            <RideTable rides={rides.slice(0, 20)} drivers={drivers} />
+          ) : (
+            <div className="p-8 bg-white rounded-lg border border-slate-200 text-center">
+              <p className="text-slate-500">No hay datos de viajes</p>
+            </div>
+          )}
         </div>
-
-        {/* Dialogs */}
-        {showCreateRide && (
-          <CreateRideDialog 
-            onClose={() => setShowCreateRide(false)} 
-          />
-        )}
-
-        {showAssignDriver && selectedRide && (
-          <AssignDriverDialog 
-            ride={selectedRide}
-            drivers={drivers}
-            onClose={() => {
-              setShowAssignDriver(false);
-              setSelectedRide(null);
-            }}
-          />
-        )}
       </div>
     </Layout>
   );
