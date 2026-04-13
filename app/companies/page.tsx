@@ -8,6 +8,23 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+export default function Companies() {
+  return (
+    <Layout currentPageName="Companies">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Empresas (B2B)</h1>
+          <p className="text-sm text-slate-500 mt-2">Gestión de empresas clientes</p>
+        </div>
+
+        <div className="p-6 bg-white rounded-lg border border-slate-200">
+          <p className="text-slate-600">La funcionalidad de empresas está siendo migrada a Supabase...</p>
+        </div>
+      </div>
+    </Layout>
+  );
+}
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
