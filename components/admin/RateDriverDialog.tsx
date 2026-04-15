@@ -51,9 +51,9 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
         <DialogHeader>
           <DialogTitle>Calificar conductor</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <div className="space-y-0.5 py-1">
           <div className="text-center">
-            <p className="text-sm text-slate-500 mb-1">Viaje de <span className="font-medium text-slate-800">{ride?.passenger_name}</span></p>
+            <p className="text-xs text-slate-500 mb-1">Viaje de <span className="font-medium text-slate-800">{ride?.passenger_name}</span></p>
             <p className="text-xs text-slate-400">Conductor: {ride?.driver_name}</p>
           </div>
           <div className="flex items-center justify-center gap-1">
@@ -69,7 +69,7 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
               </button>
             ))}
           </div>
-          <p className="text-center text-sm font-medium text-slate-700">
+          <p className="text-center text-xs font-medium text-slate-700">
             {rating === 1 ? "Muy malo" : rating === 2 ? "Malo" : rating === 3 ? "Regular" : rating === 4 ? "Bueno" : "Excelente"}
           </p>
           <div>

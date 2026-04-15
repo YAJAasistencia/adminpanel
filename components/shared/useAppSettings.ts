@@ -22,6 +22,8 @@ export default function useAppSettings() {
   const { data, isLoading } = useQuery<AppSettings[]>({
     queryKey: ["appSettings"],
     queryFn: () => supabaseApi.settings.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     initialData: [],
   });
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery } from "@tanstack/react-query";
 
 /**
@@ -19,7 +19,7 @@ export default function InstallAppBanner({ settings: settingsProp }) {
   // If no settings prop passed, fetch them ourselves (e.g. from Landing page)
   const { data: fetchedSettingsList } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: () => base44.entities.AppSettings.list(),
+    queryFn: () => supabaseApi.settings.list(),
     enabled: settingsProp === undefined,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,

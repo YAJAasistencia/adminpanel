@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ export default function TicketsPanel({
 
   const { data: tickets = [] } = useQuery({
     queryKey: ["tickets", role, driverId || passengerUserId],
-    queryFn: () => base44.entities.SupportTicket.filter(filterKey, "-created_date"),
+    queryFn: () => supabaseApi.supportTickets.list(filterKey),
     enabled: !!(driverId || passengerUserId),
   });
 
@@ -53,7 +53,7 @@ export default function TicketsPanel({
     queryKey: ["passengerRidesForTicket", passengerUserId, passengerPhone],
     queryFn: async () => {
       if (passengerPhone) {
-        const all = await base44.entities.RideRequest.filter({ passenger_phone: passengerPhone });
+        const all = await supabaseApi.rideRequests.list({ passenger_phone: passengerPhone });
         return all.filter(r => r.status === "completed").slice(0, 30);
       }
       return [];
@@ -63,9 +63,10 @@ export default function TicketsPanel({
 
   const { data: driverRides = [] } = useQuery({
     queryKey: ["driverRidesForTicketPanel", driverId],
-    queryFn: () =>
-      base44.entities.RideRequest.filter({ driver_id: driverId }, "-created_date")
-        .then(data => data.filter(r => r.status === "completed").slice(0, 30)),
+    queryFn: async () => {
+      const all = await supabaseApi.rideRequests.list({ driver_id: driverId });
+      return all.filter(r => r.status === "completed").slice(0, 30);
+    },
     enabled: role === "driver" && !rideContext && !!driverId,
   });
 
@@ -92,7 +93,7 @@ export default function TicketsPanel({
     if (!form.subject || !form.description) return;
     setSubmitting(true);
     const ticketNum = `TKT-${Date.now().toString(36).toUpperCase()}`;
-    await base44.entities.SupportTicket.create({
+    await supabaseApi.supportTickets.create({
       ticket_number: ticketNum,
       subject: form.subject,
       description: form.description,

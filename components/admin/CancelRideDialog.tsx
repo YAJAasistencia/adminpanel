@@ -89,24 +89,24 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
+          <DialogTitle className="flex items-center gap-1 text-red-600">
             <AlertTriangle className="w-5 h-5" /> Cancelar viaje
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="bg-red-50 rounded-xl p-4 text-sm space-y-3">
+        <div className="space-y-0.5 py-4">
+          <div className="bg-red-50 rounded-lg p-2 text-xs space-y-1">
             <p className="font-medium text-red-800">
               ¿Cancelar el viaje de <strong>{ride?.passenger_name}</strong>?
             </p>
             {applicablePolicy ? (
               withinFreeWindow ? (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                  <p className="text-emerald-700 font-semibold text-sm">✓ Cancelación gratuita</p>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                  <p className="text-emerald-700 font-semibold text-xs">✓ Cancelación gratuita</p>
                   <p className="text-emerald-600 text-xs mt-0.5">Dentro del período de {applicablePolicy.free_cancellation_minutes} min — sin cargo al pasajero</p>
                 </div>
               ) : effectiveFee > 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <p className="text-amber-700 font-semibold text-sm">⚠️ Se cobrará cargo por cancelación</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                  <p className="text-amber-700 font-semibold text-xs">⚠️ Se cobrará cargo por cancelación</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-amber-600 text-xs">Cargo ({applicablePolicy.fee_type === "fixed" ? "fijo" : `${applicablePolicy.fee_amount}%`})</span>
                     <span className="text-amber-800 font-black text-xl">${effectiveFee.toFixed(2)}</span>
@@ -114,12 +114,12 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
                   <p className="text-amber-600/70 text-xs mt-1">Política: {applicablePolicy.name}</p>
                 </div>
               ) : (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
                   <p className="text-slate-600 text-xs">Sin cargo aplicable para el estado "{ride?.status}"</p>
                 </div>
               )
             ) : (
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2">
                 <p className="text-slate-500 text-xs">Sin política de cancelación activa — sin cargo</p>
               </div>
             )}

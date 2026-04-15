@@ -301,26 +301,26 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-1">
             ✏️ Editar Viaje
             <Badge variant="outline" className="text-xs ml-auto">#{ride.service_id || ride.id?.slice(-8).toUpperCase()}</Badge>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="space-y-0.5 py-0.5">
           {/* Datos del pasajero */}
-          <section className="bg-slate-50 rounded-xl p-4 space-y-3">
+          <section className="bg-slate-50 rounded-lg p-2 space-y-1">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Datos del pasajero</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-1">
               <div className="space-y-1">
-                <Label className="text-xs">Nombre pasajero</Label>
-                <Input value={form.passenger_name || ""} onChange={e => set("passenger_name", e.target.value)} className="h-8 text-sm" />
+                <Label className="text-xs text-xs">Nombre pasajero</Label>
+                <Input value={form.passenger_name || ""} onChange={e => set("passenger_name", e.target.value)} className="h-7 text-xs" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Teléfono</Label>
-                <Input value={form.passenger_phone || ""} onChange={e => set("passenger_phone", e.target.value)} className="h-8 text-sm" />
+                <Label className="text-xs text-xs">Teléfono</Label>
+                <Input value={form.passenger_phone || ""} onChange={e => set("passenger_phone", e.target.value)} className="h-7 text-xs" />
               </div>
             </div>
             <div className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all ${form.show_phone_to_driver ? "bg-blue-50 border-blue-200" : "bg-white border-slate-200"}`}>
@@ -330,15 +330,15 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
           </section>
 
           {/* Servicio y asignación */}
-          <section className="bg-slate-50 rounded-xl p-4 space-y-3">
+          <section className="bg-slate-50 rounded-lg p-2 space-y-1">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo de servicio</p>
             <div className="space-y-1">
-              <Label className="text-xs">Tipo de servicio</Label>
+              <Label className="text-xs text-xs">Tipo de servicio</Label>
               <Select
                 value={form.service_type_id || activeServiceTypes.find(s => s.name === form.service_type_name)?.id || ""}
                 onValueChange={handleServiceChange}
               >
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar servicio" /></SelectTrigger>
+                <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar servicio" /></SelectTrigger>
                 <SelectContent>
                   {activeServiceTypes.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
@@ -352,10 +352,10 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
           </section>
 
           {/* Ruta */}
-          <section className="bg-slate-50 rounded-xl p-4 space-y-3">
+          <section className="bg-slate-50 rounded-lg p-2 space-y-1">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ruta</p>
             <div className="space-y-1">
-              <Label className="text-xs">Dirección de origen</Label>
+              <Label className="text-xs text-xs">Dirección de origen</Label>
               <AddressSearch
                 label="Origen"
                 value={form.pickup_address || ""}
@@ -368,7 +368,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Dirección de destino</Label>
+              <Label className="text-xs text-xs">Dirección de destino</Label>
               <AddressSearch
                 label="Destino"
                 value={form.dropoff_address || ""}
@@ -380,21 +380,21 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
                 placeholder="Buscar destino..."
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-1">
               <div className="space-y-1">
-                <Label className="text-xs">Distancia (km)</Label>
-                <Input type="number" value={form.distance_km} onChange={e => set("distance_km", e.target.value)} className="h-8 text-sm" />
+                <Label className="text-xs text-xs">Distancia (km)</Label>
+                <Input type="number" value={form.distance_km} onChange={e => set("distance_km", e.target.value)} className="h-7 text-xs" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Duración (min)</Label>
-                <Input type="number" value={form.duration_minutes} onChange={e => set("duration_minutes", e.target.value)} className="h-8 text-sm" />
+                <Label className="text-xs text-xs">Duración (min)</Label>
+                <Input type="number" value={form.duration_minutes} onChange={e => set("duration_minutes", e.target.value)} className="h-7 text-xs" />
               </div>
             </div>
           </section>
 
           {/* Cita programada */}
           {(ride.status === "scheduled" || form.is_scheduled) && (
-            <section className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+            <section className="bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" /> Cita programada
@@ -402,14 +402,14 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
                 <Switch checked={form.is_scheduled} onCheckedChange={v => set("is_scheduled", v)} />
               </div>
               {form.is_scheduled && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-1">
                   <div className="space-y-1">
-                    <Label className="text-xs text-blue-800">Fecha *</Label>
-                    <Input type="date" value={form.scheduled_date} onChange={e => set("scheduled_date", e.target.value)} className="h-8 text-sm border-blue-300" />
+                    <Label className="text-xs text-xs text-blue-800">Fecha *</Label>
+                    <Input type="date" value={form.scheduled_date} onChange={e => set("scheduled_date", e.target.value)} className="h-7 text-xs border-blue-300" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-blue-800">Hora *</Label>
-                    <Input type="time" value={form.scheduled_time} onChange={e => set("scheduled_time", e.target.value)} className="h-8 text-sm border-blue-300" />
+                    <Label className="text-xs text-xs text-blue-800">Hora *</Label>
+                    <Input type="time" value={form.scheduled_time} onChange={e => set("scheduled_time", e.target.value)} className="h-7 text-xs border-blue-300" />
                   </div>
                 </div>
               )}
@@ -417,19 +417,19 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
           )}
 
           {/* ── FINANCIERO ─────────────────────────────────────────────────── */}
-          <section className="bg-slate-50 rounded-xl p-4 space-y-4">
+          <section className="bg-slate-50 rounded-lg p-2 space-y-0.5">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Financiero</p>
 
             {/* Precio estimado: solo lectura */}
-            <div className="bg-white border border-slate-200 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="bg-white border border-slate-200 rounded-lg p-2">
+              <div className="flex items-center gap-1 mb-1">
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
-                <Label className="text-xs font-semibold text-slate-600">Precio estimado del servicio (fijo)</Label>
+                <Label className="text-xs text-xs font-semibold text-slate-600">Precio estimado del servicio (fijo)</Label>
               </div>
-              <p className="text-xs text-slate-400 mb-2">
+              <p className="text-xs text-slate-400 mb-1">
                 Calculado por tarifa mínima, cobro por km y/o zona. No se modifica al editar.
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
                 <span className="text-xl font-bold text-slate-800">${estimatedPrice.toFixed(2)}</span>
                 <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Base del servicio</span>
               </div>
@@ -437,30 +437,30 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
             {/* Empresa: costo independiente */}
             {isCompany && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
-                <Label className="text-xs font-semibold text-blue-700">💼 Costo empresa (facturación — editable independiente)</Label>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1">
+                <Label className="text-xs text-xs font-semibold text-blue-700">💼 Costo empresa (facturación — editable independiente)</Label>
                 <p className="text-xs text-blue-500">Este costo aparece en el ticket de empresa. No afecta el ticket del conductor.</p>
                 <Input
                   type="number"
                   value={form.company_price}
                   onChange={e => set("company_price", e.target.value)}
-                  className="h-8 text-sm border-blue-300 bg-white"
+                  className="h-7 text-xs border-blue-300 bg-white"
                   placeholder="Costo para facturar a la empresa"
                 />
                 {/* Quién paga */}
                 <div className="pt-1">
-                  <Label className="text-xs text-blue-600">¿Quién paga este servicio?</Label>
-                  <div className="flex gap-2 mt-1">
+                  <Label className="text-xs text-xs text-blue-600">¿Quién paga este servicio?</Label>
+                  <div className="flex gap-1 mt-1">
                     <button
                       type="button"
                       onClick={() => set("paid_by", "company")}
-                      className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-all ${form.paid_by === "company" ? "bg-blue-600 text-white border-blue-600" : "border-blue-200 text-blue-600"}`}>
+                      className={`flex-1 py-0.5 rounded-lg border text-xs font-medium transition-all ${form.paid_by === "company" ? "bg-blue-600 text-white border-blue-600" : "border-blue-200 text-blue-600"}`}>
                       🏢 La empresa
                     </button>
                     <button
                       type="button"
                       onClick={() => set("paid_by", "passenger")}
-                      className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-all ${form.paid_by === "passenger" ? "bg-orange-500 text-white border-orange-500" : "border-orange-200 text-orange-600"}`}>
+                      className={`flex-1 py-0.5 rounded-lg border text-xs font-medium transition-all ${form.paid_by === "passenger" ? "bg-orange-500 text-white border-orange-500" : "border-orange-200 text-orange-600"}`}>
                       👤 El pasajero
                     </button>
                   </div>
@@ -475,15 +475,15 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
             {/* Comisión */}
             <div className="space-y-1">
-              <Label className="text-xs">Comisión plataforma (%)</Label>
-              <div className="flex items-center gap-2">
+              <Label className="text-xs text-xs">Comisión plataforma (%)</Label>
+              <div className="flex items-center gap-1">
                 <Input
                   type="number"
                   min={0}
                   max={100}
                   value={form.commission_rate || commissionRate}
                   onChange={e => set("commission_rate", parseFloat(e.target.value) || 0)}
-                  className="h-8 text-sm w-24"
+                  className="h-7 text-xs w-24"
                 />
                 <span className="text-xs text-slate-400">%</span>
                 <span className="text-xs text-slate-400">(Base para cálculo del conductor)</span>
@@ -492,9 +492,9 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
             {/* Método de pago */}
             <div className="space-y-1">
-              <Label className="text-xs">Método de pago</Label>
+              <Label className="text-xs text-xs">Método de pago</Label>
               <Select value={form.payment_method} onValueChange={v => set("payment_method", v)}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAYMENT_METHODS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>
@@ -503,7 +503,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
           </section>
 
           {/* ── EXTRAS ─────────────────────────────────────────────────────── */}
-          <section className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+          <section className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-1">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
               <DollarSign className="w-3.5 h-3.5" /> Extras / Gastos adicionales
             </p>
@@ -512,9 +512,9 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
             </p>
 
             {extraCharges.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {extraCharges.map(charge => (
-                  <div key={charge.id} className="bg-white rounded-lg border border-amber-100 p-2.5 grid grid-cols-12 gap-2 items-center">
+                  <div key={charge.id} className="bg-white rounded-lg border border-amber-100 p-2.5 grid grid-cols-12 gap-1 items-center">
                     <div className="col-span-4">
                       <Input value={charge.concept} onChange={e => updateCharge(charge.id, "concept", e.target.value)} className="h-7 text-xs" placeholder="Concepto" />
                     </div>
@@ -550,13 +550,13 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
             )}
 
             {/* Nuevo extra */}
-            <div className="bg-white rounded-lg border border-amber-100 p-2.5 grid grid-cols-12 gap-2 items-end">
+            <div className="bg-white rounded-lg border border-amber-100 p-2.5 grid grid-cols-12 gap-1 items-end">
               <div className="col-span-4 space-y-1">
-                <Label className="text-[10px] text-slate-500">Concepto</Label>
+                <Label className="text-xs text-[10px] text-slate-500">Concepto</Label>
                 <Input value={newCharge.concept} onChange={e => setNewCharge(p => ({ ...p, concept: e.target.value }))} className="h-7 text-xs" placeholder="Ej: Peaje autopista" />
               </div>
               <div className="col-span-3 space-y-1">
-                <Label className="text-[10px] text-slate-500">Tipo</Label>
+                <Label className="text-xs text-[10px] text-slate-500">Tipo</Label>
                 <Select value={newCharge.type} onValueChange={v => setNewCharge(p => ({ ...p, type: v }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -565,7 +565,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
                 </Select>
               </div>
               <div className="col-span-2 space-y-1">
-                <Label className="text-[10px] text-slate-500">Monto $</Label>
+                <Label className="text-xs text-[10px] text-slate-500">Monto $</Label>
                 <Input type="number" value={newCharge.amount} onChange={e => setNewCharge(p => ({ ...p, amount: e.target.value }))} className="h-7 text-xs" placeholder="0" />
               </div>
               <div className="col-span-2 flex items-center gap-1 pb-0.5">
@@ -580,8 +580,8 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
             </div>
 
             {/* ── Resumen financiero ── */}
-            <div className="bg-white border border-amber-200 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-bold text-slate-700 mb-2">Resumen financiero</p>
+            <div className="bg-white border border-amber-200 rounded-lg p-2 space-y-1">
+              <p className="text-xs font-bold text-slate-700 mb-1">Resumen financiero</p>
 
               <div className="flex justify-between text-xs text-slate-600">
                 <span>Precio estimado (base fijo):</span>
@@ -609,12 +609,12 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
                 </>
               )}
 
-              <div className="border-t border-amber-200 pt-2 flex justify-between text-sm font-bold text-emerald-700">
+              <div className="border-t border-amber-200 pt-2 flex justify-between text-xs font-bold text-emerald-700">
                 <span>Precio final:</span>
                 <span>${precioFinal.toFixed(2)}</span>
               </div>
 
-              <div className="bg-slate-50 rounded-lg p-2 space-y-1.5 mt-1">
+              <div className="bg-slate-50 rounded-lg p-2 space-y-1 mt-1">
                 <div className="flex justify-between text-xs text-violet-700">
                   <span>Comisión plataforma ({commissionRate}% sobre ${baseComisionable.toFixed(2)}):</span>
                   <span>-${comision.toFixed(2)}</span>
@@ -625,7 +625,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
                     <span>+${extrasParaConductor.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm font-bold text-blue-700 border-t border-slate-200 pt-1">
+                <div className="flex justify-between text-xs font-bold text-blue-700 border-t border-slate-200 pt-1">
                   <span>Ganancia del conductor:</span>
                   <span>${gananciaConductor.toFixed(2)}</span>
                 </div>
@@ -639,12 +639,12 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
           </section>
 
           {/* Opciones */}
-          <section className="space-y-2">
-            <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${form.require_admin_approval ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
+          <section className="space-y-1">
+            <div className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all ${form.require_admin_approval ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
               <span className={form.require_admin_approval ? "text-blue-700 font-medium" : "text-slate-500"}>Requiere aprobación admin para iniciar</span>
               <Switch checked={form.require_admin_approval} onCheckedChange={v => set("require_admin_approval", v)} />
             </div>
-            <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${form.require_proof_photo ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-slate-200"}`}>
+            <div className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all ${form.require_proof_photo ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-slate-200"}`}>
               <span className={form.require_proof_photo ? "text-orange-700 font-medium" : "text-slate-500"}>Foto de comprobante obligatoria</span>
               <Switch checked={form.require_proof_photo} onCheckedChange={v => set("require_proof_photo", v)} />
             </div>
@@ -652,14 +652,14 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
           {/* Notas */}
           <section className="space-y-1">
-            <Label className="text-xs text-slate-500">Notas del servicio</Label>
-            <Textarea value={form.notes || ""} onChange={e => set("notes", e.target.value)} className="text-sm resize-none" rows={2} />
+            <Label className="text-xs text-xs text-slate-500">Notas del servicio</Label>
+            <Textarea value={form.notes || ""} onChange={e => set("notes", e.target.value)} className="text-xs resize-none" rows={2} />
           </section>
         </div>
 
-        <div className="flex gap-2 pt-2 border-t">
-          <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button className="flex-1 rounded-xl bg-slate-900 hover:bg-slate-800" onClick={handleSave} disabled={saving}>
+        <div className="flex gap-1 pt-2 border-t">
+          <Button variant="outline" className="flex-1 rounded-lg" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button className="flex-1 rounded-lg bg-slate-900 hover:bg-slate-800" onClick={handleSave} disabled={saving}>
             <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>

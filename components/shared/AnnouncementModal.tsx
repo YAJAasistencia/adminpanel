@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,7 +17,7 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
   useEffect(() => {
     const load = async () => {
       const now = new Date();
-      const all = await base44.entities.Announcement.list("-created_date", 50);
+      const all = await supabaseApi.announcements.list();
       const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
       const eligible = all.filter(a => {

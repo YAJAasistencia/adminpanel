@@ -104,36 +104,36 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
   };
 
   return (
-    <div className="border-2 border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
+    <div className="border-2 border-blue-200 bg-blue-50/30 rounded-lg p-2 space-y-1">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-slate-800 text-sm">{isEdit ? "Editar vehículo" : "Nuevo vehículo"}</p>
+        <p className="font-semibold text-slate-800 text-xs">{isEdit ? "Editar vehículo" : "Nuevo vehículo"}</p>
         {onCancel && <button onClick={onCancel} className="p-1 rounded-lg hover:bg-slate-100"><X className="w-4 h-4 text-slate-400" /></button>}
       </div>
       {/* Vehicle type selector */}
       <div>
         <Label className="text-xs">Tipo de vehículo *</Label>
-        <div className="grid grid-cols-2 gap-2 mt-1">
+        <div className="grid grid-cols-2 gap-1 mt-1">
           {[{ value: "car", label: "🚗 Carro" }, { value: "moto", label: "🏍️ Moto" }].map(t => (
             <button key={t.value} type="button"
               onClick={() => { upd("vehicle_type", t.value); upd("brand", ""); setUseCustomBrand(false); }}
-              className={`py-2 rounded-xl border-2 text-sm font-semibold transition-all ${form.vehicle_type === t.value ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+              className={`py-0.5 rounded-lg border-2 text-xs font-semibold transition-all ${form.vehicle_type === t.value ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
               {t.label}
             </button>
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-1">
         <div>
           <Label className="text-xs">Marca *</Label>
           {useCustomBrand ? (
             <div className="flex gap-1 mt-1">
-              <Input value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Ej: ITALIKA" className="h-9 text-sm" />
+              <Input value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Ej: ITALIKA" className="h-8 text-xs" />
               <button onClick={() => { setUseCustomBrand(false); setCustomBrand(""); }} className="text-xs text-slate-400 hover:text-red-400 px-1">✕</button>
             </div>
           ) : (
             <div>
               <Select value={form.brand} onValueChange={v => upd("brand", v)}>
-                <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
                   {brands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
@@ -144,36 +144,36 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
         </div>
         <div>
           <Label className="text-xs">Modelo *</Label>
-          <Input value={form.model} onChange={e => upd("model", e.target.value.toUpperCase())} placeholder="COROLLA" className="mt-1 h-9 text-sm" />
+          <Input value={form.model} onChange={e => upd("model", e.target.value.toUpperCase())} placeholder="COROLLA" className="mt-1 h-8 text-xs" />
         </div>
         <div>
           <Label className="text-xs">Año</Label>
           <Select value={form.year} onValueChange={v => upd("year", v)}>
-            <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue placeholder="Año" /></SelectTrigger>
+            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="Año" /></SelectTrigger>
             <SelectContent>{VEHICLE_YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div>
           <Label className="text-xs">Color</Label>
-          <Input value={form.color} onChange={e => upd("color", e.target.value.toUpperCase())} placeholder="BLANCO" className="mt-1 h-9 text-sm" />
+          <Input value={form.color} onChange={e => upd("color", e.target.value.toUpperCase())} placeholder="BLANCO" className="mt-1 h-8 text-xs" />
         </div>
         <div className="col-span-2">
           <Label className="text-xs">Placa *</Label>
-          <Input value={form.plates} onChange={e => upd("plates", e.target.value.toUpperCase())} placeholder="ABC-123" className="mt-1 h-9 text-sm font-mono" />
+          <Input value={form.plates} onChange={e => upd("plates", e.target.value.toUpperCase())} placeholder="ABC-123" className="mt-1 h-8 text-xs font-mono" />
         </div>
       </div>
 
       {vehicleDocs.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1">
           <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Documentos del vehículo</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1">
             {vehicleDocs.map(doc => (
-              <div key={doc.key} className="border border-slate-200 rounded-lg p-2 space-y-1.5 bg-white">
+              <div key={doc.key} className="border border-slate-200 rounded-lg p-2 space-y-1 bg-white">
                 <p className="text-[10px] font-semibold text-slate-700 truncate">{doc.label}</p>
                 <label className="cursor-pointer block">
                   <input type="file" accept="image/*,.pdf" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(doc.key, f); }} />
-                  <div className={`text-center py-1.5 rounded-lg border text-[10px] font-medium ${docFiles[doc.key] ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-500 hover:border-blue-300"}`}>
+                  <div className={`text-center py-0.5 rounded-lg border text-[10px] font-medium ${docFiles[doc.key] ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-500 hover:border-blue-300"}`}>
                       {uploading[doc.key] ? "..." : docFiles[doc.key] ? "✓ Cargado" : <><Upload className="w-2.5 h-2.5 inline mr-0.5" />Subir</>}
                     </div>
                   </label>
@@ -190,10 +190,10 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
         </div>
       )}
 
-      <div className="flex gap-2 pt-1">
-        <Button variant="outline" size="sm" onClick={onCancel || (() => {})} className="flex-1 rounded-xl text-sm">Cancelar</Button>
+      <div className="flex gap-1 pt-1">
+        <Button variant="outline" size="sm" onClick={onCancel || (() => {})} className="flex-1 rounded-lg text-xs">Cancelar</Button>
         <Button size="sm" onClick={handleAdd} disabled={(!form.brand && !customBrand) || !form.plates || !form.model}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm">
+          className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs">
           {isEdit ? "Guardar cambios" : "Agregar vehículo"}
         </Button>
       </div>
@@ -458,11 +458,11 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+          <DialogTitle className="flex items-center justify-between gap-1 flex-wrap">
+            <div className="flex items-center gap-1">
+              <div className="w-10 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
                 {driver.full_name?.charAt(0)}
               </div>
               <span>{driver.full_name}</span>
@@ -481,18 +481,18 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             <TabsTrigger value="ratings">Califs.</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="info" className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
+          <TabsContent value="info" className="space-y-0.5 mt-4">
+            <div className="grid grid-cols-2 gap-1">
               <div><Label>Nombre completo *</Label><Input value={editDriver.full_name || ""} onChange={e => update("full_name", e.target.value)} /></div>
               <div><Label>Teléfono</Label><Input value={editDriver.phone || ""} onChange={e => update("phone", e.target.value)} placeholder="Opcional" /></div>
             </div>
             <div><Label>Email (acceso)</Label><Input type="email" value={editDriver.email || ""} onChange={e => update("email", e.target.value)} placeholder="correo@ejemplo.com" /></div>
             <div><Label>Contraseña de acceso</Label><Input type="text" value={editDriver.password || ""} onChange={e => update("password", e.target.value)} placeholder="Contraseña para la app" /></div>
-            <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 flex items-center gap-2">
+            <div className="bg-slate-50 rounded-lg p-2 text-xs text-slate-500 flex items-center gap-1">
               <Car className="w-4 h-4 text-slate-400" />
               Los datos del vehículo se sincronizan desde la pestaña <strong>Vehículos</strong>. Vehículo activo: <span className="font-mono font-bold text-slate-700">{editDriver.vehicle_brand} {editDriver.vehicle_model} · {editDriver.license_plate}</span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-1">
               <div>
                 <Label>Estado</Label>
                 <Select value={editDriver.status || "offline"} onValueChange={v => update("status", v)}>
@@ -520,8 +520,8 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             </div>
             {/* Suspension reason — shown when status is suspended or blocked */}
             {(editDriver.status === "suspended" || editDriver.status === "blocked") && (
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-semibold text-orange-800">📋 Motivo de suspensión (visible para el conductor)</p>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 space-y-1">
+                <p className="text-xs font-semibold text-orange-800">📋 Motivo de suspensión (visible para el conductor)</p>
                 <Textarea
                   value={editDriver.suspension_reason || ""}
                   onChange={e => update("suspension_reason", e.target.value)}
@@ -535,12 +535,12 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
             {/* Suspension block */}
             {driver.suspended_until && new Date(driver.suspended_until) > new Date() && (
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 space-y-1">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1 min-w-0">
                     <TimerOff className="w-5 h-5 text-orange-500 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-orange-800">Suspendido automáticamente</p>
+                      <p className="text-xs font-semibold text-orange-800">Suspendido automáticamente</p>
                       <p className="text-xs text-orange-600">Hasta: {new Date(driver.suspended_until).toLocaleString("es-MX")}</p>
                     </div>
                   </div>
@@ -562,7 +562,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           </TabsContent>
 
           {/* ── VEHICLES TAB ── */}
-          <TabsContent value="vehicles" className="mt-4 space-y-3">
+          <TabsContent value="vehicles" className="mt-4 space-y-1">
             {!editingVehicleId && (
               <AdminAddVehicleForm
                 onAdd={(newVehicle) => {
@@ -581,7 +581,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               />
             )}
             {(!editDriver.vehicles || editDriver.vehicles.length === 0) && (
-              <p className="text-sm text-slate-400 text-center py-6">Este conductor no tiene vehículos registrados.</p>
+              <p className="text-xs text-slate-400 text-center py-6">Este conductor no tiene vehículos registrados.</p>
             )}
             {(editDriver.vehicles || []).map((v, i) => {
               // Filter docs by vehicle type
@@ -636,28 +636,28 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               };
 
               return (
-                <div key={v.id || i} className={`border-2 rounded-xl p-4 space-y-3 ${isDisabled ? "border-red-200 bg-red-50/30 opacity-80" : v.is_active ? "border-blue-300 bg-blue-50/40" : "border-slate-200"}`}>
+                <div key={v.id || i} className={`border-2 rounded-lg p-2 space-y-1 ${isDisabled ? "border-red-200 bg-red-50/30 opacity-80" : v.is_active ? "border-blue-300 bg-blue-50/40" : "border-slate-200"}`}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <Car className={`w-4 h-4 ${isDisabled ? "text-red-400" : "text-slate-500"}`} />
                       <span className="font-semibold text-slate-800">{v.brand} {v.model}</span>
-                      <span className="text-sm text-slate-500">{v.year} · {v.color}</span>
-                      <span className="text-sm font-mono font-bold text-slate-700">{v.plates}</span>
+                      <span className="text-xs text-slate-500">{v.year} · {v.color}</span>
+                      <span className="text-xs font-mono font-bold text-slate-700">{v.plates}</span>
                       {v.is_active && !isDisabled && <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Activo</span>}
                       {hasExpiredDoc && <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">Doc vencido</span>}
                       {v.admin_disabled && !hasExpiredDoc && <span className="text-[10px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full">Deshabilitado</span>}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <button
                         onClick={() => setEditingVehicleId(v.id || i)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex-shrink-0"
+                        className="text-xs px-2.5 py-0.5 rounded-lg font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex-shrink-0"
                       >
                         Editar
                       </button>
                       <button
                         onClick={toggleDisabled}
                         disabled={hasExpiredDoc && !v.admin_disabled}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all flex-shrink-0 ${
+                        className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold transition-all flex-shrink-0 ${
                           isDisabled ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"
                         } disabled:opacity-40 disabled:cursor-not-allowed`}
                       >
@@ -667,7 +667,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   </div>
 
                   {/* Vehicle docs — one per row with approve/reject */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {docsForVehicle.map(doc => {
                       const urlKey = `doc_${doc.key}_url`;
                       const expiryKey = `doc_${doc.key}_expiry`;
@@ -679,14 +679,14 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                       const requireExpiry = doc.require_expiry !== false;
 
                       return (
-                        <div key={doc.key} className={`p-3 rounded-xl border-2 transition-all ${isVDocApproved ? "border-emerald-300 bg-emerald-50" : isVDocRejected ? "border-red-200 bg-red-50" : url ? (days !== null && days < 0 ? "border-red-300 bg-red-50" : "border-amber-200 bg-amber-50") : "border-slate-100 bg-white"}`}>
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-2 min-w-0">
+                        <div key={doc.key} className={`p-2 rounded-lg border-2 transition-all ${isVDocApproved ? "border-emerald-300 bg-emerald-50" : isVDocRejected ? "border-red-200 bg-red-50" : url ? (days !== null && days < 0 ? "border-red-300 bg-red-50" : "border-amber-200 bg-amber-50") : "border-slate-100 bg-white"}`}>
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <div className="flex items-center gap-1 min-w-0">
                               {isVDocApproved ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                                 : isVDocRejected ? <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                                 : url ? <Clock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                                 : <X className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />}
-                              <span className="text-sm font-medium text-slate-700 truncate">{doc.label}</span>
+                              <span className="text-xs font-medium text-slate-700 truncate">{doc.label}</span>
                               {doc.required && <span className="text-[10px] text-red-500">*</span>}
                               {isVDocApproved && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full">✓ Aprobado</span>}
                               {isVDocRejected && <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full">✗ Rechazado</span>}
@@ -760,7 +760,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                           </div>
                           {/* Expiry date input — only if require_expiry */}
                           {requireExpiry && (
-                            <div className="mt-2 flex items-center gap-2">
+                            <div className="mt-2 flex items-center gap-1">
                               <span className="text-[10px] text-slate-400">Vencimiento:</span>
                               <input type="date" value={expiry || ""}
                                 onChange={async e => {
@@ -786,27 +786,27 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             })}
           </TabsContent>
 
-          <TabsContent value="services" className="mt-4 space-y-4">
+          <TabsContent value="services" className="mt-4 space-y-0.5">
             <div>
-              <Label className="text-sm text-slate-700 mb-3 block">Tipos de servicio asignados</Label>
-              <div className="space-y-2">
+              <Label className="text-xs text-slate-700 mb-3 block">Tipos de servicio asignados</Label>
+              <div className="space-y-1">
                 {serviceTypes.map(svc => {
                   const active = (editDriver.service_type_ids || []).includes(svc.id);
                   return (
-                    <div key={svc.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${active ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white"}`}>
+                    <div key={svc.id} className={`flex items-center justify-between p-2 rounded-lg border transition-all ${active ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white"}`}>
                       <div>
-                        <p className={`text-sm font-medium ${active ? "text-blue-800" : "text-slate-700"}`}>{svc.name}</p>
+                        <p className={`text-xs font-medium ${active ? "text-blue-800" : "text-slate-700"}`}>{svc.name}</p>
                         {svc.category && <p className="text-[10px] text-slate-400">{svc.category}</p>}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => { if (!active) toggleServiceType(svc.id, svc.name); }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600"}`}>
+                          className={`px-2.5 py-0.5 rounded-lg text-xs font-bold transition-all ${active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600"}`}>
                           Sí
                         </button>
                         <button
                           onClick={() => { if (active) toggleServiceType(svc.id, svc.name); }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!active ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                          className={`px-2.5 py-0.5 rounded-lg text-xs font-bold transition-all ${!active ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
                           No
                         </button>
                       </div>
@@ -814,13 +814,13 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   );
                 })}
                 {serviceTypes.length === 0 && (
-                  <p className="text-sm text-slate-400 col-span-2">No hay tipos de servicio creados aún.</p>
+                  <p className="text-xs text-slate-400 col-span-2">No hay tipos de servicio creados aún.</p>
                 )}
               </div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4">
+            <div className="bg-slate-50 rounded-lg p-2">
               <p className="text-xs text-slate-500 font-medium mb-2">RESUMEN DEL CONDUCTOR</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-1">
                 <div className="text-center"><p className="text-lg font-bold text-slate-900">{driver.total_rides || 0}</p><p className="text-xs text-slate-400">Viajes</p></div>
                 <div className="text-center"><p className="text-lg font-bold text-emerald-600">${totalEarnings.toFixed(0)}</p><p className="text-xs text-slate-400">Ganancias</p></div>
                 <div className="text-center"><p className="text-lg font-bold text-amber-600">{driver.rating || 5} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /></p><p className="text-xs text-slate-400">Calificación</p></div>
@@ -828,8 +828,8 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             </div>
           </TabsContent>
 
-          <TabsContent value="banking" className="mt-4 space-y-4">
-            <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-700 mb-2">
+          <TabsContent value="banking" className="mt-4 space-y-0.5">
+            <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-700 mb-2">
               Datos para transferencias de pago al conductor.
             </div>
             <div><Label>Titular de la cuenta</Label><Input value={editDriver.bank_holder || ""} onChange={e => update("bank_holder", e.target.value)} placeholder="Nombre completo del titular" /></div>
@@ -838,10 +838,10 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             <div><Label>CLABE interbancaria</Label><Input value={editDriver.bank_clabe || ""} onChange={e => update("bank_clabe", e.target.value)} placeholder="18 dígitos" maxLength={18} /></div>
           </TabsContent>
 
-          <TabsContent value="docs" className="mt-4 space-y-3">
-            <p className="text-xs text-slate-500 bg-blue-50 rounded-xl px-4 py-2.5">Documentos personales del conductor. Los documentos de cada vehículo están en la pestaña <strong>Vehículos</strong>.</p>
+          <TabsContent value="docs" className="mt-4 space-y-1">
+            <p className="text-xs text-slate-500 bg-blue-50 rounded-lg px-2.5 py-0.5.5">Documentos personales del conductor. Los documentos de cada vehículo están en la pestaña <strong>Vehículos</strong>.</p>
             {/* Summary bar */}
-            <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2.5 text-xs text-slate-600">
+            <div className="flex items-center gap-1 bg-slate-50 rounded-lg px-2.5 py-0.5.5 text-xs text-slate-600">
               <span className="text-emerald-600 font-semibold">✓ {Object.values(docApproved).filter(Boolean).length} aprobados</span>
               <span>·</span>
               <span className="text-red-500 font-semibold">✗ {Object.values(docRejected).filter(Boolean).length} rechazados</span>
@@ -850,7 +850,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             </div>
 
             {!canApproveDriver && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-700">
                 ⚠️ Aprueba todos los documentos requeridos antes de aprobar al conductor.
               </div>
             )}
@@ -861,14 +861,14 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               const expiry = docExpiries[doc.key] || "";
               const expiryDays = expiry ? Math.ceil((new Date(expiry) - new Date()) / 86400000) : null;
               return (
-                <div key={doc.key} className={`p-3 rounded-xl border-2 transition-all ${isApproved ? "border-emerald-300 bg-emerald-50" : isRejected ? "border-red-200 bg-red-50" : docUrl ? "border-amber-200 bg-amber-50" : "border-slate-100"}`}>
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
+                <div key={doc.key} className={`p-2 rounded-lg border-2 transition-all ${isApproved ? "border-emerald-300 bg-emerald-50" : isRejected ? "border-red-200 bg-red-50" : docUrl ? "border-amber-200 bg-amber-50" : "border-slate-100"}`}>
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {isApproved ? <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                         : isRejected ? <X className="w-4 h-4 text-red-500 flex-shrink-0" />
                         : docUrl ? <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
                         : <X className="w-4 h-4 text-slate-300 flex-shrink-0" />}
-                      <span className="text-sm font-medium text-slate-700">{doc.label}</span>
+                      <span className="text-xs font-medium text-slate-700">{doc.label}</span>
                       {doc.required && <span className="text-[10px] text-red-500">*</span>}
                       {isApproved && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Aprobado</span>}
                       {isRejected && <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">Rechazado</span>}
@@ -907,7 +907,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                     </div>
                   </div>
                   {/* Vigencia del documento personal */}
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-1">
                     <span className="text-[10px] text-slate-400">Vigencia:</span>
                     <input type="date" value={expiry}
                       onChange={e => setDocExpiries(prev => ({ ...prev, [doc.key]: e.target.value }))}
@@ -918,11 +918,11 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               );
             })}
             {dynamicDocs.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-6">Configure documentos requeridos en la sección de Configuración.</p>
+              <p className="text-xs text-slate-400 text-center py-6">Configure documentos requeridos en la sección de Configuración.</p>
             )}
           </TabsContent>
 
-          <TabsContent value="ratings" className="mt-4 space-y-4">
+          <TabsContent value="ratings" className="mt-4 space-y-0.5">
             {(() => {
               const ratedRides = rides.filter(r => r.driver_id === driver?.id && (r.admin_rating > 0 || r.passenger_rating_for_driver > 0));
               const avgAdmin = ratedRides.filter(r => r.admin_rating > 0).length > 0
@@ -933,30 +933,30 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 : null;
               return (
                 <>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                  <div className="grid grid-cols-3 gap-1">
+                    <div className="bg-slate-50 rounded-lg p-2 text-center">
                       <p className="text-lg font-bold text-amber-600 flex items-center justify-center gap-1">{driver.rating || 5} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /></p>
                       <p className="text-xs text-slate-400">Calif. general</p>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <div className="bg-slate-50 rounded-lg p-2 text-center">
                       <p className="text-lg font-bold text-blue-600">{avgAdmin || "—"}</p>
                       <p className="text-xs text-slate-400">Por admin</p>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <div className="bg-slate-50 rounded-lg p-2 text-center">
                       <p className="text-lg font-bold text-violet-600">{avgPass || "—"}</p>
                       <p className="text-xs text-slate-400">Por pasajero</p>
                     </div>
                   </div>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {ratedRides.length === 0 && <p className="text-sm text-slate-400 text-center py-6">Sin calificaciones aún</p>}
+                  <div className="space-y-1 max-h-80 overflow-y-auto">
+                    {ratedRides.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Sin calificaciones aún</p>}
                     {ratedRides.map(r => (
-                      <div key={r.id} className="border border-slate-100 rounded-xl p-3 space-y-2">
+                      <div key={r.id} className="border border-slate-100 rounded-lg p-2 space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs text-slate-400">#{r.service_id || r.id?.slice(-6)}</span>
                           <span className="text-xs text-slate-400">{r.passenger_name}</span>
                         </div>
                         {r.admin_rating > 0 && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <span className="text-[10px] text-slate-400 w-16">Admin:</span>
                             <div className="flex items-center gap-0.5">
                               {[1,2,3,4,5].map(n => <Star key={n} className={`w-3.5 h-3.5 ${n <= r.admin_rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />)}
@@ -965,7 +965,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                           </div>
                         )}
                         {r.passenger_rating_for_driver > 0 && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <span className="text-[10px] text-slate-400 w-16">Pasajero:</span>
                             <div className="flex items-center gap-0.5">
                               {[1,2,3,4,5].map(n => <Star key={n} className={`w-3.5 h-3.5 ${n <= r.passenger_rating_for_driver ? "fill-violet-400 text-violet-400" : "text-slate-200"}`} />)}
@@ -982,7 +982,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-1 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800">
             {saving ? "Guardando..." : "Guardar cambios"}

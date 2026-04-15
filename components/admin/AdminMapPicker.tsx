@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -105,7 +107,7 @@ export default function AdminMapPicker({ open, onOpenChange, lat, lon, label, is
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden gap-0">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden gap-0">
         <DialogHeader className="px-5 pt-4 pb-2 border-b border-slate-100">
           <DialogTitle className="flex items-center gap-2 text-base">
             <MapPin className="w-4 h-4 text-slate-500" />

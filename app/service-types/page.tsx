@@ -1,8 +1,10 @@
 "use client";
+export const dynamic = 'force-dynamic';
 
 import React, { useState, useMemo } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -132,6 +134,192 @@ export default function ServiceTypes() {
 	};
 
 	return (
-		...existing code...
+		<Layout currentPageName="Service Types">
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-slate-900">Tipos de Servicio</h1>
+					<p className="text-sm text-slate-400 mt-0.5">Gestión de categorías y precios</p>
+				</div>
+
+				{categories.map(cat => (
+					<Card key={cat} className="border-0 shadow-sm overflow-hidden">
+						<div
+							onClick={() => toggleCategory(cat)}
+							className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
+						>
+							<div className="flex items-center gap-2">
+								{collapsedCategories[cat] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+								<h2 className="font-semibold text-slate-900">{cat}</h2>
+								<span className="text-xs bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 font-medium">{grouped[cat].length}</span>
+							</div>
+							<Button size="sm" variant="outline" className="rounded-lg text-xs h-8" onClick={(e) => { e.stopPropagation(); setEditingCat({ oldName: cat, newName: cat }); }}>
+								Renombrar
+							</Button>
+						</div>
+
+						{!collapsedCategories[cat] && (
+							<div className="p-4 space-y-3">
+								{grouped[cat].map(s => {
+									const Icon = iconMap[s.icon] || Car;
+									return (
+										<div key={s.id} className="bg-white rounded-lg border border-slate-200 p-4 flex items-start justify-between hover:shadow-sm transition-all">
+											<div className="flex gap-3 flex-1">
+												<div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: s.color + '20' }}>
+													<Icon className="w-5 h-5" style={{ color: s.color }} />
+												</div>
+												<div className="flex-1">
+													<p className="font-semibold text-slate-900">{s.name}</p>
+													<p className="text-xs text-slate-500 mt-0.5">{s.description || 'Sin descripción'}</p>
+													<div className="flex gap-2 mt-2">
+														<span className="text-xs bg-blue-50 text-blue-700 rounded px-2 py-1">${s.base_price.toFixed(2)} base</span>
+														<span className="text-xs bg-slate-50 text-slate-600 rounded px-2 py-1">${s.price_per_km.toFixed(2)}/km</span>
+														{!s.is_active && <span className="text-xs bg-red-50 text-red-700 rounded px-2 py-1">Inactivo</span>}
+													</div>
+												</div>
+											</div>
+											<div className="flex gap-2">
+												<Button size="sm" variant="outline" className="rounded-lg text-xs h-8" onClick={() => { setEditService(s); setShowDialog(true); }}>
+													<Pencil className="w-3 h-3" />
+												</Button>
+												<Button size="sm" variant="outline" className="rounded-lg text-xs h-8 text-red-600" onClick={() => handleDelete(s)}>
+													<Trash2 className="w-3 h-3" />
+												</Button>
+											</div>
+										</div>
+									);
+								})}
+								<Button size="sm" className="w-full rounded-lg text-xs h-9" onClick={() => openNew(cat)}>
+									<Plus className="w-3 h-3 mr-1" /> Agregar servicio
+								</Button>
+							</div>
+						)}
+					</Card>
+				))}
+
+				<Button className="w-full rounded-lg h-10" onClick={() => openNew()}>
+					<Plus className="w-4 h-4 mr-2" /> Nueva categoría
+				</Button>
+
+				{/* Edit Dialog */}
+				<Dialog open={showDialog} onOpenChange={setShowDialog}>
+					<DialogContent className="max-w-2xl rounded-2xl">
+						<DialogHeader>
+							<DialogTitle>{editService?.id ? 'Editar servicio' : 'Nuevo servicio'}</DialogTitle>
+						</DialogHeader>
+
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<Label className="text-xs font-medium mb-1.5 block">Nombre</Label>
+									<Input
+										placeholder="Taxi / Ejecutivo / Grúa..."
+										value={editService?.name || ''}
+										onChange={(e) => update('name', e.target.value)}
+										className="rounded-xl text-sm h-9"
+									/>
+								</div>
+								<div>
+									<Label className="text-xs font-medium mb-1.5 block">Categoría</Label>
+									<Input
+										placeholder="Transporte / Emergencia..."
+										value={editService?.category || ''}
+										onChange={(e) => update('category', e.target.value)}
+										className="rounded-xl text-sm h-9"
+									/>
+								</div>
+							</div>
+
+							<div>
+								<Label className="text-xs font-medium mb-1.5 block">Descripción</Label>
+								<Input
+									placeholder="Descripción del servicio..."
+									value={editService?.description || ''}
+									onChange={(e) => update('description', e.target.value)}
+									className="rounded-xl text-sm h-9"
+								/>
+							</div>
+
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<Label className="text-xs font-medium mb-1.5 block">Precio base ($)</Label>
+									<Input
+										type="number"
+										value={editService?.base_price || 0}
+										onChange={(e) => update('base_price', e.target.value)}
+										className="rounded-xl text-sm h-9"
+										min={0}
+										step={0.01}
+									/>
+								</div>
+								<div>
+									<Label className="text-xs font-medium mb-1.5 block">Precio por km ($)</Label>
+									<Input
+										type="number"
+										value={editService?.price_per_km || 0}
+										onChange={(e) => update('price_per_km', e.target.value)}
+										className="rounded-xl text-sm h-9"
+										min={0}
+										step={0.01}
+									/>
+								</div>
+							</div>
+
+							<div className="flex items-center gap-4">
+								<div className="flex-1">
+									<Label className="text-xs font-medium mb-1.5 block">Color</Label>
+									<Input
+										type="color"
+										value={editService?.color || '#3B82F6'}
+										onChange={(e) => update('color', e.target.value)}
+										className="rounded-xl text-sm h-9"
+									/>
+								</div>
+								<div className="flex-1">
+									<Label className="text-xs font-medium mb-1.5 block flex items-center gap-2">
+										Activo
+										<Switch checked={editService?.is_active} onCheckedChange={(v) => update('is_active', v)} />
+									</Label>
+								</div>
+							</div>
+						</div>
+
+						<DialogFooter>
+							<Button variant="outline" className="rounded-lg" onClick={() => setShowDialog(false)}>
+								Cancelar
+							</Button>
+							<Button className="rounded-lg" onClick={handleSave} disabled={saving}>
+								{saving ? 'Guardando...' : 'Guardar'}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+
+				{/* Rename Dialog */}
+				<Dialog open={!!editingCat} onOpenChange={(open) => !open && setEditingCat(null)}>
+					<DialogContent className="rounded-2xl">
+						<DialogHeader>
+							<DialogTitle>Renombrar categoría</DialogTitle>
+						</DialogHeader>
+						<div>
+							<Label className="text-xs font-medium mb-1.5 block">Nuevo nombre</Label>
+							<Input
+								value={editingCat?.newName || ''}
+								onChange={(e) => setEditingCat({ ...editingCat, newName: e.target.value })}
+								className="rounded-xl text-sm h-9"
+								placeholder="Nuevo nombre..."
+							/>
+						</div>
+						<DialogFooter>
+							<Button variant="outline" className="rounded-lg" onClick={() => setEditingCat(null)}>
+								Cancelar
+							</Button>
+							<Button className="rounded-lg" onClick={handleRenameCategory} disabled={catSaving}>
+								{catSaving ? 'Guardando...' : 'Guardar'}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			</div>
+		</Layout>
 	);
 }

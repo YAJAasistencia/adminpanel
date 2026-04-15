@@ -401,15 +401,15 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nuevo viaje</DialogTitle>
+          <DialogTitle className="text-base">Nuevo viaje</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <div className="space-y-1 py-1">
 
           {/* PASO 1: Categoría */}
           <div>
-            <Label>Categoría *</Label>
+            <Label className="text-xs text-xs">Categoría *</Label>
             <Select value={selectedCategory} onValueChange={(v) => {
               setSelectedCategory(v);
               // Reset service if it doesn't belong to new category
@@ -428,7 +428,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           {/* PASO 2: Tipo de servicio (subcategoría) */}
           <div>
-            <Label>Tipo de servicio *</Label>
+            <Label className="text-xs text-xs">Tipo de servicio *</Label>
             <Select
               value={form.service_type_name}
               onValueChange={handleServiceChange}
@@ -453,7 +453,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               </p>
               {selectedServiceType.questionnaire.map((q, i) => (
                 <div key={i}>
-                  <Label className="text-amber-800">{q.question}{q.required && " *"}</Label>
+                  <Label className="text-xs text-amber-800">{q.question}{q.required && " *"}</Label>
                   <Select
                     value={questionnaireAnswers[i] || ""}
                     onValueChange={v => setQuestionnaireAnswers(prev => ({ ...prev, [i]: v }))}
@@ -480,7 +480,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               </p>
               {selectedServiceType.custom_fields.map(field => (
                 <div key={field.key}>
-                  <Label className="text-violet-800">{field.label}{field.required && " *"}</Label>
+                  <Label className="text-xs text-violet-800">{field.label}{field.required && " *"}</Label>
                   {field.type === "select" ? (
                     <Select
                       value={customFieldAnswers[field.key] || ""}
@@ -511,11 +511,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Nombre del pasajero *</Label>
+              <Label className="text-xs text-xs">Nombre del pasajero *</Label>
               <Input value={form.passenger_name} onChange={e => update("passenger_name", e.target.value)} placeholder="Nombre completo" />
             </div>
             <div>
-              <Label>Teléfono</Label>
+              <Label className="text-xs text-xs">Teléfono</Label>
               <Input
                 value={form.passenger_phone}
                 onChange={e => update("passenger_phone", e.target.value)}
@@ -527,7 +527,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           {/* Assignment mode */}
           <div>
-            <Label>Modo de asignación</Label>
+            <Label className="text-xs text-xs">Modo de asignación</Label>
             <div className="flex gap-2 mt-1">
               <button
                 onClick={() => update("assignment_mode", "auto")}
@@ -556,7 +556,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           </div>
 
           <div>
-            <Label>Dirección de recogida *</Label>
+            <Label className="text-xs text-xs">Dirección de recogida *</Label>
             <AddressSearch
               value={form.pickup_address}
               onChange={handlePickupChange}
@@ -580,7 +580,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           </div>
           {!isVial && (
             <div>
-              <Label>Dirección de destino {destinationRequired ? <span className="text-red-500 font-medium">*</span> : <span className="text-slate-400 font-normal">(opcional)</span>}</Label>
+              <Label className="text-xs text-xs">Dirección de destino {destinationRequired ? <span className="text-red-500 font-medium">*</span> : <span className="text-slate-400 font-normal">(opcional)</span>}</Label>
               <AddressSearch
                 value={form.dropoff_address}
                 onChange={(addr, coords) => {
@@ -616,7 +616,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           />
 
           <div>
-            <Label>Método de pago *</Label>
+            <Label className="text-xs text-xs">Método de pago *</Label>
             <Select value={form.payment_method} onValueChange={v => update("payment_method", v)}>
               <SelectTrigger className={!form.payment_method ? "border-red-300" : ""}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent>
@@ -629,7 +629,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           {/* Gasoline special field */}
           {isGasolineService && (
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-3">
-              <Label className="text-amber-800 font-semibold">⛽ Litros de gasolina</Label>
+              <Label className="text-xs text-amber-800 font-semibold">⛽ Litros de gasolina</Label>
               <div className="flex gap-2 mt-2">
                 {[5, 10].map(liters => (
                   <button
@@ -651,7 +651,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               <p className="text-xs font-semibold text-blue-800">💼 Costos corporativos</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-blue-800">Costo empresa <span className="text-red-500">*</span></Label>
+                  <Label className="text-xs text-blue-800">Costo empresa <span className="text-red-500">*</span></Label>
                   <p className="text-[10px] text-slate-400 mb-1">Lo que se factura a la empresa</p>
                   <Input
                     type="number"
@@ -666,7 +666,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   />
                 </div>
                 <div>
-                  <Label className="text-emerald-700">Pago al conductor</Label>
+                  <Label className="text-xs text-emerald-700">Pago al conductor</Label>
                   <p className="text-[10px] text-slate-400 mb-1">Solo el conductor ve este monto</p>
                   <Input
                     type="number"
@@ -684,16 +684,16 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Distancia (km)</Label>
+                  <Label className="text-xs text-xs">Distancia (km)</Label>
                   <Input type="number" value={form.distance_km} onChange={e => handleDistanceChange(e.target.value)} placeholder="0" />
                 </div>
                 <div>
-                  <Label>Duración (min)</Label>
+                  <Label className="text-xs text-xs">Duración (min)</Label>
                   <Input type="number" value={form.duration_minutes} onChange={e => update("duration_minutes", e.target.value)} placeholder="0" />
                 </div>
               </div>
               <div>
-                <Label>Costo extra empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
+                <Label className="text-xs text-xs">Costo extra empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
                 <Input type="number" value={form.extra_company_cost} onChange={e => update("extra_company_cost", e.target.value)} placeholder="$0" className="mt-1" />
               </div>
             </div>
@@ -701,20 +701,20 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
             <>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Precio estimado</Label>
+                  <Label className="text-xs text-xs">Precio estimado</Label>
                   <Input type="number" value={form.estimated_price} onChange={e => update("estimated_price", e.target.value)} placeholder="$0" />
                 </div>
                 <div>
-                  <Label>Distancia (km)</Label>
+                  <Label className="text-xs text-xs">Distancia (km)</Label>
                   <Input type="number" value={form.distance_km} onChange={e => handleDistanceChange(e.target.value)} placeholder="0" />
                 </div>
                 <div>
-                  <Label>Duración (min)</Label>
+                  <Label className="text-xs text-xs">Duración (min)</Label>
                   <Input type="number" value={form.duration_minutes} onChange={e => update("duration_minutes", e.target.value)} placeholder="0" />
                 </div>
               </div>
               <div>
-                <Label>Costo extra para empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
+                <Label className="text-xs text-xs">Costo extra para empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
                 <Input type="number" value={form.extra_company_cost} onChange={e => update("extra_company_cost", e.target.value)} placeholder="$0" className="mt-1" />
                 {form.extra_company_cost && parseFloat(form.extra_company_cost) > 0 && (
                   <p className="text-xs text-blue-600 mt-1">
@@ -743,7 +743,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           {/* Corporate */}
           <div>
-            <Label>Empresa (corporativo)</Label>
+            <Label className="text-xs text-xs">Empresa (corporativo)</Label>
             <Select value={form.company_id || "__none__"} onValueChange={handleCompanyChange}>
               <SelectTrigger className="mt-1"><SelectValue placeholder="Normal (sin empresa)" /></SelectTrigger>
               <SelectContent>
@@ -758,7 +758,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               <p className="text-xs font-semibold text-indigo-800">📋 Campos de folio requeridos</p>
               {(selectedCompany.folio_fields || []).map((field, idx) => (
                 <div key={idx}>
-                  <Label className="text-indigo-800">{field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}</Label>
+                  <Label className="text-xs text-indigo-800">{field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}</Label>
                   <Input
                     value={folioAnswers[field.key] || ""}
                     onChange={e => setFolioAnswers(prev => ({ ...prev, [field.key]: e.target.value }))}
@@ -850,7 +850,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
             {form.is_scheduled && (
               <div className="mt-2 grid grid-cols-2 gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                 <div>
-                  <Label className="text-blue-800">Fecha *</Label>
+                  <Label className="text-xs text-blue-800">Fecha *</Label>
                   <Input
                     type="date"
                     value={form.scheduled_date}
@@ -860,7 +860,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   />
                 </div>
                 <div>
-                  <Label className="text-blue-800">Hora *</Label>
+                  <Label className="text-xs text-blue-800">Hora *</Label>
                   <Input
                     type="time"
                     value={form.scheduled_time}
@@ -878,7 +878,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           </div>
 
           <div>
-            <Label>Notas</Label>
+            <Label className="text-xs text-xs">Notas</Label>
             <Textarea value={form.notes} onChange={e => update("notes", e.target.value)} placeholder="Instrucciones especiales..." rows={2} />
           </div>
         </div>
