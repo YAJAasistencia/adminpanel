@@ -40,11 +40,15 @@ export default function Liquidaciones() {
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
     queryFn: () => supabaseApi.drivers.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: () => supabaseApi.settings.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const settings = settingsList[0];
   const commissionPct = settings?.platform_commission_pct || 20;
@@ -55,6 +59,8 @@ export default function Liquidaciones() {
       const rides = await supabaseApi.rideRequests.list("-created_date", 5000);
       return rides.filter(r => r.status === "completed");
     },
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { start: weekStart, end: weekEnd } = getWeekBounds(weekOffset);
