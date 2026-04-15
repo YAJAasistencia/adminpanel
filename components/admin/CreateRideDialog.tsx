@@ -401,11 +401,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">Nuevo viaje</DialogTitle>
+          <DialogTitle>Nuevo viaje</DialogTitle>
         </DialogHeader>
-        <div className="space-y-1 py-1">
+        <div className="space-y-1.5 py-1">
 
           {/* PASO 1: Categoría */}
           <div>

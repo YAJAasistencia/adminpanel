@@ -217,7 +217,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1">
             <FileText className="w-5 h-5" />
