@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,57 +25,66 @@ export default function CitiesPage() {
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("cities").select("*");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cities.list(),
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("drivers").select("*");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.drivers.list(),
   });
 
   const getDriverCount = (cityId: string) => drivers.filter((d: any) => d.city_id === cityId).length;
 
   const handleSave = async () => {
     setSaving(true);
-    const data = {
-      ...editCity,
-      center_lat: editCity.center_lat ? parseFloat(editCity.center_lat) : undefined,
-      center_lon: editCity.center_lon ? parseFloat(editCity.center_lon) : undefined,
-    };
-    if (editCity.id) {
-      await supabase.from("cities").update(data).eq("id", editCity.id);
-      toast.success("Ciudad actualizada");
-    } else {
-      await supabase.from("cities").insert(data);
-      toast.success("Ciudad creada");
+    try {
+      const data = {
+        ...editCity,
+        center_lat: editCity.center_lat ? parseFloat(editCity.center_lat) : undefined,
+        center_lon: editCity.center_lon ? parseFloat(editCity.center_lon) : undefined,
+      };
+      if (editCity.id) {
+        await supabaseApi.cities.update(editCity.id, data);
+        toast.success("Ciudad actualizada");
+      } else {
+        await supabaseApi.cities.create(data);
+        toast.success("Ciudad creada");
+      }
+      queryClient.invalidateQueries({ queryKey: ["cities"] });
+      setShowDialog(false);
+      setEditCity(null);
+    } catch (error) {
+      toast.error("Error al guardar ciudad");
+      console.error(error);
+    } finally {
+      setSaving(false);
     }
-    queryClient.invalidateQueries({ queryKey: ["cities"] });
-    setSaving(false);
-    setShowDialog(false);
-    setEditCity(null);
   };
 
   const handleDelete = async (city: any) => {
-    await supabase.from("cities").delete().eq("id", city.id);
-    queryClient.invalidateQueries({ queryKey: ["cities"] });
-    toast.success("Ciudad eliminada");
+    try {
+      await supabaseApi.cities.delete(city.id);
+      queryClient.invalidateQueries({ queryKey: ["cities"] });
+      toast.success("Ciudad eliminada");
+    } catch (error) {
+      toast.error("Error al eliminar ciudad");
+      console.error(error);
+    }
   };
 
   const handleToggle = async (city: any) => {
-    await supabase.from("cities").update({ is_active: !city.is_active }).eq("id", city.id);
-    queryClient.invalidateQueries({ queryKey: ["cities"] });
+    try {
+      await supabaseApi.cities.update(city.id, { is_active: !city.is_active });
+      queryClient.invalidateQueries({ queryKey: ["cities"] });
+    } catch (error) {
+      toast.error("Error al actualizar ciudad");
+      console.error(error);
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <Layout currentPageName="Cities">
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Ciudades</h1>
@@ -161,6 +170,7 @@ export default function CitiesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </Layout>
   );
 }

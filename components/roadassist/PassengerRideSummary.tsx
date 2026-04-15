@@ -125,7 +125,14 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
   const pollRef = useRef(null);
 
   useEffect(() => {
-    supabase.from("AppSettings").select("*").then(({ data }) => { if (data?.[0]) setSettings(data[0]); }).catch(() => {});
+    (async () => {
+      try {
+        const { data } = await supabase.from("AppSettings").select("*");
+        if (data?.[0]) setSettings(data[0]);
+      } catch (err) {
+        // silently fail
+      }
+    })();
   }, []);
 
   const isCompleted = ride.status === "completed";

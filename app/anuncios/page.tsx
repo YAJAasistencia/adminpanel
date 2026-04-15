@@ -2,9 +2,9 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
-import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
+import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Megaphone, Plus, Pencil, Trash2, ImageIcon, Clock, Users } from "lucide-react";
+import { Megaphone, Plus, Pencil, Trash2, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { formatCDMX } from "@/components/shared/dateUtils";
 
@@ -26,41 +26,27 @@ const EMPTY = {
   show_from: "", expires_at: "", is_active: true,
 };
 
-export default function AnunciosPage() {
+function AnunciosContent() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
-  // Adaptación: Consultas a Supabase en vez de base44
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("announcements").select("*").order("created_date", { ascending: false }).limit(100);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.announcements.list(),
     refetchInterval: 30000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("cities").select("*");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cities.list(),
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("service_types").select("*");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.serviceTypes.list(),
   });
 
   const openCreate = () => { setForm(EMPTY); setEditId(null); setOpen(true); };
@@ -78,52 +64,57 @@ export default function AnunciosPage() {
     setOpen(true);
   };
 
-  // NOTA: Adaptar handleUploadImage a tu integración de almacenamiento en Supabase
-  const handleUploadImage = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    // Aquí deberías subir la imagen a Supabase Storage y obtener la URL
-    // Ejemplo básico:
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const { data, error } = await supabase.storage.from('anuncios').upload(fileName, file);
-    if (error) { toast.error("Error al subir imagen"); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from('anuncios').getPublicUrl(fileName);
-    setForm(f => ({ ...f, image_url: urlData?.publicUrl || "" }));
-    setUploading(false);
-  };
-
   const handleSave = async () => {
     if (!form.title.trim() || !form.body.trim()) { toast.error("Título y mensaje son obligatorios"); return; }
     setSaving(true);
-    const data = {
-      ...form,
-      show_from: form.show_from ? new Date(form.show_from).toISOString() : null,
-      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
-    };
-    if (editId) {
-      await supabase.from("announcements").update(data).eq("id", editId);
-      toast.success("Anuncio actualizado");
-    } else {
-      await supabase.from("announcements").insert([data]);
-      toast.success("Anuncio creado");
+    try {
+      const data = {
+        title: form.title,
+        body: form.body,
+        image_url: form.image_url,
+        target_audience: form.target_audience,
+        filter_city_id: form.filter_city_id || null,
+        filter_city_name: form.filter_city_name || null,
+        filter_service_type_id: form.filter_service_type_id || null,
+        filter_service_type_name: form.filter_service_type_name || null,
+        show_from: form.show_from ? new Date(form.show_from).toISOString() : null,
+        expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+        is_active: form.is_active,
+      };
+      if (editId) {
+        await supabaseApi.announcements.update(editId, data);
+        toast.success("Anuncio actualizado");
+      } else {
+        await supabaseApi.announcements.create(data);
+        toast.success("Anuncio creado");
+      }
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+      setSaving(false);
+      setOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Error al guardar");
+      setSaving(false);
     }
-    qc.invalidateQueries({ queryKey: ["announcements"] });
-    setSaving(false);
-    setOpen(false);
   };
 
-  const handleDelete = async (a) => {
+  const handleDelete = async (a: any) => {
     if (!window.confirm(`¿Eliminar el anuncio "${a.title}"?`)) return;
-    await supabase.from("announcements").delete().eq("id", a.id);
-    qc.invalidateQueries({ queryKey: ["announcements"] });
-    toast.success("Anuncio eliminado");
+    try {
+      await supabaseApi.announcements.delete(a.id);
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+      toast.success("Anuncio eliminado");
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar");
+    }
   };
 
-  const handleToggle = async (a) => {
-    await supabase.from("announcements").update({ is_active: !a.is_active }).eq("id", a.id);
-    qc.invalidateQueries({ queryKey: ["announcements"] });
+  const handleToggle = async (a: any) => {
+    try {
+      await supabaseApi.announcements.update(a.id, { is_active: !a.is_active });
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+    } catch (error: any) {
+      toast.error(error.message || "Error al actualizar");
+    }
   };
 
   const now = new Date();
@@ -148,8 +139,7 @@ export default function AnunciosPage() {
   };
 
   return (
-    <Layout currentPageName="Anuncios">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
@@ -204,14 +194,15 @@ export default function AnunciosPage() {
                 <Textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Describe el anuncio..." rows={3} className="mt-1" maxLength={500} />
               </div>
               <div>
-                <Label>Imagen (opcional)</Label>
+                <Label>Imagen (URL)</Label>
                 <div className="mt-1 space-y-2">
                   {form.image_url && <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-xl border" />}
-                  <label className="flex items-center gap-2 cursor-pointer border border-dashed border-slate-300 rounded-xl px-4 py-3 hover:bg-slate-50 text-sm text-slate-500">
-                    <ImageIcon className="w-4 h-4" />
-                    {uploading ? "Subiendo..." : "Seleccionar imagen"}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={uploading} />
-                  </label>
+                  <Input 
+                    value={form.image_url} 
+                    onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} 
+                    placeholder="Pega la URL de la imagen aquí (ej: https://...)"
+                    className="text-xs"
+                  />
                   {form.image_url && <Button variant="ghost" size="sm" className="text-red-400 h-7" onClick={() => setForm(f => ({ ...f, image_url: "" }))}>Quitar imagen</Button>}
                 </div>
               </div>
@@ -282,7 +273,14 @@ export default function AnunciosPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+    </div>
+  );
+}
+
+export default function AnunciosPage() {
+  return (
+    <Layout currentPageName="Anuncios">
+      <AnunciosContent />
     </Layout>
   );
 }

@@ -29,20 +29,25 @@ Accede a la app en [http://localhost:3301](http://localhost:3301)
 
 Nota:
 - El proyecto usa por defecto el puerto `3301` para `dev` y `start`.
-- Si necesitas otro puerto, puedes sobrescribirlo con `PORT`.
+- Si necesitas otro puerto, puedes usar:
 	```bash
-	PORT=3000 npm run dev
+	npm run dev:3000  # para puerto 3000
+	PORT=3000 npm run dev  # para otro puerto
 	```
 
 ---
 
 ## 🛠️ Tecnologías principales
 
-- Next.js 13+
+- Next.js 13.5+
 - TypeScript
 - Supabase (auth, base de datos, storage)
-- TailwindCSS
-- React Query
+- TailwindCSS 3.x
+- React Query (@tanstack/react-query)
+- Radix UI + shadcn/ui
+- Leaflet (mapas)
+- Framer Motion (animaciones)
+- Sonner (notificaciones)
 
 ---
 
@@ -50,20 +55,17 @@ Nota:
 
 Puedes desplegar este panel en Vercel, Netlify o cualquier plataforma compatible con Next.js. Solo asegúrate de configurar las variables de entorno de Supabase en el dashboard de tu proveedor.
 
-### Accesos principales (producción y local)
+### Rutas principales disponibles
 
-- Landing principal: `/`
-- Login administrador: `/admin-login`
-- Panel (dashboard): `/dashboard`
-- App conductor: `/driver-app`
-- App pasajero: `/road-assist-app`
-
-### Accesos amigables configurados
-
-- `/admin` → `/admin-login`
-- `/panel` → `/dashboard`
-- `/conductor` → `/driver-app`
-- `/pasajero` → `/road-assist-app`
+- **Landing:** `/`
+- **Admin Login:** `/admin-login`
+- **Dashboard:** `/dashboard`
+- **Conductor:** `/driver-app`
+- **Road Assist (Pasajero):** `/road-assist-app`
+- **Analytics:** `/analytics`
+- **Chats:** `/chats`
+- **Soporte:** `/support-tickets`
+- **Configuración:** `/settings`
 
 ### Vercel (variables requeridas)
 
@@ -72,9 +74,7 @@ Configura estas variables en Project Settings > Environment Variables:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-### Vercel con correo (CLI)
-
-Si quieres publicar usando tu cuenta de Vercel por correo:
+### Despliegue con Vercel CLI
 
 1. Login con correo:
 	```bash
@@ -97,7 +97,8 @@ Si quieres publicar usando tu cuenta de Vercel por correo:
 Luego despliega y verifica:
 
 1. `https://tu-dominio/` (landing)
-2. `https://tu-dominio/admin` (login admin)
+2. `https://tu-dominio/admin-login` (login admin)
+3. `https://tu-dominio/dashboard` (panel)
 3. `https://tu-dominio/panel` (dashboard)
 4. `https://tu-dominio/conductor` (app conductor)
 5. `https://tu-dominio/pasajero` (app pasajero)

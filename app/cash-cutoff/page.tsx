@@ -21,6 +21,41 @@ import moment from "moment";
 import { formatCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
+interface Ride {
+  id: string;
+  driver_id: string | null;
+  driver_name: string | null;
+  payment_method: string;
+  driver_earnings: number;
+  platform_commission: number;
+  final_price: number | null;
+  estimated_price: number | null;
+  status: string;
+  requested_at: string | null;
+  created_date: string;
+}
+
+interface Driver {
+  id: string;
+  name: string;
+  [key: string]: any;
+}
+
+interface Cutoff {
+  id: string;
+  cutoff_date: string;
+  [key: string]: any;
+}
+
+interface DriverStats {
+  driver_id: string;
+  driver_name: string;
+  cash: { count: number; earnings: number; commission: number };
+  card: { count: number; earnings: number; commission: number };
+  transfer: { count: number; earnings: number; commission: number };
+  rides: Ride[];
+}
+
 export default function CashCutoffPage() {
   const queryClient = useQueryClient();
   const [dateFrom, setDateFrom] = useState(moment().subtract(7, "days").format("YYYY-MM-DD"));
@@ -37,7 +72,7 @@ export default function CashCutoffPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("ride_requests").select("*").order("created_date", { ascending: false }).limit(2000);
       if (error) throw error;
-      return data || [];
+      return (data || []) as Ride[];
     },
   });
 
@@ -46,7 +81,7 @@ export default function CashCutoffPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("drivers").select("*");
       if (error) throw error;
-      return data || [];
+      return (data || []) as Driver[];
     },
   });
 
@@ -55,7 +90,7 @@ export default function CashCutoffPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("cash_cutoffs").select("*").order("cutoff_date", { ascending: false }).limit(50);
       if (error) throw error;
-      return data || [];
+      return (data || []) as Cutoff[];
     },
   });
 
@@ -66,20 +101,21 @@ export default function CashCutoffPage() {
   }), [rides, dateFrom, dateTo]);
 
   const driverStats = useMemo(() => {
-    const map = {};
-    filteredRides.forEach(r => {
+    const map: Record<string, DriverStats> = {};
+    filteredRides.forEach((r: Ride) => {
       const id = r.driver_id || "sin_asignar";
       const name = r.driver_name || "Sin conductor";
       if (!map[id]) {
         map[id] = {
-          driver_id: id, driver_name: name,
+          driver_id: id, 
+          driver_name: name,
           cash: { count: 0, earnings: 0, commission: 0 },
           card: { count: 0, earnings: 0, commission: 0 },
           transfer: { count: 0, earnings: 0, commission: 0 },
           rides: [],
         };
       }
-      const method = ["cash", "card", "transfer"].includes(r.payment_method) ? r.payment_method : "cash";
+      const method = (["cash", "card", "transfer"].includes(r.payment_method) ? r.payment_method : "cash") as keyof Omit<DriverStats, "driver_id" | "driver_name" | "rides">;
       map[id][method].count++;
       map[id][method].earnings += r.driver_earnings || 0;
       map[id][method].commission += r.platform_commission || 0;
@@ -88,7 +124,7 @@ export default function CashCutoffPage() {
     return Object.values(map);
   }, [filteredRides]);
 
-  const filtered = driverStats.filter(d => {
+  const filtered = driverStats.filter((d: DriverStats) => {
     if (driverFilter !== "all" && d.driver_id !== driverFilter) return false;
     if (search && !d.driver_name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;

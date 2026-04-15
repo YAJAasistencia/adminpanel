@@ -14,6 +14,38 @@ import { toast } from "sonner";
 import { Plus, Trash2, DollarSign, AlertCircle, Save, Calendar, Lock } from "lucide-react";
 import AddressSearch from "@/components/admin/AddressSearch";
 
+interface RideFormData {
+  passenger_name: string;
+  passenger_phone: string;
+  pickup_address: string;
+  dropoff_address: string;
+  pickup_lat: number | null;
+  pickup_lon: number | null;
+  dropoff_lat: number | null;
+  dropoff_lon: number | null;
+  notes: string;
+  payment_method: string;
+  estimated_price: string | number;
+  company_price: string | number;
+  driver_earnings_base: string | number;
+  distance_km: string | number;
+  duration_minutes: string | number;
+  service_type_name: string;
+  service_type_id: string;
+  driver_id: string;
+  driver_name: string;
+  city_id: string;
+  city_name: string;
+  require_proof_photo: boolean;
+  require_admin_approval: boolean;
+  show_phone_to_driver: boolean;
+  is_scheduled: boolean;
+  scheduled_date: string;
+  scheduled_time: string;
+  commission_rate: string | number;
+  paid_by: string;
+}
+
 const CHARGE_TYPES = [
   { value: "peaje", label: "🛣️ Peaje" },
   { value: "espera", label: "⏱️ Tiempo de espera" },
@@ -28,7 +60,37 @@ const PAYMENT_METHODS = [
 ];
 
 export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState<RideFormData>({
+    passenger_name: "",
+    passenger_phone: "",
+    pickup_address: "",
+    dropoff_address: "",
+    pickup_lat: null,
+    pickup_lon: null,
+    dropoff_lat: null,
+    dropoff_lon: null,
+    notes: "",
+    payment_method: "cash",
+    estimated_price: "",
+    company_price: "",
+    driver_earnings_base: "",
+    distance_km: "",
+    duration_minutes: "",
+    service_type_name: "",
+    service_type_id: "",
+    driver_id: "",
+    driver_name: "",
+    city_id: "",
+    city_name: "",
+    require_proof_photo: false,
+    require_admin_approval: false,
+    show_phone_to_driver: true,
+    is_scheduled: false,
+    scheduled_date: "",
+    scheduled_time: "",
+    commission_rate: 20,
+    paid_by: "company",
+  });
   const [extraCharges, setExtraCharges] = useState([]);
   const [saving, setSaving] = useState(false);
   const [newCharge, setNewCharge] = useState({ concept: "", amount: "", type: "peaje", paid_to_driver: false });
@@ -111,7 +173,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
       scheduled_time: scheduled_time_val,
       commission_rate: ride.commission_rate ?? settings?.platform_commission_pct ?? 20,
       paid_by: ride.paid_by || "company",
-    });
+    } as RideFormData);
     setExtraCharges(Array.isArray(ride.extra_charges) ? ride.extra_charges : []);
   }, [ride, settings]);
 
@@ -119,22 +181,22 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
   // ── Lógica financiera ─────────────────────────────────────────────────────
   // Precio estimado = fijo (lo que se le cobra a empresa/cliente, no cambia)
-  const estimatedPrice = parseFloat(form.estimated_price) || 0;
+  const estimatedPrice = Number(form.estimated_price) || 0;
 
   // Extras: suma total de todos los extras agregados
-  const totalExtras = extraCharges.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalExtras = extraCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
   // Extras marcados "para el conductor" → van directo al conductor sin descontar comisión
-  const extrasParaConductor = extraCharges.filter(c => c.paid_to_driver).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const extrasParaConductor = extraCharges.filter(c => c.paid_to_driver).reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
   // Extras que sí llevan comisión
-  const extrasConComision = extraCharges.filter(c => !c.paid_to_driver).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const extrasConComision = extraCharges.filter(c => !c.paid_to_driver).reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
   // Precio final = precio estimado + TODOS los extras
   const precioFinal = estimatedPrice + totalExtras;
 
   // Tasa de comisión
-  const commissionRate = parseFloat(form.commission_rate) || settings?.platform_commission_pct || 20;
+  const commissionRate = Number(form.commission_rate) || settings?.platform_commission_pct || 20;
 
   // Base comisionable = precio estimado + extras que llevan comisión
   const baseComisionable = estimatedPrice + extrasConComision;
@@ -184,7 +246,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const updates = {
+    const updates: Record<string, any> = {
       passenger_name: form.passenger_name,
       passenger_phone: form.passenger_phone,
       pickup_address: form.pickup_address,
@@ -220,9 +282,9 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
       _admin_edit: true,
     };
 
-    if (form.company_price !== "") updates.company_price = parseFloat(form.company_price) || 0;
-    if (form.distance_km !== "") updates.distance_km = parseFloat(form.distance_km) || 0;
-    if (form.duration_minutes !== "") updates.duration_minutes = parseFloat(form.duration_minutes) || 0;
+    if (form.company_price !== "") updates.company_price = Number(form.company_price) || 0;
+    if (form.distance_km !== "") updates.distance_km = Number(form.distance_km) || 0;
+    if (form.duration_minutes !== "") updates.duration_minutes = Number(form.duration_minutes) || 0;
 
     await supabaseApi.rideRequests.update(ride.id, updates);
     toast.success("Viaje actualizado correctamente");
@@ -295,6 +357,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
             <div className="space-y-1">
               <Label className="text-xs">Dirección de origen</Label>
               <AddressSearch
+                label="Origen"
                 value={form.pickup_address || ""}
                 onChange={(address, coords) => setForm(f => ({
                   ...f,
@@ -307,6 +370,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
             <div className="space-y-1">
               <Label className="text-xs">Dirección de destino</Label>
               <AddressSearch
+                label="Destino"
                 value={form.dropoff_address || ""}
                 onChange={(address, coords) => setForm(f => ({
                   ...f,

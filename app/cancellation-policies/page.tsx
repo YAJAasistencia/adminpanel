@@ -2,9 +2,10 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
-import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
+import { toast } from "sonner";
+import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,34 +37,43 @@ export default function CancellationPoliciesPage() {
 
   const { data: policies = [] } = useQuery({
     queryKey: ["policies"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("cancellation_policies").select("*");
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cancellationPolicies.list(),
   });
 
   const handleSave = async () => {
-    setSaving(true);
-    const data = {
-      ...editPolicy,
-      fee_amount: parseFloat(editPolicy.fee_amount) || 0,
-      free_cancellation_minutes: parseInt(editPolicy.free_cancellation_minutes) || 0,
-    };
-    if (editPolicy.id) {
-      await supabase.from("cancellation_policies").update(data).eq("id", editPolicy.id);
-    } else {
-      await supabase.from("cancellation_policies").insert([data]);
+    try {
+      setSaving(true);
+      const data = {
+        ...editPolicy,
+        fee_amount: parseFloat(editPolicy.fee_amount) || 0,
+        free_cancellation_minutes: parseInt(editPolicy.free_cancellation_minutes) || 0,
+      };
+      if (editPolicy.id) {
+        await supabaseApi.cancellationPolicies.update(editPolicy.id, data);
+        toast.success("Política actualizada");
+      } else {
+        await supabaseApi.cancellationPolicies.create(data);
+        toast.success("Política creada");
+      }
+      queryClient.invalidateQueries({ queryKey: ["policies"] });
+      setSaving(false);
+      setShowDialog(false);
+      setEditPolicy(null);
+    } catch (error: any) {
+      toast.error(error.message || "Error al guardar");
+      setSaving(false);
     }
-    queryClient.invalidateQueries({ queryKey: ["policies"] });
-    setSaving(false);
-    setShowDialog(false);
-    setEditPolicy(null);
   };
 
-  const handleDelete = async (p) => {
-    await supabase.from("cancellation_policies").delete().eq("id", p.id);
-    queryClient.invalidateQueries({ queryKey: ["policies"] });
+  const handleDelete = async (p: any) => {
+    if (!window.confirm(`¿Eliminar la política "${p.name}"?`)) return;
+    try {
+      await supabaseApi.cancellationPolicies.delete(p.id);
+      queryClient.invalidateQueries({ queryKey: ["policies"] });
+      toast.success("Política eliminada");
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar");
+    }
   };
 
   const toggleStatus = (status) => {

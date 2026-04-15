@@ -20,6 +20,8 @@ const nextConfig = {
     // This is useful for pages with dynamic content that can't be prerendered
     ppr: false,
   },
+  // Agregar un manejador de errores durante la prerendering
+  staticPageGenerationTimeout: 0,
 };
 
 module.exports = nextConfig;

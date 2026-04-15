@@ -567,18 +567,69 @@ export const supabaseApi = {
       return data;
     },
     create: async (user: any) => {
-      const { data, error } = await supabase.from('admin_users').insert(user).select().single();
-      if (error) throw error;
-      return data;
+      // 1. Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: user.email?.trim().toLowerCase(),
+        password: user.password,
+        user_metadata: {
+          full_name: user.full_name,
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData?.user?.id) throw new Error('No user ID returned from Auth');
+
+      // 2. Create record in admin_users table
+      const adminUserData = {
+        id: authData.user.id,
+        email: user.email?.trim().toLowerCase(),
+        full_name: user.full_name,
+        role: user.role || 'operator',
+        allowed_pages: user.allowed_pages || [],
+        is_active: user.is_active !== false,
+        created_at: new Date().toISOString(),
+      };
+
+      const { data: userData, error: userError } = await supabase
+        .from('admin_users')
+        .insert(adminUserData)
+        .select()
+        .single();
+      
+      if (userError) throw userError;
+      return userData;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('admin_users').update(updates).eq('id', id).select().single();
+      // Remove password from updates to avoid storing it in DB
+      const { password, ...safeUpdates } = updates;
+
+      // If password is provided, update it in Auth
+      if (password) {
+        const { error: authError } = await supabase.auth.admin.updateUserById(id, {
+          password: password,
+        });
+        if (authError) throw authError;
+      }
+
+      // Update admin user record
+      const { data, error } = await supabase
+        .from('admin_users')
+        .update(safeUpdates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('admin_users').delete().eq('id', id);
-      if (error) throw error;
+      // 1. Delete from admin_users table
+      const { error: tableError } = await supabase.from('admin_users').delete().eq('id', id);
+      if (tableError) throw tableError;
+
+      // 2. Delete from Auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(id);
+      if (authError) throw authError;
+
       return { success: true };
     },
   },

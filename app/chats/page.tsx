@@ -4,31 +4,35 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { Send, MessageCircle, Search, User } from "lucide-react";
+import { Send, MessageCircle, Search } from "lucide-react";
 import { formatCDMX } from "@/components/shared/dateUtils";
+import { toast } from "sonner";
 
 export default function ChatsPage() {
-  const [selectedRideId, setSelectedRideId] = useState(null);
+  const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [showBlockedWordsSettings, setShowBlockedWordsSettings] = useState(false);
   const [newBlockedWord, setNewBlockedWord] = useState("");
-  const [blockedWords, setBlockedWords] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("chat_blocked_words") || "[]"); } catch { return []; }
+  const [blockedWords, setBlockedWords] = useState<string[]>(() => {
+    try { return typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("chat_blocked_words") || "[]") : []; } catch { return []; }
   });
-  const bottomRef = useRef(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   const saveBlockedWords = (words: string[]) => {
     setBlockedWords(words);
-    localStorage.setItem("chat_blocked_words", JSON.stringify(words));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("chat_blocked_words", JSON.stringify(words));
+    }
   };
 
   const addBlockedWord = () => {
@@ -44,14 +48,12 @@ export default function ChatsPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["ridesWithMessages"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ride_requests")
-        .select("*")
-        .in("status", ["assigned", "admin_approved", "en_route", "arrived", "in_progress"])
-        .order("updated_date", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data || [];
+      try {
+        return await supabaseApi.rideRequests.list();
+      } catch (error) {
+        console.error("Error fetching rides:", error);
+        return [];
+      }
     },
     refetchInterval: 5000,
   });
@@ -60,13 +62,18 @@ export default function ChatsPage() {
   const { data: allMessages = [] } = useQuery({
     queryKey: ["allMessages"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .order("created_date", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .order("created_date", { ascending: false })
+          .limit(500);
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        return [];
+      }
     },
     refetchInterval: 5000,
     staleTime: 0,
@@ -79,7 +86,7 @@ export default function ChatsPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "chat_messages" },
-        (payload) => {
+        () => {
           queryClient.invalidateQueries({ queryKey: ["allMessages"] });
         }
       )
@@ -101,11 +108,19 @@ export default function ChatsPage() {
       (m.sender_role === "driver" || m.sender_role === "passenger")
     );
     unread.forEach(async (m: any) => {
-      await supabase.from("chat_messages").update({ read_by_admin: true }).eq("id", m.id);
+      try {
+        await supabase.from("chat_messages").update({ read_by_admin: true }).eq("id", m.id);
+      } catch (error) {
+        console.error("Error marking message as read:", error);
+      }
     });
   }, [selectedRideId, allMessages]);
 
-  const ridesWithChatActivity = rides.filter((r: any) => {
+  const activeRides = rides.filter((r: any) =>
+    ["assigned", "admin_approved", "en_route", "arrived", "in_progress"].includes(r.status)
+  );
+
+  const ridesWithChatActivity = activeRides.filter((r: any) => {
     const msgs = allMessages.filter((m: any) => m.ride_id === r.id);
     return msgs.length > 0 || r.driver_id;
   });
@@ -128,44 +143,59 @@ export default function ChatsPage() {
     if (!messageText.trim() || !selectedRideId) return;
     const hasBlocked = blockedWords.some((w: string) => messageText.toLowerCase().includes(w));
     if (hasBlocked) {
-      alert("⚠️ Tu mensaje contiene palabras no permitidas y no puede enviarse.");
+      toast.error("⚠️ Tu mensaje contiene palabras no permitidas");
       return;
     }
     setSending(true);
-    await supabase.from("chat_messages").insert({
-      ride_id: selectedRideId,
-      sender_role: "admin",
-      sender_name: "Administrador",
-      message: messageText.trim(),
-      read_by_driver: false,
-      read_by_admin: true,
-      created_date: new Date().toISOString(),
-    });
-    setMessageText("");
-    queryClient.invalidateQueries({ queryKey: ["allMessages"] });
-    setSending(false);
+    try {
+      await supabase.from("chat_messages").insert({
+        ride_id: selectedRideId,
+        sender_role: "admin",
+        sender_name: "Administrador",
+        message: messageText.trim(),
+        read_by_driver: false,
+        read_by_admin: true,
+        created_date: new Date().toISOString(),
+      });
+      setMessageText("");
+      queryClient.invalidateQueries({ queryKey: ["allMessages"] });
+      toast.success("Mensaje enviado");
+    } catch (error: any) {
+      toast.error(error.message || "Error al enviar mensaje");
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  const visibleRideIds = new Set(rides.filter((r: any) => r.driver_id).map((r: any) => r.id));
+  const visibleRideIds = new Set(activeRides.filter((r: any) => r.driver_id).map((r: any) => r.id));
   const totalUnread = allMessages.filter((m: any) =>
     visibleRideIds.has(m.ride_id) &&
     !m.read_by_admin && (m.sender_role === "driver" || m.sender_role === "passenger")
   ).length;
 
   return (
-    <div className="flex gap-0 h-[calc(100vh-8rem)] rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
-      {/* Sidebar */}
-      <div className="w-80 border-r flex flex-col flex-shrink-0">
-        <div className="p-4 border-b">
-          <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-blue-600" />
-            Chats de viajes
-            {totalUnread > 0 && <Badge className="bg-red-500 text-white text-xs">{totalUnread}</Badge>}
-          </h1>
+    <Layout currentPageName="Chats">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="w-6 h-6 text-blue-600" />
+            <h1 className="text-2xl font-bold text-slate-900">Chats de viajes</h1>
+            {totalUnread > 0 && <Badge className="bg-red-500 text-white">{totalUnread}</Badge>}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-0 h-[calc(100vh-14rem)] rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm mt-4">
+        {/* Sidebar */}
+        <div className="w-80 border-r flex flex-col flex-shrink-0">
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageCircle className="w-5 h-5 text-blue-600" />
+              <p className="font-semibold text-slate-900">Conversaciones activas</p>
+            </div>
           <div className="mt-3 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input placeholder="Buscar viaje o conductor..." className="pl-9 text-sm" value={search} onChange={e => setSearch(e.target.value)} />
@@ -315,5 +345,6 @@ export default function ChatsPage() {
         </div>
       )}
     </div>
+    </Layout>
   );
 }
