@@ -65,6 +65,8 @@ export default function ServiceTypes() {
 	const { data: services = [] } = useQuery({
 		queryKey: ["serviceTypes"],
 		queryFn: () => supabaseApi.serviceTypes.list(),
+		staleTime: 5 * 60 * 1000,
+		gcTime: 10 * 60 * 1000,
 	});
 
 	const grouped = useMemo(() => {
