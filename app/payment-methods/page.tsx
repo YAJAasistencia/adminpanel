@@ -16,7 +16,7 @@ import {
   Plus, Trash2, CreditCard, Save, Zap, Eye, EyeOff, Shield, ChevronDown, ChevronUp,
   Wallet, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle, AlertTriangle,
   Ban, RefreshCw, TrendingUp, DollarSign, Users, Activity, Search, Filter,
-  Unlock, MessageSquare
+  Unlock, MessageSquare, Lock
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -632,6 +632,286 @@ function TransactionsTab({ rides, settings }) {
   );
 }
 
+// ─── Tab: Wallets ─────────────────────────────────────────────────────────────
+
+function WalletsTab({ users, rides, settings }) {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [processingId, setProcessingId] = useState(null);
+  const [walletModal, setWalletModal] = useState(null);
+  const [walletAmount, setWalletAmount] = useState("");
+  const [walletAction, setWalletAction] = useState("load");
+
+  const walletUsers = users.map(u => {
+    const userRides = rides.filter(r => r.passenger_id === u.id);
+    const totalSpent = userRides.reduce((s, r) => s + (r.final_price || r.estimated_price || 0), 0);
+    return {
+      id: u.id,
+      name: u.full_name || u.email,
+      email: u.email,
+      phone: u.phone,
+      wallet_balance: u.wallet_balance || 0,
+      wallet_locked: u.wallet_locked || 0,
+      total_rides: userRides.length,
+      total_spent: totalSpent,
+      created_at: u.created_date,
+      status: (u.wallet_balance || 0) > (settings?.wallet_min_balance || 0) ? "active" : "low",
+    };
+  });
+
+  const filtered = walletUsers.filter(u => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.phone?.includes(q);
+    const matchStatus = statusFilter === "all" || u.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const handleUpdateWallet = async () => {
+    if (!walletModal || !walletAmount || isNaN(Number(walletAmount))) return;
+    setProcessingId(walletModal);
+    const amount = Number(walletAmount);
+    const user = walletUsers.find(u => u.id === walletModal);
+    if (!user) return;
+
+    const newBalance = walletAction === "load" ? user.wallet_balance + amount : Math.max(0, user.wallet_balance - amount);
+    await supabaseApi.roadAssistUsers.update(walletModal, { wallet_balance: newBalance });
+    queryClient.invalidateQueries({ queryKey: ["passUsers"] });
+    toast.success(`Wallet actualizado: $${newBalance.toFixed(2)}`);
+    setWalletModal(null);
+    setWalletAmount("");
+    setProcessingId(null);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input className="pl-9 rounded-xl" placeholder="Buscar por nombre, email o teléfono..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44 rounded-xl"><Filter className="w-3.5 h-3.5 mr-1.5" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Balance OK</SelectItem>
+            <SelectItem value="low">Balance bajo</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard icon={Wallet} label="Usuarios con wallet" value={walletUsers.length} color="bg-purple-100 text-purple-600" />
+        <StatCard icon={DollarSign} label="Saldo total depositado" value={`$${walletUsers.reduce((s, u) => s + u.wallet_balance, 0).toFixed(0)}`} color="bg-green-100 text-green-600" />
+        <StatCard icon={Lock} label="Fondos bloqueados" value={`$${walletUsers.reduce((s, u) => s + u.wallet_locked, 0).toFixed(0)}`} color="bg-amber-100 text-amber-600" />
+        <StatCard icon={Unlock} label="Disponible para usar" value={`$${walletUsers.reduce((s, u) => s + Math.max(0, u.wallet_balance - u.wallet_locked), 0).toFixed(0)}`} color="bg-blue-100 text-blue-600" />
+      </div>
+
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Usuario</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Saldo</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bloqueado</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Disponible</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Servicios</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Total gastado</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.length === 0 && (<tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400 text-sm">No hay usuarios en el wallet</td></tr>)}
+              {filtered.map(u => {
+                const isProcessing = processingId === u.id;
+                const available = Math.max(0, u.wallet_balance - u.wallet_locked);
+                const statusColor = u.status === "active" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700";
+                const statusLabel = u.status === "active" ? "OK" : "Bajo";
+                return (
+                  <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs font-mono">{u.email}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900">${u.wallet_balance.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-amber-700 font-medium">${u.wallet_locked.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-green-700 font-medium">${available.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-center text-slate-600">{u.total_rides}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900">${u.total_spent.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>{statusLabel}</span>
+                        <Button size="sm" variant="outline" disabled={isProcessing} className="text-xs h-7 px-2 text-purple-700 border-purple-200 hover:bg-purple-50" onClick={() => { setWalletModal(u.id); setWalletAction("load"); setWalletAmount(""); }}><Plus className="w-3 h-3 mr-1" /> Cargar</Button>
+                        <Button size="sm" variant="outline" disabled={isProcessing || available === 0} className="text-xs h-7 px-2 text-red-700 border-red-200 hover:bg-red-50" onClick={() => { setWalletModal(u.id); setWalletAction("withdraw"); setWalletAmount(""); }}><ArrowUpRight className="w-3 h-3 mr-1" /> Retirar</Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Dialog open={!!walletModal} onOpenChange={(open) => !open && setWalletModal(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader><DialogTitle>{walletAction === "load" ? "Cargar saldo a wallet" : "Retirar saldo del wallet"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {walletModal && (<>
+              <div className="p-3 bg-slate-50 rounded-xl"><p className="text-xs text-slate-500 mb-1">Usuario</p><p className="font-medium text-slate-900">{walletUsers.find(u => u.id === walletModal)?.name}</p></div>
+              <div className="p-3 bg-slate-50 rounded-xl"><p className="text-xs text-slate-500 mb-1">Saldo actual</p><p className="font-semibold text-slate-900">${walletUsers.find(u => u.id === walletModal)?.wallet_balance.toFixed(2)}</p></div>
+              <div><Label className="text-sm">Monto</Label><Input type="number" placeholder="0.00" value={walletAmount} onChange={e => setWalletAmount(e.target.value)} className="mt-2 text-sm" min={0} step={0.01} /></div>
+            </>)}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWalletModal(null)}>Cancelar</Button>
+            <Button onClick={handleUpdateWallet} disabled={processingId || !walletAmount || isNaN(Number(walletAmount))} className="bg-purple-600 hover:bg-purple-700">{walletAction === "load" ? "Cargar" : "Retirar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─── Tab: Driver Payouts ──────────────────────────────────────────────────────
+
+function DriverPayoutsTab({ rides, drivers, settings }) {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("pendiente");
+  const [processingId, setProcessingId] = useState(null);
+  const [payoutModal, setPayoutModal] = useState(null);
+  const [payoutNotes, setPayoutNotes] = useState("");
+
+  const commissionPct = settings?.platform_commission_pct || 20;
+
+  const payoutRides = rides.filter(r => r.status === "completed" || r.status === "liquidado").map(r => {
+    const driverObj = drivers.find(d => d.id === r.driver_id) || {};
+    const amount = r.final_price || r.estimated_price || 0;
+    const commission = r.platform_commission != null ? r.platform_commission : +(amount * commissionPct / 100);
+    const driverEarning = r.driver_earnings != null ? r.driver_earnings : +(amount - commission);
+    return {
+      id: r.id, service_id: r.service_id || r.id?.slice(0, 8), driver_id: r.driver_id, driver_name: r.driver_name || driverObj.full_name || "—", driver_phone: driverObj.phone,
+      amount, driver_earning, commission, payout_status: r.driver_payout_status || "pendiente", payout_method: r.driver_payout_method || "transfer",
+      ride_status: r.status, completed_at: r.completed_date || r.finished_date, passenger: r.passenger_name || "—", notes: r.payout_notes || "",
+    };
+  });
+
+  const filtered = payoutRides.filter(p => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || p.driver_name?.toLowerCase().includes(q) || p.service_id?.toLowerCase().includes(q) || p.driver_phone?.includes(q);
+    const matchStatus = statusFilter === "all" || p.payout_status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const pendingPayouts = filtered.filter(p => p.payout_status === "pendiente");
+  const paidPayouts = filtered.filter(p => p.payout_status === "pagado");
+  const totalPending = pendingPayouts.reduce((s, p) => s + p.driver_earning, 0);
+  const totalPaid = paidPayouts.reduce((s, p) => s + p.driver_earning, 0);
+
+  const markAsPaid = async (rideId) => {
+    setProcessingId(rideId);
+    await supabaseApi.rideRequests.update(rideId, { driver_payout_status: "pagado", payout_notes: payoutNotes });
+    queryClient.invalidateQueries({ queryKey: ["rides"] });
+    toast.success("Pago a conductor registrado");
+    setPayoutModal(null);
+    setPayoutNotes("");
+    setProcessingId(null);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input className="pl-9 rounded-xl" placeholder="Buscar por conductor, teléfono o folio..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44 rounded-xl"><Filter className="w-3.5 h-3.5 mr-1.5" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pendiente">Pendiente</SelectItem>
+            <SelectItem value="pagado">Pagado</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard icon={Clock} label="Pagos pendientes" value={pendingPayouts.length} sub={`$${totalPending.toFixed(0)}`} color="bg-amber-100 text-amber-600" />
+        <StatCard icon={CheckCircle2} label="Pagos realizados" value={paidPayouts.length} sub={`$${totalPaid.toFixed(0)}`} color="bg-green-100 text-green-600" />
+        <StatCard icon={Users} label="Conductores únicos" value={new Set(filtered.map(p => p.driver_id)).size} color="bg-blue-100 text-blue-600" />
+        <StatCard icon={DollarSign} label="Total a pagar" value={`$${filtered.reduce((s, p) => s + p.driver_earning, 0).toFixed(0)}`} color="bg-purple-100 text-purple-600" />
+      </div>
+
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Folio</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Conductor</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Pasajero</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tarifa</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Comisión</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Pago conductor</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Método</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.length === 0 && (<tr><td colSpan={9} className="px-4 py-10 text-center text-slate-400 text-sm">No hay pagos a conductores</td></tr>)}
+              {filtered.map(p => {
+                const isProcessing = processingId === p.id;
+                const statusBg = p.payout_status === "pendiente" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700";
+                const statusIcon = p.payout_status === "pendiente" ? Clock : CheckCircle2;
+                const StatusIcon = statusIcon;
+                return (
+                  <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.service_id}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800">{p.driver_name}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">{p.passenger}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900">${p.amount.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-violet-700 font-medium">${p.commission.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-green-700 font-bold text-base">${p.driver_earning.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-center text-xs"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium capitalize">{p.payout_method === "transfer" && <ArrowDownLeft className="w-3 h-3" />}{p.payout_method === "cash" && <DollarSign className="w-3 h-3" />}{p.payout_method}</span></td>
+                    <td className="px-4 py-3 text-center"><span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${statusBg}`}><StatusIcon className="w-3 h-3" />{p.payout_status === "pendiente" ? "Pendiente" : "Pagado"}</span></td>
+                    <td className="px-4 py-3 text-center">{p.payout_status === "pendiente" && (<Button size="sm" variant="outline" disabled={isProcessing} className="text-xs h-7 px-2 text-green-700 border-green-200 hover:bg-green-50" onClick={() => { setPayoutModal(p.id); setPayoutNotes(""); }}><CheckCircle2 className="w-3 h-3 mr-1" /> Marcar pagado</Button>)}{p.payout_status === "pagado" && (<span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 justify-center"><CheckCircle2 className="w-3 h-3" /> Confirmado</span>)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Dialog open={!!payoutModal} onOpenChange={(open) => !open && setPayoutModal(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader><DialogTitle>Confirmar pago a conductor</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {payoutModal && (() => {
+              const payout = filtered.find(p => p.id === payoutModal);
+              return (<>
+                <div className="p-3 bg-slate-50 rounded-xl"><p className="text-xs text-slate-500 mb-1">Conductor</p><p className="font-semibold text-slate-900">{payout?.driver_name}</p></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl"><p className="text-xs text-slate-500 mb-1">Tarifa</p><p className="font-semibold text-slate-900">${payout?.amount.toFixed(2)}</p></div>
+                  <div className="p-3 bg-green-50 rounded-xl"><p className="text-xs text-green-600 mb-1">Pago conductor</p><p className="font-semibold text-green-900">${payout?.driver_earning.toFixed(2)}</p></div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl"><p className="text-xs text-slate-500 mb-1">Método de pago</p><p className="font-medium text-slate-900 capitalize">{payout?.payout_method}</p></div>
+                <div><Label className="text-sm">Notas (opcional)</Label><Input placeholder="ej. Transferencia # 123..." value={payoutNotes} onChange={e => setPayoutNotes(e.target.value)} className="mt-2 text-sm" /></div>
+              </>);
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayoutModal(null)}>Cancelar</Button>
+            <Button onClick={() => markAsPaid(payoutModal)} disabled={processingId} className="bg-green-600 hover:bg-green-700">Confirmar pago</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ─── Tab: Reportes / KPIs ─────────────────────────────────────────────────────
 
 function ReportsTab({ rides, settings }) {
@@ -756,10 +1036,11 @@ export default function PaymentMethods() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
-  const { data: settingsList = [] } = useQuery({ queryKey: ["appSettings"], queryFn: () => supabaseApi.settings.list() });
-  const { data: serviceTypes = [] } = useQuery({ queryKey: ["serviceTypes"], queryFn: () => supabaseApi.serviceTypes.list() });
-  const { data: rides = [] } = useQuery({ queryKey: ["rides"], queryFn: () => supabaseApi.rideRequests.list("-created_date", 500) });
-  const { data: drivers = [] } = useQuery({ queryKey: ["drivers"], queryFn: () => supabaseApi.drivers.list() });
+  const { data: settingsList = [] } = useQuery({ queryKey: ["appSettings"], queryFn: () => supabaseApi.settings.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
+  const { data: serviceTypes = [] } = useQuery({ queryKey: ["serviceTypes"], queryFn: () => supabaseApi.serviceTypes.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
+  const { data: rides = [] } = useQuery({ queryKey: ["rides"], queryFn: () => supabaseApi.rideRequests.list("-created_date", 500), staleTime: 30 * 1000, gcTime: 60 * 1000 });
+  const { data: drivers = [] } = useQuery({ queryKey: ["drivers"], queryFn: () => supabaseApi.drivers.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
+  const { data: users = [] } = useQuery({ queryKey: ["passUsers"], queryFn: () => supabaseApi.roadAssistUsers.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
 
   const settings = settingsList[0];
 
@@ -786,6 +1067,8 @@ export default function PaymentMethods() {
         <TabsList className="bg-slate-100 rounded-xl p-1 gap-1 flex-wrap h-auto">
           <TabsTrigger value="config" className="rounded-lg text-xs px-3 py-1.5">⚙️ Configuración</TabsTrigger>
           <TabsTrigger value="transactions" className="rounded-lg text-xs px-3 py-1.5">💳 Transacciones</TabsTrigger>
+          <TabsTrigger value="wallets" className="rounded-lg text-xs px-3 py-1.5">👛 Wallets</TabsTrigger>
+          <TabsTrigger value="payouts" className="rounded-lg text-xs px-3 py-1.5">🏦 Pagos a conductores</TabsTrigger>
           <TabsTrigger value="reports" className="rounded-lg text-xs px-3 py-1.5">📊 Reportes</TabsTrigger>
         </TabsList>
 
@@ -793,7 +1076,13 @@ export default function PaymentMethods() {
           <MethodsConfigTab settings={settings} serviceTypes={serviceTypes} onSave={handleSaveSettings} saving={saving} />
         </TabsContent>
         <TabsContent value="transactions" className="mt-6">
-          <TransactionsTab rides={rides} settings={settings} />
+          <TransactionsTab rides={rides} users={users} settings={settings} />
+        </TabsContent>
+        <TabsContent value="wallets" className="mt-6">
+          <WalletsTab users={users} rides={rides} settings={settings} />
+        </TabsContent>
+        <TabsContent value="payouts" className="mt-6">
+          <DriverPayoutsTab rides={rides} drivers={drivers} settings={settings} />
         </TabsContent>
         <TabsContent value="reports" className="mt-6">
           <ReportsTab rides={rides} settings={settings} />
