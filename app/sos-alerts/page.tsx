@@ -36,7 +36,8 @@ export default function SosAlertsPage() {
         return [];
       }
     },
-    refetchInterval: 5000,
+    staleTime: 5 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const active = alerts.filter((a: any) => a.status === "active");

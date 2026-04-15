@@ -65,7 +65,8 @@ export default function LiveDriversPage() {
         return [];
       }
     },
-    refetchInterval: 8000,
+    staleTime: 5 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
@@ -78,7 +79,8 @@ export default function LiveDriversPage() {
         return [];
       }
     },
-    refetchInterval: 8000,
+    staleTime: 5 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   useEffect(() => {

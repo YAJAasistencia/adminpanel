@@ -260,6 +260,8 @@ export default function RoadAssistApp() {
   const { data: activeRides = [], refetch: refetchRides } = useQuery({
     queryKey: ["ra_active_rides", user?.id],
     enabled: !!user?.id,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchInterval: 30000,
     queryFn: async () => {
       const all = await supabaseApi.rideRequests.list({ passenger_phone: user.phone });
@@ -278,6 +280,8 @@ export default function RoadAssistApp() {
   const { data: allRides = [] } = useQuery({
     queryKey: ["ra_all_rides", user?.id],
     enabled: !!user?.id,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchInterval: 60000,
     queryFn: () => supabaseApi.rideRequests.list({ passenger_phone: user.phone }),
   });

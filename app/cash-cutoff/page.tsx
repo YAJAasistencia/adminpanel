@@ -70,28 +70,31 @@ export default function CashCutoffPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["rides"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ride_requests").select("*").order("created_date", { ascending: false }).limit(2000);
-      if (error) throw error;
-      return (data || []) as Ride[];
+      const all = await supabaseApi.rideRequests.list("-created_date", 2000);
+      return all;
     },
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("drivers").select("*");
-      if (error) throw error;
-      return (data || []) as Driver[];
+      const all = await supabaseApi.drivers.list();
+      return all;
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: cutoffs = [] } = useQuery({
     queryKey: ["cashCutoffs"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cash_cutoffs").select("*").order("cutoff_date", { ascending: false }).limit(50);
-      if (error) throw error;
-      return (data || []) as Cutoff[];
+      const all = await supabaseApi.cashCutoffs.list("-cutoff_date", 50);
+      return all;
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const filteredRides = useMemo(() => rides.filter(r => {

@@ -38,7 +38,8 @@ export default function Dashboard() {
         return await supabaseApi.sosAlerts.list() || [];
       } catch { return []; }
     },
-    staleTime: Infinity,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
@@ -48,7 +49,8 @@ export default function Dashboard() {
         return await supabaseApi.rideRequests.list();
       } catch { return []; }
     },
-    staleTime: Infinity,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
@@ -69,6 +71,8 @@ export default function Dashboard() {
         return await supabaseApi.cities.list();
       } catch { return []; }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: geoZones = [] } = useQuery({
@@ -78,6 +82,8 @@ export default function Dashboard() {
         return await supabaseApi.geoZones.list();
       } catch { return []; }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
@@ -87,6 +93,8 @@ export default function Dashboard() {
         return await supabaseApi.serviceTypes.list();
       } catch { return []; }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: policies = [] } = useQuery({
@@ -96,6 +104,8 @@ export default function Dashboard() {
         return await supabaseApi.cancellationPolicies.list();
       } catch { return []; }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: settings = {} } = useQuery({
@@ -106,6 +116,8 @@ export default function Dashboard() {
         return data?.[0] || {};
       } catch { return {}; }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   useEffect(() => {

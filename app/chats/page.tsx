@@ -55,6 +55,8 @@ export default function ChatsPage() {
         return [];
       }
     },
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchInterval: 5000,
   });
 
@@ -76,7 +78,8 @@ export default function ChatsPage() {
       }
     },
     refetchInterval: 5000,
-    staleTime: 0,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   // Suscripción en tiempo real a nuevos mensajes

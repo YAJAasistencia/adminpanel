@@ -52,6 +52,8 @@ export default function RedZones() {
   const { data: zones = [] } = useQuery({
     queryKey: ["redZones"],
     queryFn: () => supabaseApi.redZones.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const up = (k, v) => setEditing(prev => ({ ...prev, [k]: v }));

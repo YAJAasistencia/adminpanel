@@ -32,6 +32,8 @@ function PassengerProfileModal({ passenger, onClose }) {
       const all = await supabaseApi.rideRequests.list("-created_date", 1000);
       return all.filter((r) => r.passenger_user_id === passenger.id);
     },
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const now = new Date();
@@ -267,6 +269,8 @@ function PassengersContent() {
   const { data: passengers = [], isLoading } = useQuery({
     queryKey: ["passengers"],
     queryFn: () => supabaseApi.passengers.list("-created_date", 500),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const filtered = passengers.filter(p => {

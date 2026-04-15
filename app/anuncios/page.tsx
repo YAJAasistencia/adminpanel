@@ -36,17 +36,22 @@ function AnunciosContent() {
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
     queryFn: () => supabaseApi.announcements.list(),
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: () => supabaseApi.cities.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: () => supabaseApi.serviceTypes.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const openCreate = () => { setForm(EMPTY); setEditId(null); setOpen(true); };

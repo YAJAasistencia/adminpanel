@@ -341,14 +341,20 @@ export default function Invoices() {
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => supabaseApi.invoices.list("-created_date", 200),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: () => supabaseApi.companies.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
     queryFn: () => supabaseApi.rideRequests.list("-created_date", 5000),
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const handleStatusChange = async (invoice, newStatus) => {

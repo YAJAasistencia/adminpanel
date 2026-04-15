@@ -247,16 +247,22 @@ function AnalyticsContent() {
   const { data: rides = [] } = useQuery({
     queryKey: ["analytics_rides"],
     queryFn: () => supabaseApi.rideRequests.list(),
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["analytics_drivers"],
     queryFn: () => supabaseApi.drivers.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["analytics_service_types"],
     queryFn: () => supabaseApi.serviceTypes.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const filteredRides = useMemo(() => {

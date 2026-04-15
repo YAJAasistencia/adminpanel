@@ -35,6 +35,8 @@ export default function DriverEarningsPage() {
         return [];
       }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
@@ -47,6 +49,8 @@ export default function DriverEarningsPage() {
         return [];
       }
     },
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const since = filterMode === "days"

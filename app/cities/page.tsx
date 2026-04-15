@@ -26,11 +26,15 @@ export default function CitiesPage() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: () => supabaseApi.cities.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
     queryFn: () => supabaseApi.drivers.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const getDriverCount = (cityId: string) => drivers.filter((d: any) => d.city_id === cityId).length;

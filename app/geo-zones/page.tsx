@@ -98,11 +98,15 @@ function GeoZonesContent() {
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
     queryFn: () => supabaseApi.geoZones.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["ridesForZones"],
     queryFn: () => supabaseApi.rideRequests.list("-created_date", 500),
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const up = (k, v) => setEditing(prev => ({ ...prev, [k]: v }));

@@ -249,6 +249,8 @@ function ResponsesPanel({ responses, companies }: any) {
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
     queryFn: () => supabaseApi.surveys.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const filtered = responses.filter((r: any) => {
@@ -399,11 +401,15 @@ export default function SurveysPage() {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: () => supabaseApi.companies.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: responses = [] } = useQuery({
     queryKey: ["surveyResponses"],
     queryFn: () => supabaseApi.surveyResponses.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const handleDelete = async (s: any) => {
