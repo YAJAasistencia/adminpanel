@@ -278,6 +278,8 @@ export default function Companies() {
       const all = await supabaseApi.geoZones.list();
       return all.filter(z => z.is_active === true);
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
@@ -285,6 +287,8 @@ export default function Companies() {
       const all = await supabaseApi.serviceTypes.list();
       return all.filter(s => s.is_active === true);
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const [expandedZones, setExpandedZones] = useState({});
   const [detailCompany, setDetailCompany] = useState(null);
@@ -294,6 +298,8 @@ export default function Companies() {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: () => supabaseApi.companies.list(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: surveys = [] } = useQuery({
@@ -302,11 +308,15 @@ export default function Companies() {
       const all = await supabaseApi.surveys.list();
       return all.filter(s => s.is_active === true);
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
     queryFn: () => supabaseApi.rideRequests.list("-created_date", 2000),
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const up = (k, v) => setEditing(prev => ({ ...prev, [k]: v }));
