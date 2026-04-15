@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -90,7 +91,8 @@ export default function RedZones() {
   const scheduledCount = zones.filter(z => z.use_schedule).length;
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -321,5 +323,6 @@ export default function RedZones() {
         </DialogContent>
       </Dialog>
     </div>
+    </Layout>
   );
 }

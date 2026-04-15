@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -384,7 +385,8 @@ export default function Invoices() {
   const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + (i.total||0), 0);
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Facturación</h1>
@@ -514,5 +516,6 @@ export default function Invoices() {
         />
       )}
     </div>
+    </Layout>
   );
 }

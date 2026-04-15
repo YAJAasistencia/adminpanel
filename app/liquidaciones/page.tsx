@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,7 +136,8 @@ export default function Liquidaciones() {
   };
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       <div className="flex items-center gap-3">
         <FileText className="w-6 h-6 text-blue-600" />
         <h1 className="text-2xl font-bold text-slate-900">Liquidaciones</h1>
@@ -303,5 +305,6 @@ export default function Liquidaciones() {
         </>
       )}
     </div>
+    </Layout>
   );
 }

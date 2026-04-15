@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -389,7 +390,8 @@ export default function Companies() {
   const companyRides = (companyId) => rides.filter(r => r.company_id === companyId);
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Empresas (B2B)</h1>
@@ -536,5 +538,6 @@ export default function Companies() {
         />
       )}
     </div>
+    </Layout>
   );
 }
