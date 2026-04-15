@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import moment from "moment";
+import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -1057,7 +1058,8 @@ export default function PaymentMethods() {
   };
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Pagos y Control Financiero</h1>
         <p className="text-sm text-slate-400 mt-0.5">Gestiona métodos de pago, transacciones, wallets, pagos a conductores y reportes</p>
@@ -1089,5 +1091,6 @@ export default function PaymentMethods() {
         </TabsContent>
       </Tabs>
     </div>
+    </Layout>
   );
 }
