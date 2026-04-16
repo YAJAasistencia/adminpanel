@@ -44,7 +44,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     queryKey: ["myTickets", driver.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("SupportTicket").select("*").eq("driver_id", driver.id).order("created_date", { ascending: false });
+        const { data, error } = await supabase.from("SupportTicket").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -59,7 +59,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     queryKey: ["driverRidesForTicket", driver.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("RideRequest").select("*").eq("driver_id", driver.id).order("created_date", { ascending: false });
+        const { data, error } = await supabase.from("RideRequest").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -242,7 +242,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
                           <p className="text-xs text-emerald-800">{ticket.admin_response}</p>
                         </div>
                       )}
-                      <p className="text-xs text-slate-400">{moment(ticket.created_date).fromNow()}</p>
+                      <p className="text-xs text-slate-400">{moment(ticket.created_at).fromNow()}</p>
                     </div>
                   );
                 })}

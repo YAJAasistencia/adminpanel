@@ -31,7 +31,7 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
 
   // Check if within free cancellation window (use current time in configured TZ)
   const withinFreeWindow = applicablePolicy?.free_cancellation_minutes > 0 && (() => {
-    const createdAt = ride?.created_date ? new Date(ride.created_date).getTime() : 0;
+    const createdAt = ride?.created_at ? new Date(ride.created_at).getTime() : 0;
     const elapsedMin = (Date.now() - createdAt) / 60000;
     return elapsedMin <= applicablePolicy.free_cancellation_minutes;
   })();
@@ -87,7 +87,7 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-4">
+      <DialogContent className="max-w-sm sm:max-w-2xl p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1 text-red-600">
             <AlertTriangle className="w-5 h-5" /> Cancelar viaje

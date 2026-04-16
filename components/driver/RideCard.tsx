@@ -80,7 +80,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     queryKey: ["chatMessages", ride.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("created_date", { ascending: true });
+        const { data, error } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("created_at", { ascending: true });
         if (error) throw error;
         return data || [];
       } catch (err) {

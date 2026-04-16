@@ -20,7 +20,7 @@ function buildWeeks(rides, weeksBack = 12) {
 
 function getWeekRides(rides, week) {
   return rides.filter(r => {
-    const d = moment(r.requested_at || r.created_date);
+    const d = moment(r.requested_at || r.created_at);
     return d.isSameOrAfter(week.start) && d.isSameOrBefore(week.end);
   });
 }
@@ -35,7 +35,7 @@ function formatWeekLabel(week) {
 function downloadCSV(rows, driver, week) {
   const header = "Fecha,Pasajero,Origen,Destino,Pago,Ganancia,Comisión,Estado";
   const lines = rows.map(r => [
-    formatCDMX(r.requested_at || r.created_date, "shortdatetime"),
+    formatCDMX(r.requested_at || r.created_at, "shortdatetime"),
     r.passenger_name || "",
     r.pickup_address || "",
     r.dropoff_address || "",
@@ -74,7 +74,7 @@ export default function DriverWeeklyEarnings({ driver, rides = [], darkMode = fa
   // Build days Mon–Sun for this week
   const days = Array.from({ length: 7 }, (_, i) => {
     const day = week.start.clone().add(i, "days");
-    const dayRides = weekRides.filter(r => moment(r.requested_at || r.created_date).isSame(day, "day"));
+    const dayRides = weekRides.filter(r => moment(r.requested_at || r.created_at).isSame(day, "day"));
     const earnings = dayRides.reduce((s, r) => s + (r.driver_earnings || 0), 0);
     const commission = dayRides.reduce((s, r) => s + (r.platform_commission || 0), 0);
     return { day, rides: dayRides, earnings, commission };

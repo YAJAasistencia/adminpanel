@@ -100,7 +100,7 @@ export default function CashCutoffPage() {
 
   const filteredRides = useMemo(() => rides.filter(r => {
     if (r.status !== "completed") return false;
-    const d = moment(r.requested_at || r.created_date);
+    const d = moment(r.requested_at || r.created_at);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
   }), [rides, dateFrom, dateTo]);
 

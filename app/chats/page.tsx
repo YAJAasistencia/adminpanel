@@ -68,7 +68,7 @@ export default function ChatsPage() {
         const { data, error } = await supabase
           .from("chat_messages")
           .select("*")
-          .order("created_date", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(500);
         if (error) throw error;
         return data || [];
@@ -139,7 +139,7 @@ export default function ChatsPage() {
       (m.sender_role === "driver" || m.sender_role === "passenger")
     ).length;
 
-  const selectedMessages = allMessages.filter((m: any) => m.ride_id === selectedRideId).sort((a: any, b: any) => new Date(a.created_date).getTime() - new Date(b.created_date).getTime());
+  const selectedMessages = allMessages.filter((m: any) => m.ride_id === selectedRideId).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const selectedRide = rides.find((r: any) => r.id === selectedRideId);
 
   const sendMessage = async () => {
@@ -158,7 +158,7 @@ export default function ChatsPage() {
         message: messageText.trim(),
         read_by_driver: false,
         read_by_admin: true,
-        created_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       });
       setMessageText("");
       queryClient.invalidateQueries({ queryKey: ["allMessages"] });
@@ -206,7 +206,7 @@ export default function ChatsPage() {
         </div>
         <div className="flex-1 overflow-y-auto">
           {filteredRides.map((ride: any) => {
-            const msgs = allMessages.filter((m: any) => m.ride_id === ride.id).sort((a: any, b: any) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
+            const msgs = allMessages.filter((m: any) => m.ride_id === ride.id).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
             const lastMsg = msgs[0];
             const unread = getUnreadCount(ride.id);
             const isSelected = selectedRideId === ride.id;
@@ -228,7 +228,7 @@ export default function ChatsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <StatusBadge status={ride.status} />
-                    {lastMsg && <span className="text-xs text-slate-300">{formatCDMX(lastMsg.created_date, "time")}</span>}
+                    {lastMsg && <span className="text-xs text-slate-300">{formatCDMX(lastMsg.created_at, "time")}</span>}
                   </div>
                 </div>
               </button>

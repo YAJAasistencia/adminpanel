@@ -309,7 +309,7 @@ function HomeMap({
       const { data, error } = await supabase
         .from("RideRequest")
         .select("*")
-        .order("created_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(200);
 
       if (error) throw error;
@@ -319,7 +319,7 @@ function HomeMap({
       const relevant = (data || []).filter(
         (r) =>
           r.status !== "cancelled" &&
-          new Date(r.created_date || r.requested_at).getTime() > since
+          new Date(r.requested_at || r.created_at).getTime() > since
       );
       setFlowRides(relevant);
     } catch (_) {}
@@ -884,7 +884,7 @@ export default function DriverApp() {
         .from("RideRequest")
         .select("*")
         .eq("driver_id", driver.id)
-        .order("created_date", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -1017,7 +1017,7 @@ export default function DriverApp() {
     rides
       .filter((r) => r.status === "assigned" && r.driver_id === driver.id)
       .forEach((r) => {
-        shownRideAssignmentsRef.current[r.id] = r.updated_date || r.created_date || "";
+        shownRideAssignmentsRef.current[r.id] = r.updated_date || r.created_at || "";
         acceptedRideIdsRef.current.add(r.id);
       });
   }, [rides.length > 0 || initializedRef.current, driver?.id]);
@@ -1092,7 +1092,7 @@ export default function DriverApp() {
           if (payload.type === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
             if (!initializedRef.current) return;
             const prevShownAt = shownRideAssignmentsRef.current[data.id];
-            const thisAssignmentAt = data.updated_date || data.created_date;
+            const thisAssignmentAt = data.updated_date || data.created_at;
             const isNewAssignment = !prevShownAt || prevShownAt !== thisAssignmentAt;
             const alreadyAccepted = acceptedRideIdsRef.current.has(data.id);
             if (isNewAssignment && !alreadyAccepted) {
@@ -1166,7 +1166,7 @@ export default function DriverApp() {
       const { data, error } = await supabase
         .from("surveys")
         .select("*")
-        .order("created_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
       return data || [];
@@ -2065,7 +2065,7 @@ export default function DriverApp() {
                   .filter(
                     (r) =>
                       r.status === "completed" &&
-                      new Date(r.completed_at || r.updated_date || r.created_date || "").toDateString() ===
+                      new Date(r.completed_at || r.updated_date || r.created_at || "").toDateString() ===
                         today
                   )
                   .reduce((sum, r) => {

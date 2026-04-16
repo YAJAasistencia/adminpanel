@@ -185,7 +185,7 @@ function AnunciosContent() {
 
         {/* Dialog */}
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editId ? "Editar anuncio" : "Nuevo anuncio"}</DialogTitle>
             </DialogHeader>

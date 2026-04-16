@@ -314,8 +314,8 @@ function NotificacionesContent() {
                       </div>
                       <p className="text-xs text-slate-500 line-clamp-2">{n.body}</p>
                       <p className="text-[10px] text-slate-400">
-                        {n.created_date
-                          ? format(new Date(n.created_date), "d MMM yyyy · HH:mm", { locale: es })
+                        {n.created_at
+                          ? format(new Date(n.created_at), "d MMM yyyy · HH:mm", { locale: es })
                           : "—"}
                       </p>
                     </div>

@@ -29,7 +29,7 @@ export default function useAdminBadges(): AdminBadges {
         supabase
           .from("chat_messages")
           .select("id, ride_id, sender_role, read_by_admin")
-          .order("created_date", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(200),
       ]);
 

@@ -222,7 +222,7 @@ export default function RedZones() {
 
       {/* Edit/Create Dialog */}
       <Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) { setDrawing(false); setPolygon([]); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <ShieldAlert className="w-5 h-5" />

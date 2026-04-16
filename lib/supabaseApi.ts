@@ -8,6 +8,29 @@ import { supabase } from "@/lib/supabase";
 // snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
 //   cash_cutoffs, chat_messages, liquidations, notifications, surveys
 
+// ─── Helper: Update with fallback to GET (handles RLS select() restrictions) ───
+async function updateWithFallback(tableName: string, id: string, updates: any) {
+  try {
+    console.log(`[supabaseApi] UPDATE ${tableName} id=${id}`, updates);
+    const { data, error } = await supabase.from(tableName).update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    console.log(`[supabaseApi] UPDATE SUCCESS (with .select())`, data);
+    return data;
+  } catch (selectError: any) {
+    console.warn(`[supabaseApi] UPDATE .select() failed on ${tableName} (fallback to GET):`, selectError?.message);
+    // Fallback: fetch the updated record separately
+    try {
+      const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
+      if (error) throw error;
+      console.log(`[supabaseApi] UPDATE SUCCESS (via GET fallback)`, data);
+      return data;
+    } catch (fetchError: any) {
+      console.error(`[supabaseApi] UPDATE FAILED on ${tableName}:`, fetchError);
+      throw new Error(`Actualización fallida en ${tableName}: ${fetchError?.message || 'Falló seleccionar después del update'}`);
+    }
+  }
+}
+
 export const supabaseApi = {
 
   // ─── Cities ───────────────────────────────────────────────────────────────
@@ -28,9 +51,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('City').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('City', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('City').delete().eq('id', id);
@@ -63,9 +84,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('Driver').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('Driver', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('Driver').delete().eq('id', id);
@@ -77,10 +96,10 @@ export const supabaseApi = {
   // ─── Ride Requests ────────────────────────────────────────────────────────
   rideRequests: {
     list: async (filters?: any) => {
-      let query = supabase.from('RideRequest').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('RideRequest').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -98,9 +117,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('RideRequest').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('RideRequest', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('RideRequest').delete().eq('id', id);
@@ -127,9 +144,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('GeoZone').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('GeoZone', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('GeoZone').delete().eq('id', id);
@@ -141,10 +156,10 @@ export const supabaseApi = {
   // ─── Support Tickets ──────────────────────────────────────────────────────
   supportTickets: {
     list: async (filters?: any) => {
-      let query = supabase.from('SupportTicket').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('SupportTicket').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -162,9 +177,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('SupportTicket').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('SupportTicket', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('SupportTicket').delete().eq('id', id);
@@ -197,9 +210,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('chat_messages').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('chat_messages', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('chat_messages').delete().eq('id', id);
@@ -211,10 +222,10 @@ export const supabaseApi = {
   // ─── SOS Alerts ───────────────────────────────────────────────────────────
   sosAlerts: {
     list: async (filters?: any) => {
-      let query = supabase.from('SosAlert').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('SosAlert').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -232,9 +243,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('SosAlert').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('SosAlert', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('SosAlert').delete().eq('id', id);
@@ -246,7 +255,7 @@ export const supabaseApi = {
   // ─── Settings (AppSettings) ───────────────────────────────────────────────
   settings: {
     list: async () => {
-      const { data, error } = await supabase.from('AppSettings').select('*').order('created_date', { ascending: false }).limit(1);
+      const { data, error } = await supabase.from('AppSettings').select('*').order('created_at', { ascending: false }).limit(1);
       if (error) throw error;
       return data || [];
     },
@@ -261,9 +270,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('AppSettings').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('AppSettings', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('AppSettings').delete().eq('id', id);
@@ -275,7 +282,7 @@ export const supabaseApi = {
   // ─── Passengers / Road Assist Users ──────────────────────────────────────
   passengers: {
     list: async () => {
-      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_date', { ascending: false });
+      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -290,9 +297,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('RoadAssistUser').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('RoadAssistUser', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('RoadAssistUser').delete().eq('id', id);
@@ -319,9 +324,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('ServiceType').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('ServiceType', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('ServiceType').delete().eq('id', id);
@@ -333,7 +336,7 @@ export const supabaseApi = {
   // ─── Admin Users ──────────────────────────────────────────────────────────
   adminUsers: {
     list: async () => {
-      const { data, error } = await supabase.from('AdminUser').select('*').order('created_date', { ascending: false });
+      const { data, error } = await supabase.from('AdminUser').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -378,9 +381,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('Company').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('Company', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('Company').delete().eq('id', id);
@@ -392,10 +393,10 @@ export const supabaseApi = {
   // ─── Invoices ─────────────────────────────────────────────────────────────
   invoices: {
     list: async (filters?: any) => {
-      let query = supabase.from('Invoice').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('Invoice').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -413,9 +414,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('Invoice').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('Invoice', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('Invoice').delete().eq('id', id);
@@ -427,7 +426,7 @@ export const supabaseApi = {
   // ─── Bonus Rules ──────────────────────────────────────────────────────────
   bonusRules: {
     list: async () => {
-      const { data, error } = await supabase.from('BonusRule').select('*').order('created_date', { ascending: false });
+      const { data, error } = await supabase.from('BonusRule').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -437,9 +436,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('BonusRule').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('BonusRule', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('BonusRule').delete().eq('id', id);
@@ -451,10 +448,10 @@ export const supabaseApi = {
   // ─── Bonus Logs ───────────────────────────────────────────────────────────
   bonusLogs: {
     list: async (filters?: any) => {
-      let query = supabase.from('BonusLog').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('BonusLog').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -467,9 +464,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('BonusLog').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('BonusLog', id, updates);
     },
   },
 
@@ -524,9 +519,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('RedZone').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('RedZone', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('RedZone').delete().eq('id', id);
@@ -548,9 +541,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('surveys').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('surveys', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('surveys').delete().eq('id', id);
@@ -578,9 +569,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('notifications').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('notifications', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('notifications').delete().eq('id', id);
@@ -608,9 +597,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('liquidations').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('liquidations', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('liquidations').delete().eq('id', id);
@@ -632,9 +619,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('announcements').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('announcements', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('announcements').delete().eq('id', id);
@@ -656,9 +641,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('cancellation_policies').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('cancellation_policies', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('cancellation_policies').delete().eq('id', id);
@@ -680,9 +663,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('cash_cutoffs').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('cash_cutoffs', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('cash_cutoffs').delete().eq('id', id);
@@ -694,7 +675,7 @@ export const supabaseApi = {
   // ─── Road Assist Users (alias de passengers) ──────────────────────────────
   roadAssistUsers: {
     list: async () => {
-      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_date', { ascending: false });
+      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -704,19 +685,17 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('RoadAssistUser').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('RoadAssistUser', id, updates);
     },
   },
 
   // ─── Survey Responses ─────────────────────────────────────────────────────
   surveyResponses: {
     list: async (filters?: any) => {
-      let query = supabase.from('SurveyResponse').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('SurveyResponse').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -738,7 +717,7 @@ export const supabaseApi = {
   // ─── Driver Notifications ─────────────────────────────────────────────────
   driverNotifications: {
     list: async () => {
-      const { data, error } = await supabase.from('DriverNotification').select('*').order('created_date', { ascending: false });
+      const { data, error } = await supabase.from('DriverNotification').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -748,9 +727,7 @@ export const supabaseApi = {
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('DriverNotification').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return updateWithFallback('DriverNotification', id, updates);
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('DriverNotification').delete().eq('id', id);

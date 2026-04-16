@@ -56,7 +56,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
         r.passenger_name||"",r.driver_name||"",r.pickup_address||"",r.dropoff_address||"",
         r.service_type_name||"",r.status||"",r.estimated_price||"",r.final_price||"",
         r.distance_km||"",r.payment_method||"",
-        r.created_date ? formatStoredLocal(r.created_date, "datetime") : ""
+        r.created_at ? formatStoredLocal(r.created_at, "datetime") : ""
       ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","))
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -163,7 +163,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                         👤 {ride.created_by.split("@")[0]}
                       </span>
                     ) : null}
-                    <span className="text-xs text-slate-300">{formatCDMX(ride.requested_at || ride.created_date, "shortdatetime")}</span>
+                    <span className="text-xs text-slate-300">{formatCDMX(ride.requested_at || ride.created_at, "shortdatetime")}</span>
                   </div>
                   {ride.cancellation_reason && (
                     <p className="text-xs text-red-500 mt-1.5 bg-red-50 px-2 py-1 rounded-lg">❌ {ride.cancellation_reason}</p>

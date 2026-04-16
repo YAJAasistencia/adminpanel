@@ -293,7 +293,7 @@ export default function ServiceTypes() {
 
 		{/* Main edit dialog */}
 		<Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) setEditService(null); }}>
-			<DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+			<DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>{editService?.id ? "Editar subcategoría" : "Nueva subcategoría"}</DialogTitle>
 				</DialogHeader>

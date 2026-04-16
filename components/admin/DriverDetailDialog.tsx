@@ -274,7 +274,9 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
         rejected_docs: Object.keys(docRejected).filter(k => docRejected[k]),
         doc_expiries: docExpiries,
       };
-      await supabaseApi.drivers.update(driver.id, dataToSave);
+      console.log('[DriverDetailDialog] Saving driver:', { driverId: driver.id, dataToSave });
+      const result = await supabaseApi.drivers.update(driver.id, dataToSave);
+      console.log('[DriverDetailDialog] Update result:', result);
       queryClient.setQueryData(["drivers"], (old = []) =>
         old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
       );
@@ -283,7 +285,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       setSaving(false);
       onOpenChange(false);
     } catch (err: any) {
-      console.error("Error saving driver:", err);
+      console.error("[DriverDetailDialog] Error saving driver:", err);
       toast.error(`Error al guardar: ${err?.message || JSON.stringify(err)}`);
       setSaving(false);
     }
@@ -459,14 +461,14 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-1 flex-wrap">
             <div className="flex items-center gap-1">
-              <div className="w-10 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
                 {driver.full_name?.charAt(0)}
               </div>
-              <span>{driver.full_name}</span>
+              <span className="text-base">{driver.full_name}</span>
             </div>
             <DriverSmsNotifier driver={driver} />
           </DialogTitle>
@@ -482,22 +484,22 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             <TabsTrigger value="ratings">Califs.</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="info" className="space-y-0.5 mt-4">
-            <div className="grid grid-cols-2 gap-1">
-              <div><Label>Nombre completo *</Label><Input value={editDriver.full_name || ""} onChange={e => update("full_name", e.target.value)} /></div>
-              <div><Label>Teléfono</Label><Input value={editDriver.phone || ""} onChange={e => update("phone", e.target.value)} placeholder="Opcional" /></div>
+          <TabsContent value="info" className="space-y-0.5 mt-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-sm">Nombre completo *</Label><Input size="sm" value={editDriver.full_name || ""} onChange={e => update("full_name", e.target.value)} className="h-7 text-sm" /></div>
+              <div><Label className="text-sm">Teléfono</Label><Input size="sm" value={editDriver.phone || ""} onChange={e => update("phone", e.target.value)} placeholder="Opcional" className="h-7 text-sm" /></div>
             </div>
-            <div><Label>Email (acceso)</Label><Input type="email" value={editDriver.email || ""} onChange={e => update("email", e.target.value)} placeholder="correo@ejemplo.com" /></div>
-            <div><Label>Contraseña de acceso</Label><Input type="text" value={editDriver.password || ""} onChange={e => update("password", e.target.value)} placeholder="Contraseña para la app" /></div>
+            <div><Label className="text-sm">Email (acceso)</Label><Input size="sm" type="email" value={editDriver.email || ""} onChange={e => update("email", e.target.value)} placeholder="correo@ejemplo.com" className="h-7 text-sm" /></div>
+            <div><Label className="text-sm">Contraseña de acceso</Label><Input size="sm" type="text" value={editDriver.password || ""} onChange={e => update("password", e.target.value)} placeholder="Contraseña para la app" className="h-7 text-sm" /></div>
             <div className="bg-slate-50 rounded-lg p-2 text-xs text-slate-500 flex items-center gap-1">
               <Car className="w-4 h-4 text-slate-400" />
               Los datos del vehículo se sincronizan desde la pestaña <strong>Vehículos</strong>. Vehículo activo: <span className="font-mono font-bold text-slate-700">{editDriver.vehicle_brand} {editDriver.vehicle_model} · {editDriver.license_plate}</span>
             </div>
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>Estado</Label>
+                <Label className="text-sm">Estado</Label>
                 <Select value={editDriver.status || "offline"} onValueChange={v => update("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-7 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="available">Disponible</SelectItem>
                     <SelectItem value="busy">Ocupado</SelectItem>
@@ -508,9 +510,9 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 </Select>
               </div>
               <div>
-                <Label>Aprobación</Label>
+                <Label className="text-sm">Aprobación</Label>
                 <Select value={editDriver.approval_status || "pending"} onValueChange={v => update("approval_status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-7 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pendiente</SelectItem>
                     <SelectItem value="approved">Aprobado</SelectItem>
@@ -563,7 +565,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           </TabsContent>
 
           {/* ── VEHICLES TAB ── */}
-          <TabsContent value="vehicles" className="mt-4 space-y-1">
+          <TabsContent value="vehicles" className="mt-3 space-y-1">
             {!editingVehicleId && (
               <AdminAddVehicleForm
                 onAdd={(newVehicle) => {
@@ -787,7 +789,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             })}
           </TabsContent>
 
-          <TabsContent value="services" className="mt-4 space-y-0.5">
+          <TabsContent value="services" className="mt-3 space-y-0.5">
             <div>
               <Label className="text-xs text-slate-700 mb-3 block">Tipos de servicio asignados</Label>
               <div className="space-y-1">
@@ -983,9 +985,9 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-1 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800">
+        <div className="flex justify-end gap-2 pt-2 border-t">
+          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-sm">
             {saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>

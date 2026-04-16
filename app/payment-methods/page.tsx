@@ -503,7 +503,7 @@ function TransactionsTab({ rides, settings }) {
         ride_status: r.status,
         driver: r.driver_name || "—",
         reference: r.payment_reference,
-        created_at: r.requested_at || r.created_date,
+        created_at: r.requested_at || r.created_at,
         driver_earnings: r.driver_earnings,
         commission: r.platform_commission,
         driver_payout_status: r.driver_payout_status || "pendiente",

@@ -49,7 +49,7 @@ async function generateTicketPDF(ride, type, companyOverridePrice) {
   doc.text(title, 105, y, { align: "center" }); nl(7);
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
   doc.text(`Folio: ${ride.service_id || ride.id?.slice(-8).toUpperCase()}`, 105, y, { align: "center" }); nl(6);
-  const fechaStr = formatCDMX(ride.requested_at || ride.created_date, "datetime");
+  const fechaStr = formatCDMX(ride.requested_at || ride.created_at, "datetime");
   doc.text(`Fecha: ${fechaStr}`, 105, y, { align: "center" }); nl(4);
   line();
 
@@ -198,7 +198,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           .from("chat_messages")
           .select("*")
           .eq("ride_id", ride.id)
-          .order("created_date", { ascending: true });
+          .order("created_at", { ascending: true });
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -217,7 +217,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1">
             <FileText className="w-5 h-5" />
@@ -360,7 +360,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           {/* Proceso del servicio */}
           {(() => {
             // Hora de solicitud: requested_at es guardado como hora local (no UTC real), usar formatCDMX directo
-            const solicitudTs = ride.requested_at || ride.created_date;
+            const solicitudTs = ride.requested_at || ride.created_at;
             // Los demás timestamps (en_route_at, in_progress_at, completed_at) son UTC reales → formatCDMX correcto
             const steps = [
               { label: "Solicitud", ts: solicitudTs, icon: "📨" },
@@ -423,7 +423,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
                           isPassenger ? "text-violet-600" : "text-blue-600"
                         }`}>{msg.sender_name || (isPassenger ? "Pasajero" : "Conductor")}</p>}
                         <p>{msg.message}</p>
-                        <p className="text-[9px] opacity-50 mt-0.5">{formatCDMX(msg.created_date, "time")}</p>
+                        <p className="text-[9px] opacity-50 mt-0.5">{formatCDMX(msg.created_at, "time")}</p>
                       </div>
                     </div>
                   );

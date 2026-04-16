@@ -15,7 +15,7 @@ export default function DriverNotificationsPanel({ driver }) {
   const { data: notifications = [], refetch } = useQuery({
     queryKey: ["driverNotifs", driver?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("DriverNotification").select("*").eq("driver_id", driver.id).order("created_date", { ascending: false }).limit(50);
+      const { data, error } = await supabase.from("DriverNotification").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false }).limit(50);
       if (error) throw error;
       const all = data || [];
       return all.filter(n => !n.driver_ids?.length || n.driver_ids.includes(driver?.id));
@@ -116,7 +116,7 @@ export default function DriverNotificationsPanel({ driver }) {
                           {!isRead && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
                         </div>
                         <p className={`text-xs mt-0.5 leading-snug ${isRead ? "text-slate-400" : "text-slate-600"}`}>{n.body}</p>
-                        <p className="text-[10px] text-slate-300 mt-1.5">{formatCDMX(n.created_date, "relative")}</p>
+                        <p className="text-[10px] text-slate-300 mt-1.5">{formatCDMX(n.created_at, "relative")}</p>
                       </div>
                     </div>
                   </button>

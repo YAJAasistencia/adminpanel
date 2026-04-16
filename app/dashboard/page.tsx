@@ -260,13 +260,13 @@ export default function Dashboard() {
   }, [queryClient]);
 
   useEffect(() => {
-    const check = () => {
+      const check = () => {
       const now = Date.now();
       const unassigned = rides.find((r: any) =>
         (r.status === "pending" || r.status === "auction") &&
         !r.driver_id &&
         !r.scheduled_time &&
-        (now - new Date(r.created_date).getTime()) > 60000
+        (now - new Date(r.created_at).getTime()) > 60000
       );
       if (unassigned && (!manualAssignPrompt || manualAssignPrompt.id !== unassigned.id)) {
         setManualAssignPrompt(unassigned);
@@ -345,15 +345,15 @@ export default function Dashboard() {
 
     if (ACTIVE_STATUSES.includes(r.status)) return matchSearch && matchStatus;
 
-    const rideDate = new Date(r.requested_at || r.created_date);
+    const rideDate = new Date(r.requested_at || r.created_at);
     const matchDate = rideDate >= dayStart && rideDate <= dayEnd;
 
     return matchSearch && matchStatus && matchDate;
   });
 
-  const sortedFiltered = [
-    ...filtered.filter((r: any) => ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime()),
-    ...filtered.filter((r: any) => !ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_date || b.created_date).getTime() - new Date(a.updated_date || a.created_date).getTime()),
+    const sortedFiltered = [
+    ...filtered.filter((r: any) => ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    ...filtered.filter((r: any) => !ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_date || b.created_at).getTime() - new Date(a.updated_date || a.created_at).getTime()),
   ];
 
 
@@ -383,8 +383,8 @@ export default function Dashboard() {
           const todayEnd = endOfDayCDMX(today);
           const completedToday = rides.filter((r: any) =>
             r.status === "completed" &&
-            new Date(r.updated_date || r.created_date) >= todayStart &&
-            new Date(r.updated_date || r.created_date) < todayEnd
+            new Date(r.updated_date || r.created_at) >= todayStart &&
+            new Date(r.updated_date || r.created_at) < todayEnd
           ).length;
           const pendingScheduled = rides.filter((r: any) =>
             r.scheduled_time &&

@@ -37,7 +37,7 @@ function PassengerProfileModal({ passenger, onClose }) {
 
   const now = new Date();
   const filteredRides = rides.filter(r => {
-    const rDate = new Date(r.requested_at || r.created_date);
+    const rDate = new Date(r.requested_at || r.created_at);
     if (dateFilter === "7d" && (now - rDate) > 7 * 86400000) return false;
     if (dateFilter === "30d" && (now - rDate) > 30 * 86400000) return false;
     if (dateFilter === "90d" && (now - rDate) > 90 * 86400000) return false;
@@ -293,9 +293,9 @@ function PassengersContent() {
           <Badge className="bg-blue-100 text-blue-700 text-sm px-3 py-1">
             {passengers.length} registrados
           </Badge>
-          <Button variant="outline" onClick={() => {
+            <Button variant="outline" onClick={() => {
             const csv = ["Nombre,Email,Teléfono,Estado,Fecha registro",
-              ...passengers.map(p => [p.full_name,p.email||"",p.phone||"",p.is_active!==false?"Activo":"Inactivo",p.created_date ? new Date(p.created_date).toLocaleDateString("es") : ""].join(","))
+              ...passengers.map(p => [p.full_name,p.email||"",p.phone||"",p.is_active!==false?"Activo":"Inactivo",p.created_at ? new Date(p.created_at).toLocaleDateString("es") : ""].join(","))
             ].join("\n");
             const blob = new Blob([csv], { type: "text/csv" });
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "pasajeros.csv"; a.click();
@@ -418,10 +418,10 @@ function PassengersContent() {
                     <Button size="sm" variant="outline" onClick={() => openEdit(p)} className="h-8 px-2 gap-1 text-xs">
                       <Pencil className="w-3 h-3" /> Editar
                     </Button>
-                    {p.created_date && (
+                    {p.created_at && (
                       <p className="text-[11px] text-slate-300 flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(p.created_date), "d MMM yyyy", { locale: es })}
+                        {format(new Date(p.created_at), "d MMM yyyy", { locale: es })}
                       </p>
                     )}
                   </div>

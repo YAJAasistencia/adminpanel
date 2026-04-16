@@ -277,7 +277,7 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl ${isAssigned ? "sm:max-w-2xl" : "sm:max-w-2xl"}`}>
+      <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl max-w-sm sm:max-w-2xl`}>
         {isNoDrivers ? (
           <NoDriversPhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />
         ) : isAssigned ? (
