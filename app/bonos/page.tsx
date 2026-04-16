@@ -454,7 +454,7 @@ export default function BonosPage() {
 
         {/* Rule create/edit dialog */}
         <Dialog open={showRuleDialog} onOpenChange={setShowRuleDialog}>
-          <DialogContent className="max-w-md rounded-2xl">
+          <DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 rounded-2xl">
             <DialogHeader>
               <DialogTitle>{editingRule ? "Editar regla" : "Nueva regla de bono"}</DialogTitle>
             </DialogHeader>

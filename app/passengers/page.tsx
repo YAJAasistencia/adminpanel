@@ -309,7 +309,7 @@ function PassengersContent() {
       </div>
 
       <Dialog open={!!editPassenger} onOpenChange={open => { if (!open) setEditPassenger(null); }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader><DialogTitle>Editar usuario</DialogTitle></DialogHeader>
           <div className="grid gap-3 py-2">
             {[
@@ -334,7 +334,7 @@ function PassengersContent() {
       </Dialog>
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader><DialogTitle>Nuevo usuario de app</DialogTitle></DialogHeader>
           <div className="grid gap-3 py-2">
             {[

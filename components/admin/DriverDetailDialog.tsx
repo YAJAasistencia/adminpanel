@@ -461,7 +461,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
+      <DialogContent className="max-w-sm sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-1 flex-wrap">
             <div className="flex items-center gap-1">

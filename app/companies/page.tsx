@@ -470,7 +470,7 @@ export default function Companies() {
       </div>
 
       <Dialog open={showForm} onOpenChange={v => { setShowForm(v); if (!v) setEditing(null); }}>
-        <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Editar empresa" : "Nueva empresa"}</DialogTitle>
           </DialogHeader>

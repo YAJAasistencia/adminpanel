@@ -186,7 +186,7 @@ function SupportTicketsContent() {
 
       {/* Detail dialog */}
       <Dialog open={!!selected} onOpenChange={v => { if (!v) { setSelected(null); setResponse(""); } }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>Ticket de soporte</DialogTitle>
           </DialogHeader>

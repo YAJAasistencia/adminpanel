@@ -257,7 +257,7 @@ function GeoZonesContent() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) { setDrawing(false); setPolygon([]); } }}>
-        <DialogContent className="max-w-sm sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Editar zona tarifaria" : "Nueva zona tarifaria"}</DialogTitle>
           </DialogHeader>
