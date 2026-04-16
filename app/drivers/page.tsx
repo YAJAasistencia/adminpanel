@@ -129,7 +129,9 @@ export default function DriversPage() {
         created_date: new Date().toISOString(),
       });
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      setSelectedDriver(created);
+      // Accept either direct row or array-like return; keep defensive assignment
+      const row = Array.isArray(created) ? created[0] : created;
+      setSelectedDriver(row);
       setShowDetail(true);
       toast.success("Conductor creado");
     } catch (error: any) {

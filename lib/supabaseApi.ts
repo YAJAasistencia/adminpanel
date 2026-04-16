@@ -45,7 +45,7 @@ export const supabaseApi = {
       let query = supabase.from('Driver').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
