@@ -931,7 +931,7 @@ export default function DriverApp() {
       .channel(`driver:${driver.id}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "drivers", filter: `id=eq.${driver.id}` },
+        { event: "UPDATE", schema: "public", table: "Driver", filter: `id=eq.${driver.id}` },
         (payload) => {
           const evt = payload.new as Driver;
           if (evt?.id === driver.id) {
