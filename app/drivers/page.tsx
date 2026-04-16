@@ -126,13 +126,14 @@ export default function DriversPage() {
         access_code: code,
         total_rides: 0,
         rating: 5,
+        created_date: new Date().toISOString(),
       });
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       setSelectedDriver(created);
       setShowDetail(true);
       toast.success("Conductor creado");
-    } catch (error) {
-      toast.error("Error al crear conductor");
+    } catch (error: any) {
+      toast.error(`Error al crear conductor: ${error?.message || JSON.stringify(error)}`);
     }
   };
 

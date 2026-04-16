@@ -278,12 +278,13 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       queryClient.setQueryData(["drivers"], (old = []) =>
         old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
       );
+      queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.success("Conductor actualizado");
       setSaving(false);
       onOpenChange(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving driver:", err);
-      toast.error("Error al guardar conductor");
+      toast.error(`Error al guardar: ${err?.message || JSON.stringify(err)}`);
       setSaving(false);
     }
   };
