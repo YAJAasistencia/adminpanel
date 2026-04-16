@@ -17,7 +17,7 @@ import { useAdminSession, PUBLIC_PAGES } from "@/components/shared/useAdminSessi
 import { ALL_PAGES, DEFAULT_NAV_CONFIG } from "@/components/shared/navPages";
 import useAdminBadges from "@/components/shared/useAdminBadges.ts";
 import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 
 // ─── Update PWA title per app context ────────────────────────────────────────
@@ -54,6 +54,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ Finanzas: false, "Configuración": true });
   const { settings } = useAppSettings();
   const { session, validated, isAllowed, logout } = useAdminSession();
+  const queryClient = useQueryClient();
   const badges = useAdminBadges();
 
   // ── Load cities for geofence checks used by auto-assign ──────────────────
@@ -81,6 +82,18 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     if (!session) { window.location.href = createPageUrl("AdminLogin"); return; }
     if (!isAllowed(currentPageName)) { window.location.href = createPageUrl("Dashboard"); }
   }, [validated, session, currentPageName, isAllowed]);
+
+  // Invalidate react-query cache when session becomes available to ensure
+  // freshly fetched data is shown immediately after login.
+  React.useEffect(() => {
+    if (session) {
+      try {
+        queryClient.invalidateQueries();
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [session, queryClient]);
 
   const shareAdminLink = () => {
     navigator.clipboard.writeText(window.location.origin);
