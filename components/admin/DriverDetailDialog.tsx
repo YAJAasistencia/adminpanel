@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { CAR_BRANDS, MOTO_BRANDS, VEHICLE_YEARS } from "@/components/shared/vehicleBrands";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -472,6 +472,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             </div>
             <DriverSmsNotifier driver={driver} />
           </DialogTitle>
+          <DialogDescription className="sr-only">Editar información del conductor</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="info">

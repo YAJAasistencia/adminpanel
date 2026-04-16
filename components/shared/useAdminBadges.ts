@@ -28,7 +28,7 @@ export default function useAdminBadges(): AdminBadges {
         supabaseApi.sosAlerts.list(),
         supabase
           .from("chat_messages")
-          .select("id, ride_id, sender_role, read_by_admin")
+          .select("*")
           .order("created_at", { ascending: false })
           .limit(200),
       ]);
