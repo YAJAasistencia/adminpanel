@@ -87,7 +87,7 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1 text-red-600">
             <AlertTriangle className="w-5 h-5" /> Cancelar viaje
@@ -135,8 +135,8 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Volver</Button>
-          <Button variant="destructive" onClick={handleCancel} disabled={saving}>
+          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Volver</Button>
+          <Button size="sm" variant="destructive" onClick={handleCancel} disabled={saving} className="text-sm">
             {saving ? "Cancelando..." : "Confirmar cancelación"}
           </Button>
         </DialogFooter>

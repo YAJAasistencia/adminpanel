@@ -201,7 +201,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="text-lg flex items-center gap-1">
             Asignar conductor
@@ -455,8 +455,8 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleAssign} disabled={!selectedDriverId || saving} className="bg-slate-900 hover:bg-slate-800">
+          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Cancelar</Button>
+          <Button size="sm" onClick={handleAssign} disabled={!selectedDriverId || saving} className="bg-slate-900 hover:bg-slate-800 text-sm">
             {saving ? "Asignando..." : "Asignar conductor"}
           </Button>
         </DialogFooter>

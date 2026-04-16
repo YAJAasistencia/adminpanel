@@ -301,7 +301,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1">
             ✏️ Editar Viaje
@@ -657,10 +657,10 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
           </section>
         </div>
 
-        <div className="flex gap-1 pt-2 border-t">
-          <Button variant="outline" className="flex-1 rounded-lg" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button className="flex-1 rounded-lg bg-slate-900 hover:bg-slate-800" onClick={handleSave} disabled={saving}>
-            <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar cambios"}
+        <div className="flex gap-2 pt-2 border-t">
+          <Button size="sm" variant="outline" className="flex-1 rounded-lg text-sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button size="sm" className="flex-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sm" onClick={handleSave} disabled={saving}>
+            <Save className="w-3.5 h-3.5 mr-1" /> {saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
       </DialogContent>

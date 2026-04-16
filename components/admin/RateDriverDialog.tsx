@@ -47,7 +47,7 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl p-4">
         <DialogHeader>
           <DialogTitle>Calificar conductor</DialogTitle>
         </DialogHeader>
@@ -65,7 +65,7 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
                 onClick={() => setRating(n)}
                 className="p-1 transition-transform hover:scale-110"
               >
-                <Star className={`w-8 h-8 transition-colors ${n <= (hover || rating) ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />
+                <Star className={`w-6 h-6 transition-colors ${n <= (hover || rating) ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />
               </button>
             ))}
           </div>
@@ -78,8 +78,8 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-amber-500 hover:bg-amber-600">
+          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-amber-500 hover:bg-amber-600 text-sm">
             {saving ? "Guardando..." : "Guardar calificación"}
           </Button>
         </DialogFooter>
