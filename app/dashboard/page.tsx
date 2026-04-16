@@ -112,7 +112,7 @@ export default function Dashboard() {
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const data = await supabaseApi.appSettings.list();
+        const data = await supabaseApi.settings.list();
         return data?.[0] || {};
       } catch { return {}; }
     },

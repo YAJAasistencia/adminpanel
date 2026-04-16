@@ -76,7 +76,19 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      // Buscar usuario en tabla admin_users
+      // Autenticar con Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (authError || !authData?.user) {
+        setError("Credenciales incorrectas.");
+        setLoading(false);
+        return;
+      }
+
+      // Verificar que el usuario existe y está activo en admin_users
       const { data: adminUser, error: fetchError } = await supabase
         .from("admin_users")
         .select("*")
@@ -85,15 +97,14 @@ export default function AdminLoginPage() {
 
       if (fetchError || !adminUser) {
         setError("Credenciales incorrectas.");
+        await supabase.auth.signOut();
         setLoading(false);
         return;
       }
 
-      // Validar contraseña (debe estar hasheada en base de datos)
-      // Aquí asumimos que la contraseña se compara directamente
-      // Si está hasheada, necesitarías usar bcrypt para validar
-      if (adminUser.password !== password) {
-        setError("Credenciales incorrectas.");
+      if (adminUser.is_active === false) {
+        setError("Tu cuenta se encuentra desactivada. Contacta al administrador.");
+        await supabase.auth.signOut();
         setLoading(false);
         return;
       }

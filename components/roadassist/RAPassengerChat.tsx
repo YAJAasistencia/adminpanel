@@ -13,7 +13,7 @@ export default function RAPassengerChat({ ride, user, onClose }) {
   const { data: messages = [] } = useQuery({
     queryKey: ["passengerChat", ride.id],
     queryFn: async () => {
-      const { data } = await supabase.from("ChatMessage").select("*").eq("ride_id", ride.id).order("created_date", { ascending: true });
+      const { data } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("created_date", { ascending: true });
       return data || [];
     },
     refetchInterval: false,
@@ -23,7 +23,7 @@ export default function RAPassengerChat({ ride, user, onClose }) {
   React.useEffect(() => {
     if (!ride.id) return;
     const channel = supabase.channel(`realtime:ChatMessage:${ride.id}`);
-    const sub = channel.on("postgres_changes", { event: "*", schema: "public", table: "ChatMessage", filter: `ride_id=eq.${ride.id}` }, (event) => {
+    const sub = channel.on("postgres_changes", { event: "*", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
       const msg = event.new;
       if (!msg || msg.ride_id !== ride.id) return;
       queryClient.setQueryData(["passengerChat", ride.id], (old = []) => {
@@ -52,14 +52,14 @@ export default function RAPassengerChat({ ride, user, onClose }) {
       } catch (_) {}
     }
     prevCountRef.current = unread.length;
-    unread.forEach(m => supabase.from("ChatMessage").update({ read_by_passenger: true }).eq("id", m.id));
+    unread.forEach(m => supabase.from("chat_messages").update({ read_by_passenger: true }).eq("id", m.id));
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
     setSending(true);
-    await supabase.from("ChatMessage").insert([{
+    await supabase.from("chat_messages").insert([{
       ride_id: ride.id,
       sender_role: "passenger",
       sender_name: user?.full_name || "Pasajero",

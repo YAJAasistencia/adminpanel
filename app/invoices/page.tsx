@@ -341,7 +341,7 @@ export default function Invoices() {
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
-    queryFn: () => supabaseApi.invoices.list("-created_date", 200),
+    queryFn: () => supabaseApi.invoices.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -353,7 +353,7 @@ export default function Invoices() {
   });
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
-    queryFn: () => supabaseApi.rideRequests.list("-created_date", 5000),
+    queryFn: () => supabaseApi.rideRequests.list(),
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
   });

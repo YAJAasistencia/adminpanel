@@ -136,7 +136,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
     queryKey: ["driverAllRides", driver?.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("ride_requests").select("*").eq("driver_id", driver?.id).order("completed_at", { ascending: false });
+        const { data, error } = await supabase.from("RideRequest").select("*").eq("driver_id", driver?.id).order("completed_at", { ascending: false });
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -157,7 +157,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-photos/${fileName}`);
       const file_url = publicUrlData.publicUrl;
-      await supabase.from("drivers").update({ photo_url: file_url }).eq("id", driver.id);
+      await supabase.from("Driver").update({ photo_url: file_url }).eq("id", driver.id);
       onPhotoUpdate(file_url);
     } catch (err) {
       console.error("Error uploading photo:", err);
@@ -169,7 +169,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
     if (deleteConfirmText !== "ELIMINAR") return;
     setDeleting(true);
     try {
-      await supabase.from("drivers").delete().eq("id", driver.id);
+      await supabase.from("Driver").delete().eq("id", driver.id);
       localStorage.removeItem(SESSION_KEY);
       onDeleteAccount();
     } catch (err) {

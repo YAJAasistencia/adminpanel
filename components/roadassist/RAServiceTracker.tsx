@@ -182,7 +182,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const { data: policies = [] } = useQuery({
     queryKey: ["cancellationPolicies"],
     queryFn: async () => {
-      const { data } = await supabase.from("CancellationPolicy").select("*").eq("is_active", true);
+      const { data } = await supabase.from("cancellation_policies").select("*").eq("is_active", true);
       return data || [];
     },
   });
@@ -191,7 +191,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   useEffect(() => {
     if (!ride?.id) return;
     const channel = supabase.channel(`rt:ChatMessage:${ride.id}`);
-    const sub = channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "ChatMessage", filter: `ride_id=eq.${ride.id}` }, (event) => {
+    const sub = channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
       const msg = event.new;
       if (!msg || msg.ride_id !== ride.id) return;
       if ((msg.sender_role === "driver" || msg.sender_role === "admin") && !msg.read_by_passenger) {

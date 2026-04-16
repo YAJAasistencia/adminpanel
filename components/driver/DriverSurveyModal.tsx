@@ -139,7 +139,7 @@ export default function DriverSurveyModal({ survey, ride, driver, onComplete, on
     }));
 
     try {
-      await supabase.from("survey_responses").insert([{
+      await supabase.from("SurveyResponse").insert([{
         survey_id: survey.id,
         survey_title: survey.title,
         ride_id: ride.id,

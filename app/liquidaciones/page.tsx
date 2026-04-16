@@ -57,7 +57,7 @@ export default function Liquidaciones() {
   const { data: allRides = [] } = useQuery({
     queryKey: ["rides-completed"],
     queryFn: async () => {
-      const rides = await supabaseApi.rideRequests.list("-created_date", 5000);
+      const rides = await supabaseApi.rideRequests.list();
       return rides.filter(r => r.status === "completed");
     },
     staleTime: 30 * 1000,

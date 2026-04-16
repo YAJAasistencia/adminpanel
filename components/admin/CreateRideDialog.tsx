@@ -53,7 +53,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     queryKey: ["redZones"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("red_zones").select("*");
+        const { data, error } = await supabase.from("RedZone").select("*");
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -68,7 +68,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     queryKey: ["companies"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("companies").select("*").eq("is_active", true);
+        const { data, error } = await supabase.from("Company").select("*").eq("is_active", true);
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -102,7 +102,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const handlePhoneBlur = async (phone) => {
     if (!phone || phone.length < 8) return;
     try {
-      const { data, error } = await supabase.from("road_assist_users").select("*").eq("phone", phone.trim());
+      const { data, error } = await supabase.from("RoadAssistUser").select("*").eq("phone", phone.trim());
       if (error || !data) return;
       if (data.length > 0) {
         const p = data[0];

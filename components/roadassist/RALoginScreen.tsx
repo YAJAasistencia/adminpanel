@@ -54,7 +54,7 @@ export default function RALoginScreen({ onLogin }) {
     if (!form.email || !form.password) { setError("Ingresa correo y contraseña"); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("road_assist_users").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
+      const { data, error } = await supabase.from("RoadAssistUser").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
       if (error || !data || data.length === 0) { setError("No existe una cuenta con ese correo"); setLoading(false); return; }
       const u = data[0];
       if (!u.is_active) {
@@ -87,21 +87,21 @@ export default function RALoginScreen({ onLogin }) {
     setLoading(true);
 
     // Check passenger account by email
-    const { data: existingPassenger } = await supabase.from("road_assist_users").select("*").eq("email", emailLow).limit(1);
+    const { data: existingPassenger } = await supabase.from("RoadAssistUser").select("*").eq("email", emailLow).limit(1);
     if (existingPassenger && existingPassenger.length > 0) {
       setError("Ya existe una cuenta de cliente con ese correo. Inicia sesión.");
       setLoading(false); return;
     }
 
     // Check phone duplicate
-    const { data: existingPhone } = await supabase.from("road_assist_users").select("*").eq("phone", form.phone.trim()).limit(1);
+    const { data: existingPhone } = await supabase.from("RoadAssistUser").select("*").eq("phone", form.phone.trim()).limit(1);
     if (existingPhone && existingPhone.length > 0) {
       setError("Ya existe una cuenta registrada con ese número de teléfono.");
       setLoading(false); return;
     }
 
     // Check driver account (cross-check)
-    const { data: existingDriver } = await supabase.from("drivers").select("*").eq("email", emailLow).limit(1);
+    const { data: existingDriver } = await supabase.from("Driver").select("*").eq("email", emailLow).limit(1);
     if (existingDriver && existingDriver.length > 0) {
       setError("Ese correo ya está registrado como conductor en la plataforma. Usa uno diferente.");
       setLoading(false); return;
@@ -126,7 +126,7 @@ export default function RALoginScreen({ onLogin }) {
       return;
     }
 
-    const { data: newUser } = await supabase.from("road_assist_users").insert([userData]).select().single();
+    const { data: newUser } = await supabase.from("RoadAssistUser").insert([userData]).select().single();
     const u = newUser;
     setLoading(false);
     onLogin(u);
@@ -139,13 +139,13 @@ export default function RALoginScreen({ onLogin }) {
     setLoading(true);
 
     // Check if it's a driver email (not a passenger)
-    const { data: drivers } = await supabase.from("drivers").select("*").eq("email", emailLow).limit(1);
+    const { data: drivers } = await supabase.from("Driver").select("*").eq("email", emailLow).limit(1);
     if (drivers && drivers.length > 0) {
       setError("Ese correo pertenece a una cuenta de conductor, no de cliente.");
       setLoading(false); return;
     }
 
-    const { data: users } = await supabase.from("road_assist_users").select("*").eq("email", emailLow).limit(1);
+    const { data: users } = await supabase.from("RoadAssistUser").select("*").eq("email", emailLow).limit(1);
     if (!users || users.length === 0) {
       setError("No encontramos ninguna cuenta de cliente con ese correo.");
       setLoading(false); return;
@@ -154,7 +154,7 @@ export default function RALoginScreen({ onLogin }) {
     const token = genToken();
     const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min
 
-    await supabase.from("road_assist_users").update({
+    await supabase.from("RoadAssistUser").update({
       reset_token: token,
       reset_token_expires: expires,
     }).eq("id", users[0].id);
@@ -173,7 +173,7 @@ export default function RALoginScreen({ onLogin }) {
     if (pwdError) { setError(pwdError); return; }
     setLoading(true);
 
-    const { data: users } = await supabase.from("road_assist_users").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
+    const { data: users } = await supabase.from("RoadAssistUser").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
     const u = users?.[0];
     if (!u) { setError("Correo no encontrado"); setLoading(false); return; }
 
@@ -182,7 +182,7 @@ export default function RALoginScreen({ onLogin }) {
     if (new Date() > new Date(u.reset_token_expires)) {
       setError("El código ha expirado. Solicita uno nuevo."); setLoading(false); return; }
 
-    await supabase.from("road_assist_users").update({
+    await supabase.from("RoadAssistUser").update({
       password: form.new_password,
       reset_token: null,
       reset_token_expires: null,
@@ -278,7 +278,7 @@ export default function RALoginScreen({ onLogin }) {
                   onClick={async () => {
                     if (enteredOtp.trim() !== otpCode) { setError("Código incorrecto"); return; }
                     setLoading(true); setError("");
-                    const { data: newUser } = await supabase.from("road_assist_users").insert([pendingUserData]).select().single();
+                    const { data: newUser } = await supabase.from("RoadAssistUser").insert([pendingUserData]).select().single();
                     setLoading(false);
                     if (newUser) onLogin(newUser);
                   }}

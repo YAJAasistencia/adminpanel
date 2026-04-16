@@ -1,675 +1,401 @@
 import { supabase } from "@/lib/supabase";
 
 // ─── Supabase API Functions ──────────────────────────────────────────────────
+// Tabla → nombre real en Supabase
+// PascalCase (datos de Base44): Driver, RideRequest, City, RoadAssistUser,
+//   ServiceType, Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
+//   SosAlert, SupportTicket, SurveyResponse, DriverNotification, AdminUser, AppSettings
+// snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
+//   cash_cutoffs, chat_messages, liquidations, notifications, surveys
 
 export const supabaseApi = {
-  // Internal helper: some datasets still use the legacy table name `settings`
-  // while the current Supabase project exposes `AppSettings`.
-  _settingsTable: async () => {
-    const primary = await supabase.from('AppSettings').select('id').limit(1);
-    if (!primary.error) return 'AppSettings';
 
-    const legacy = await supabase.from('settings').select('id').limit(1);
-    if (!legacy.error) return 'settings';
-
-    throw primary.error || legacy.error;
-  },
-
-  // Cities
+  // ─── Cities ───────────────────────────────────────────────────────────────
   cities: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('City').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('City').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (city: any) => {
-      const { data, error } = await supabase
-        .from('cities')
-        .insert(city)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('City').insert(city).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('cities')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('City').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('cities')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('City').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Drivers
+  // ─── Drivers ──────────────────────────────────────────────────────────────
   drivers: {
     list: async (filters?: any) => {
-      let query = supabase
-        .from('drivers')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      let query = supabase.from('Driver').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) {
-            query = query.eq(key, value);
-          }
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('Driver').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (driver: any) => {
-      const { data, error } = await supabase
-        .from('drivers')
-        .insert(driver)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('Driver').insert(driver).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('drivers')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('Driver').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('drivers')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('Driver').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Ride Requests
+  // ─── Ride Requests ────────────────────────────────────────────────────────
   rideRequests: {
     list: async (filters?: any) => {
-      let query = supabase
-        .from('ride_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      let query = supabase.from('RideRequest').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) {
-            query = query.eq(key, value);
-          }
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('RideRequest').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (rideRequest: any) => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .insert(rideRequest)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('RideRequest').insert(rideRequest).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('RideRequest').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('ride_requests')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('RideRequest').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Geo Zones
+  // ─── Geo Zones ────────────────────────────────────────────────────────────
   geoZones: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('GeoZone').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('GeoZone').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (geoZone: any) => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .insert(geoZone)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('GeoZone').insert(geoZone).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('GeoZone').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('geo_zones')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('GeoZone').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Support Tickets
+  // ─── Support Tickets ──────────────────────────────────────────────────────
   supportTickets: {
     list: async (filters?: any) => {
-      let query = supabase
-        .from('support_tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      let query = supabase.from('SupportTicket').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) {
-            query = query.eq(key, value);
-          }
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('SupportTicket').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (ticket: any) => {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .insert(ticket)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('SupportTicket').insert(ticket).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('SupportTicket').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('support_tickets')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('SupportTicket').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Chats
+  // ─── Chat Messages (snake_case — sin PascalCase) ──────────────────────────
   chats: {
     list: async (filters?: any) => {
-      let query = supabase
-        .from('chats')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
+      let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) {
-            query = query.eq(key, value);
-          }
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('chats')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('chat_messages').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (chat: any) => {
-      const { data, error } = await supabase
-        .from('chats')
-        .insert(chat)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('chat_messages').insert(chat).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('chats')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('chat_messages').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('chats')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('chat_messages').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // SOS Alerts
+  // ─── SOS Alerts ───────────────────────────────────────────────────────────
   sosAlerts: {
     list: async (filters?: any) => {
-      let query = supabase
-        .from('sos_alerts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      let query = supabase.from('SosAlert').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) {
-            query = query.eq(key, value);
-          }
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('sos_alerts')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('SosAlert').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (alert: any) => {
-      const { data, error } = await supabase
-        .from('sos_alerts')
-        .insert(alert)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('SosAlert').insert(alert).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('sos_alerts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('SosAlert').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('sos_alerts')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('SosAlert').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Settings
+  // ─── Settings (AppSettings) ───────────────────────────────────────────────
   settings: {
     list: async () => {
-      const table = await supabaseApi._settingsTable();
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1);
+      const { data, error } = await supabase.from('AppSettings').select('*').order('created_date', { ascending: false }).limit(1);
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const table = await supabaseApi._settingsTable();
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('AppSettings').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (setting: any) => {
-      const table = await supabaseApi._settingsTable();
-      const { data, error } = await supabase
-        .from(table)
-        .insert(setting)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('AppSettings').insert(setting).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const table = await supabaseApi._settingsTable();
-      const { data, error } = await supabase
-        .from(table)
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('AppSettings').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const table = await supabaseApi._settingsTable();
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('AppSettings').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Passengers
+  // ─── Passengers / Road Assist Users ──────────────────────────────────────
   passengers: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('passengers')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_date', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('passengers')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('RoadAssistUser').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (passenger: any) => {
-      const { data, error } = await supabase
-        .from('passengers')
-        .insert(passenger)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('RoadAssistUser').insert(passenger).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('passengers')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('RoadAssistUser').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('passengers')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('RoadAssistUser').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Service Types
+  // ─── Service Types ────────────────────────────────────────────────────────
   serviceTypes: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('ServiceType').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('ServiceType').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (serviceType: any) => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .insert(serviceType)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('ServiceType').insert(serviceType).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('ServiceType').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase
-        .from('service_types')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('ServiceType').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Admin Users
+  // ─── Admin Users ──────────────────────────────────────────────────────────
   adminUsers: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('AdminUser').select('*').order('created_date', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('admin_users').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('AdminUser').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (user: any) => {
-      // 1. Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: user.email?.trim().toLowerCase(),
-        password: user.password,
-        user_metadata: {
-          full_name: user.full_name,
-        },
-      });
-
-      if (authError) throw authError;
-      if (!authData?.user?.id) throw new Error('No user ID returned from Auth');
-
-      // 2. Create record in admin_users table
-      const adminUserData = {
-        id: authData.user.id,
-        email: user.email?.trim().toLowerCase(),
-        full_name: user.full_name,
-        role: user.role || 'operator',
-        allowed_pages: user.allowed_pages || [],
-        is_active: user.is_active !== false,
-        created_at: new Date().toISOString(),
-      };
-
-      const { data: userData, error: userError } = await supabase
-        .from('admin_users')
-        .insert(adminUserData)
-        .select()
-        .single();
-      
-      if (userError) throw userError;
-      return userData;
+      const { data, error } = await supabase.from('AdminUser').insert(user).select().single();
+      if (error) throw error;
+      return data;
     },
     update: async (id: string, updates: any) => {
-      // Remove password from updates to avoid storing it in DB
       const { password, ...safeUpdates } = updates;
-
-      // If password is provided, update it in Auth
-      if (password) {
-        const { error: authError } = await supabase.auth.admin.updateUserById(id, {
-          password: password,
-        });
-        if (authError) throw authError;
-      }
-
-      // Update admin user record
-      const { data, error } = await supabase
-        .from('admin_users')
-        .update(safeUpdates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('AdminUser').update(safeUpdates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      // 1. Delete from admin_users table
-      const { error: tableError } = await supabase.from('admin_users').delete().eq('id', id);
-      if (tableError) throw tableError;
-
-      // 2. Delete from Auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(id);
-      if (authError) throw authError;
-
+      const { error } = await supabase.from('AdminUser').delete().eq('id', id);
+      if (error) throw error;
       return { success: true };
     },
   },
 
-  // Companies
+  // ─── Companies ────────────────────────────────────────────────────────────
   companies: {
     list: async () => {
-      const { data, error } = await supabase.from('companies').select('*').order('name');
+      const { data, error } = await supabase.from('Company').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('companies').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('Company').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (company: any) => {
-      const { data, error } = await supabase.from('companies').insert(company).select().single();
+      const { data, error } = await supabase.from('Company').insert(company).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('companies').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('Company').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('companies').delete().eq('id', id);
+      const { error } = await supabase.from('Company').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Invoices
+  // ─── Invoices ─────────────────────────────────────────────────────────────
   invoices: {
     list: async (filters?: any) => {
-      let query = supabase.from('invoices').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('Invoice').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = query.eq(key, value);
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -677,58 +403,58 @@ export const supabaseApi = {
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('invoices').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('Invoice').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (invoice: any) => {
-      const { data, error } = await supabase.from('invoices').insert(invoice).select().single();
+      const { data, error } = await supabase.from('Invoice').insert(invoice).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('invoices').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('Invoice').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('invoices').delete().eq('id', id);
+      const { error } = await supabase.from('Invoice').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Bonus Rules
+  // ─── Bonus Rules ──────────────────────────────────────────────────────────
   bonusRules: {
     list: async () => {
-      const { data, error } = await supabase.from('bonus_rules').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('BonusRule').select('*').order('created_date', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     create: async (rule: any) => {
-      const { data, error } = await supabase.from('bonus_rules').insert(rule).select().single();
+      const { data, error } = await supabase.from('BonusRule').insert(rule).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('bonus_rules').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('BonusRule').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('bonus_rules').delete().eq('id', id);
+      const { error } = await supabase.from('BonusRule').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Bonus Logs
+  // ─── Bonus Logs ───────────────────────────────────────────────────────────
   bonusLogs: {
     list: async (filters?: any) => {
-      let query = supabase.from('bonus_logs').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('BonusLog').select('*').order('created_date', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = query.eq(key, value);
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -736,66 +462,80 @@ export const supabaseApi = {
       return data || [];
     },
     create: async (log: any) => {
-      const { data, error } = await supabase.from('bonus_logs').insert(log).select().single();
+      const { data, error } = await supabase.from('BonusLog').insert(log).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('bonus_logs').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('BonusLog').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
   },
 
-  // Payment Methods
+  // ─── Payment Methods (dentro de AppSettings) ──────────────────────────────
   paymentMethods: {
     list: async () => {
-      const { data, error } = await supabase.from('payment_methods').select('*').order('name');
+      const { data, error } = await supabase.from('AppSettings').select('payment_methods').limit(1);
       if (error) throw error;
-      return data || [];
+      return data?.[0]?.payment_methods || [];
     },
     create: async (method: any) => {
-      const { data, error } = await supabase.from('payment_methods').insert(method).select().single();
+      const { data: current } = await supabase.from('AppSettings').select('*').limit(1);
+      const settings = current?.[0];
+      if (!settings) throw new Error('No AppSettings found');
+      const methods = [...(settings.payment_methods || []), method];
+      const { error } = await supabase.from('AppSettings').update({ payment_methods: methods }).eq('id', settings.id);
       if (error) throw error;
-      return data;
+      return method;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('payment_methods').update(updates).eq('id', id).select().single();
+      const { data: current } = await supabase.from('AppSettings').select('*').limit(1);
+      const settings = current?.[0];
+      if (!settings) throw new Error('No AppSettings found');
+      const methods = (settings.payment_methods || []).map((m: any) =>
+        m.id === id || m.key === id ? { ...m, ...updates } : m
+      );
+      const { error } = await supabase.from('AppSettings').update({ payment_methods: methods }).eq('id', settings.id);
       if (error) throw error;
-      return data;
+      return updates;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('payment_methods').delete().eq('id', id);
+      const { data: current } = await supabase.from('AppSettings').select('*').limit(1);
+      const settings = current?.[0];
+      if (!settings) throw new Error('No AppSettings found');
+      const methods = (settings.payment_methods || []).filter((m: any) => m.id !== id && m.key !== id);
+      const { error } = await supabase.from('AppSettings').update({ payment_methods: methods }).eq('id', settings.id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Red Zones
+  // ─── Red Zones ────────────────────────────────────────────────────────────
   redZones: {
     list: async () => {
-      const { data, error } = await supabase.from('red_zones').select('*').order('name');
+      const { data, error } = await supabase.from('RedZone').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     create: async (zone: any) => {
-      const { data, error } = await supabase.from('red_zones').insert(zone).select().single();
+      const { data, error } = await supabase.from('RedZone').insert(zone).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('red_zones').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('RedZone').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('red_zones').delete().eq('id', id);
+      const { error } = await supabase.from('RedZone').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // Surveys
+  // ─── Surveys (snake_case — sin PascalCase) ────────────────────────────────
   surveys: {
     list: async () => {
       const { data, error } = await supabase.from('surveys').select('*').order('created_at', { ascending: false });
@@ -819,13 +559,13 @@ export const supabaseApi = {
     },
   },
 
-  // Notifications
+  // ─── Notifications (snake_case — sin PascalCase) ──────────────────────────
   notifications: {
     list: async (filters?: any) => {
       let query = supabase.from('notifications').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = query.eq(key, value);
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -849,13 +589,13 @@ export const supabaseApi = {
     },
   },
 
-  // Liquidations
+  // ─── Liquidations (snake_case — sin PascalCase) ───────────────────────────
   liquidations: {
     list: async (filters?: any) => {
       let query = supabase.from('liquidations').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = query.eq(key, value);
+          if (value !== undefined) query = (query as any).eq(key, value);
         });
       }
       const { data, error } = await query;
@@ -879,7 +619,7 @@ export const supabaseApi = {
     },
   },
 
-  // Announcements
+  // ─── Announcements (snake_case — sin PascalCase) ──────────────────────────
   announcements: {
     list: async () => {
       const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
@@ -903,7 +643,7 @@ export const supabaseApi = {
     },
   },
 
-  // Cancellation Policies
+  // ─── Cancellation Policies (snake_case — sin PascalCase) ─────────────────
   cancellationPolicies: {
     list: async () => {
       const { data, error } = await supabase.from('cancellation_policies').select('*').order('name');
@@ -927,10 +667,10 @@ export const supabaseApi = {
     },
   },
 
-  // Cash Cutoffs
+  // ─── Cash Cutoffs (snake_case — sin PascalCase) ───────────────────────────
   cashCutoffs: {
     list: async () => {
-      const { data, error } = await supabase.from('cash_cutoffs').select('*').order('cutoff_date', { ascending: false });
+      const { data, error } = await supabase.from('cash_cutoffs').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -948,6 +688,86 @@ export const supabaseApi = {
       const { error } = await supabase.from('cash_cutoffs').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
+    },
+  },
+
+  // ─── Road Assist Users (alias de passengers) ──────────────────────────────
+  roadAssistUsers: {
+    list: async () => {
+      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('RoadAssistUser').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      const { data, error } = await supabase.from('RoadAssistUser').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+  },
+
+  // ─── Survey Responses ─────────────────────────────────────────────────────
+  surveyResponses: {
+    list: async (filters?: any) => {
+      let query = supabase.from('SurveyResponse').select('*').order('created_date', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (response: any) => {
+      const { data, error } = await supabase.from('SurveyResponse').insert(response).select().single();
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('SurveyResponse').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
+  },
+
+  // ─── Driver Notifications ─────────────────────────────────────────────────
+  driverNotifications: {
+    list: async () => {
+      const { data, error } = await supabase.from('DriverNotification').select('*').order('created_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (notification: any) => {
+      const { data, error } = await supabase.from('DriverNotification').insert(notification).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      const { data, error } = await supabase.from('DriverNotification').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('DriverNotification').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
+  },
+
+  // ─── File Uploads (Supabase Storage) ─────────────────────────────────────
+  uploads: {
+    uploadFile: async ({ file, bucket = 'assets' }: { file: File; bucket?: string }) => {
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+      return { file_url: urlData.publicUrl };
     },
   },
 };

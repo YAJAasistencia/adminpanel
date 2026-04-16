@@ -45,12 +45,12 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     if (!email) { setError("Ingresa tu correo"); return; }
     setLoading(true); setError("");
     try {
-      const { data, error: queryError } = await supabase.from("drivers").select("*").eq("email", email.trim().toLowerCase()).limit(1);
+      const { data, error: queryError } = await supabase.from("Driver").select("*").eq("email", email.trim().toLowerCase()).limit(1);
       if (queryError || !data || data.length === 0) { setError("No existe una cuenta de conductor con ese correo"); setLoading(false); return; }
       const driver = data[0];
       const token = genToken();
       const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      await supabase.from("drivers").update({ reset_token: token, reset_token_expires: expires }).eq("id", driver.id);
+      await supabase.from("Driver").update({ reset_token: token, reset_token_expires: expires }).eq("id", driver.id);
       // Note: SendEmail functionality requires RPC or edge function - implement as needed
       setForgotMsg(`Código de recuperación enviado a ${email}. Revisa tu correo.`);
     } catch (err) {
@@ -65,12 +65,12 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     if (forgotNewPass.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true); setError("");
     try {
-      const { data, error: fetchErr } = await supabase.from("drivers").select("*").eq("email", email.trim().toLowerCase()).limit(1);
+      const { data, error: fetchErr } = await supabase.from("Driver").select("*").eq("email", email.trim().toLowerCase()).limit(1);
       if (fetchErr || !data || data.length === 0) { setError("Correo no encontrado"); setLoading(false); return; }
       const d = data[0];
       if (d.reset_token !== forgotToken.trim().toUpperCase()) { setError("El código es incorrecto"); setLoading(false); return; }
       if (new Date() > new Date(d.reset_token_expires)) { setError("El código expiró. Solicita uno nuevo."); setLoading(false); return; }
-      await supabase.from("drivers").update({ password: forgotNewPass, reset_token: null, reset_token_expires: null }).eq("id", d.id);
+      await supabase.from("Driver").update({ password: forgotNewPass, reset_token: null, reset_token_expires: null }).eq("id", d.id);
       setLoading(false);
       setForgotMsg("¡Contraseña actualizada! Ya puedes iniciar sesión.");
       goLogin();
@@ -95,7 +95,7 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     setLoading(true);
     setError("");
     try {
-      const { data, error: fetchErr } = await supabase.from("drivers").select("*").eq("email", email.trim().toLowerCase()).limit(1);
+      const { data, error: fetchErr } = await supabase.from("Driver").select("*").eq("email", email.trim().toLowerCase()).limit(1);
       if (fetchErr || !data || data.length === 0) {
         const a = getAttempts();
         const newCount = (a.count || 0) + 1;
@@ -118,7 +118,7 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
 
       resetAttempts();
       const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
-      await supabase.from("drivers").update({ access_code: token }).eq("id", found.id);
+      await supabase.from("Driver").update({ access_code: token }).eq("id", found.id);
       localStorage.setItem(SESSION_KEY, found.id);
       localStorage.setItem(SESSION_TOKEN_KEY, token);
       setLoading(false);

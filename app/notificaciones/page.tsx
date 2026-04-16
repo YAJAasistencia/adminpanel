@@ -57,7 +57,7 @@ function NotificacionesContent() {
   });
   const { data: sentNotifications = [] } = useQuery({
     queryKey: ["driver-notifications"],
-    queryFn: () => supabaseApi.driverNotifications.list("-created_date", 50),
+    queryFn: () => supabaseApi.driverNotifications.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

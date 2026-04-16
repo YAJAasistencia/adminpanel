@@ -112,7 +112,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     queryKey: ["cities"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("cities").select("*");
+        const { data, error } = await supabase.from("City").select("*");
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -125,7 +125,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("service_types").select("*");
+        const { data, error } = await supabase.from("ServiceType").select("*");
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -160,7 +160,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     if (!validateCURPFormat(clean)) { setCurpStatus("invalid_format"); return; }
     setCurpStatus("checking");
     try {
-      const { data, error } = await supabase.from("drivers").select("*").eq("curp", clean).limit(1);
+      const { data, error } = await supabase.from("Driver").select("*").eq("curp", clean).limit(1);
       if (error) throw error;
       setCurpStatus(data && data.length > 0 ? "duplicate" : "valid");
     } catch (err) {
@@ -174,7 +174,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setError("");
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("drivers").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
+      const { data, error } = await supabase.from("Driver").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
       if (error) throw error;
       if (data && data.length > 0) {
         setExistingDriver(data[0]);
@@ -276,7 +276,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
 
     setLoading(true);
     try {
-      const { data: curpCheckData, error: curpCheckErr } = await supabase.from("drivers").select("*").eq("curp", form.curp.trim().toUpperCase()).limit(1);
+      const { data: curpCheckData, error: curpCheckErr } = await supabase.from("Driver").select("*").eq("curp", form.curp.trim().toUpperCase()).limit(1);
       if (curpCheckErr) throw curpCheckErr;
       if (curpCheckData && curpCheckData.length > 0) {
         setError("Ya existe una cuenta registrada con ese CURP");
@@ -328,14 +328,14 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
         vehicles: [vehicleObj],
       };
 
-      const { data: createdDriver, error: createErr } = await supabase.from("drivers").insert([driverData]).select().single();
+      const { data: createdDriver, error: createErr } = await supabase.from("Driver").insert([driverData]).select().single();
       if (createErr) throw createErr;
 
       if (createdDriver) {
         setExistingDriver(createdDriver);
         if (onLogin) {
           const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
-          await supabase.from("drivers").update({ access_code: token }).eq("id", createdDriver.id);
+          await supabase.from("Driver").update({ access_code: token }).eq("id", createdDriver.id);
           localStorage.setItem(SESSION_KEY, createdDriver.id);
           localStorage.setItem(SESSION_TOKEN_KEY, token);
           const { password: _, ...safeDriver } = createdDriver;

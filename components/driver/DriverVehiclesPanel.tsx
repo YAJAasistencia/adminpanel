@@ -278,7 +278,7 @@ export default function DriverVehiclesPanel({ driver, onDriverUpdate, vehicleDoc
       const updated = [...existing, vehicleData];
       const activeVehicle = updated.find(v => v.is_active);
       const extraFields = activeVehicle ? syncFields(activeVehicle) : {};
-      await supabase.from("drivers").update({ vehicles: updated, ...extraFields }).eq("id", driver.id);
+      await supabase.from("Driver").update({ vehicles: updated, ...extraFields }).eq("id", driver.id);
       onDriverUpdate({ ...driver, vehicles: updated, ...extraFields });
       setEditing(null);
     } catch (err) {
@@ -292,7 +292,7 @@ export default function DriverVehiclesPanel({ driver, onDriverUpdate, vehicleDoc
       const updated = vehicles.map(v => ({ ...v, is_active: v.id === vehicleId }));
       const activeVehicle = updated.find(v => v.is_active);
       const extraFields = activeVehicle ? syncFields(activeVehicle) : {};
-      await supabase.from("drivers").update({ vehicles: updated, ...extraFields }).eq("id", driver.id);
+      await supabase.from("Driver").update({ vehicles: updated, ...extraFields }).eq("id", driver.id);
       onDriverUpdate({ ...driver, vehicles: updated, ...extraFields });
     } catch (err) {
       console.error("Error setting active vehicle:", err);

@@ -315,7 +315,7 @@ export default function Companies() {
 
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
-    queryFn: () => supabaseApi.rideRequests.list("-created_date", 2000),
+    queryFn: () => supabaseApi.rideRequests.list(),
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
   });

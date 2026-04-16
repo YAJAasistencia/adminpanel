@@ -30,7 +30,7 @@ export default function Earnings() {
 
   const { data: rides = [] } = useQuery({
     queryKey: ["rides"],
-    queryFn: () => supabaseApi.rideRequests.list("-created_date", 500),
+    queryFn: () => supabaseApi.rideRequests.list(),
   });
 
   const { data: drivers = [] } = useQuery({

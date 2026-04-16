@@ -104,7 +104,7 @@ function GeoZonesContent() {
 
   const { data: rides = [] } = useQuery({
     queryKey: ["ridesForZones"],
-    queryFn: () => supabaseApi.rideRequests.list("-created_date", 500),
+    queryFn: () => supabaseApi.rideRequests.list(),
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
   });

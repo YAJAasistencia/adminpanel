@@ -5,6 +5,7 @@ import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +71,7 @@ export default function CashCutoffPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["rides"],
     queryFn: async () => {
-      const all = await supabaseApi.rideRequests.list("-created_date", 2000);
+      const all = await supabaseApi.rideRequests.list();
       return all;
     },
     staleTime: 30 * 1000,
@@ -90,7 +91,7 @@ export default function CashCutoffPage() {
   const { data: cutoffs = [] } = useQuery({
     queryKey: ["cashCutoffs"],
     queryFn: async () => {
-      const all = await supabaseApi.cashCutoffs.list("-cutoff_date", 50);
+      const all = await supabaseApi.cashCutoffs.list();
       return all;
     },
     staleTime: 5 * 60 * 1000,

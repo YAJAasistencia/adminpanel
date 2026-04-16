@@ -24,25 +24,25 @@ export default function RatingModal({ ride, raterRole, targetName, targetPhoto, 
       await supabaseApi.rideRequests.update(ride.id, updates);
       
       if (!isDriver && ride.driver_id) {
-        const { data: allRides, error } = await supabase.from("ride_requests").select("*").eq("driver_id", ride.driver_id);
+        const { data: allRides, error } = await supabase.from("RideRequest").select("*").eq("driver_id", ride.driver_id);
         if (!error && allRides) {
           const rated = allRides.filter(r => r.passenger_rating_for_driver > 0);
           if (rated.length > 0) {
             const avg = rated.reduce((s, r) => s + r.passenger_rating_for_driver, 0) / rated.length;
-            await supabase.from("drivers").update({ rating: parseFloat(avg.toFixed(1)) }).eq("id", ride.driver_id);
+            await supabase.from("Driver").update({ rating: parseFloat(avg.toFixed(1)) }).eq("id", ride.driver_id);
           }
         }
       }
       
       if (isDriver && ride.passenger_user_id) {
-        const { data: allRides, error } = await supabase.from("ride_requests").select("*").eq("passenger_user_id", ride.passenger_user_id);
+        const { data: allRides, error } = await supabase.from("RideRequest").select("*").eq("passenger_user_id", ride.passenger_user_id);
         if (!error && allRides) {
           const rated = allRides.filter(r => r.driver_rating_for_passenger > 0);
           const newRated = [...rated.filter(r => r.id !== ride.id), { driver_rating_for_passenger: stars }];
           if (newRated.length > 0) {
             const avg = newRated.reduce((s, r) => s + r.driver_rating_for_passenger, 0) / newRated.length;
             try {
-              await supabase.from("road_assist_users").update({
+              await supabase.from("RoadAssistUser").update({
                 rating: parseFloat(avg.toFixed(1)),
                 rating_count: newRated.length,
               }).eq("id", ride.passenger_user_id);
