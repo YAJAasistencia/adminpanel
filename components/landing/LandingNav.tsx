@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { Menu, X, Zap } from "lucide-react";
 import { useLandingConfig } from "@/hooks/useLandingConfig";
+import useAppSettings from "@/components/shared/useAppSettings";
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lc = useLandingConfig();
+  const { settings } = useAppSettings();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -28,15 +30,15 @@ export default function LandingNav() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          {lc.brand_logo_url
-            ? <img src={lc.brand_logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+          {settings?.logo_url || lc.brand_logo_url
+            ? <img src={settings?.logo_url || lc.brand_logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
             : (
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
             )
           }
-          <span className="text-white font-bold text-xl tracking-tight">{lc.brand_name || "YAJA"}</span>
+          <span className="text-white font-bold text-xl tracking-tight">{settings?.company_name || lc.brand_name || "YAJA"}</span>
           <span className="text-[#0ea5e9] font-light text-sm ml-1">asistencia</span>
         </div>
 

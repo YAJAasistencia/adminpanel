@@ -23,11 +23,12 @@ import { supabaseApi } from "@/lib/supabaseApi";
 // ─── Update PWA title per app context ────────────────────────────────────────
 // The static /public/manifest.json handles the full PWA definition.
 // This hook only updates the iOS title meta tag dynamically.
-function usePWAManifest(currentPageName: string) {
+function usePWAManifest(currentPageName: string, companyName?: string) {
   useEffect(() => {
     const isPassenger = currentPageName === "RoadAssistApp";
     const isDriver = currentPageName === "DriverApp";
-    const appTitle = isPassenger ? "Pasajero" : isDriver ? "YAJA Conductor" : "YAJA Asistencia";
+    const company = companyName || "YAJA Asistencia";
+    const appTitle = isPassenger ? "Pasajero" : isDriver ? `${company} Conductor` : company;
 
     // Update iOS PWA title (does not affect the manifest — that is static)
     let el = document.querySelector('meta[name="apple-mobile-web-app-title"]');
@@ -40,7 +41,7 @@ function usePWAManifest(currentPageName: string) {
 
     // Update document title too
     document.title = appTitle;
-  }, [currentPageName]);
+  }, [currentPageName, companyName]);
 }
 
 interface LayoutProps {
@@ -49,10 +50,10 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, currentPageName }: LayoutProps) {
-  usePWAManifest(currentPageName);
+  const { settings } = useAppSettings();
+  usePWAManifest(currentPageName, settings?.company_name);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ Finanzas: false, "Configuración": true });
-  const { settings } = useAppSettings();
   const { session, validated, isAllowed, logout } = useAdminSession();
   const queryClient = useQueryClient();
   const badges = useAdminBadges();
