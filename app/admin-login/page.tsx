@@ -88,9 +88,9 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Verificar que el usuario existe y está activo en AdminUser
+      // Verificar que el usuario existe y está activo en admin_user
       const { data: adminUser, error: fetchError } = await supabase
-        .from("AdminUser")
+        .from("admin_user")
         .select("*")
         .eq("email", email.trim().toLowerCase())
         .single();
