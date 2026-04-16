@@ -274,14 +274,32 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
         rejected_docs: Object.keys(docRejected).filter(k => docRejected[k]),
         doc_expiries: docExpiries,
       };
-      console.log('[DriverDetailDialog] Saving driver:', { driverId: driver.id, dataToSave });
-      const result = await supabaseApi.drivers.update(driver.id, dataToSave);
-      console.log('[DriverDetailDialog] Update result:', result);
-      queryClient.setQueryData(["drivers"], (old = []) =>
-        old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
-      );
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.success("Conductor actualizado");
+      
+      // If this is a new driver (no ID yet), CREATE instead of UPDATE
+      if (!driver?.id || driver?._isNewDriver) {
+        console.log('[DriverDetailDialog] Creating new driver:', dataToSave);
+        // Remove the temporary flag before saving
+        const { _isNewDriver, ...cleanData } = dataToSave;
+        // Generate access code for new driver
+        const code = "DRV" + String(Math.floor(Math.random() * 99999)).padStart(5, "0");
+        const result = await supabaseApi.drivers.create({
+          ...cleanData,
+          access_code: code,
+        });
+        console.log('[DriverDetailDialog] Create result:', result);
+        queryClient.invalidateQueries({ queryKey: ["drivers"] });
+        toast.success("Conductor creado");
+      } else {
+        // Update existing driver
+        console.log('[DriverDetailDialog] Saving driver:', { driverId: driver.id, dataToSave });
+        const result = await supabaseApi.drivers.update(driver.id, dataToSave);
+        console.log('[DriverDetailDialog] Update result:', result);
+        queryClient.setQueryData(["drivers"], (old = []) =>
+          old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
+        );
+        queryClient.invalidateQueries({ queryKey: ["drivers"] });
+        toast.success("Conductor actualizado");
+      }
       setSaving(false);
       onOpenChange(false);
     } catch (err: any) {
@@ -316,13 +334,15 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       setEditDriver(prev => {
         const newUrls = { ...(prev.doc_urls || {}), [docKey]: file_url };
         const updated = { ...prev, doc_urls: newUrls };
-        // Persist immediately (fire and forget, handleSave will also save it)
-        supabaseApi.drivers.update(driver.id, { doc_urls: newUrls }).catch(err => {
-          console.error("Error updating driver doc URLs:", err);
-        });
-        queryClient.setQueryData(["drivers"], (old = []) =>
-          old.map(d => d.id === driver.id ? { ...d, doc_urls: newUrls } : d)
-        );
+        // Only persist immediately if this is an existing driver (has ID)
+        if (driver?.id && !driver?._isNewDriver) {
+          supabaseApi.drivers.update(driver.id, { doc_urls: newUrls }).catch(err => {
+            console.error("Error updating driver doc URLs:", err);
+          });
+          queryClient.setQueryData(["drivers"], (old = []) =>
+            old.map(d => d.id === driver.id ? { ...d, doc_urls: newUrls } : d)
+          );
+        }
         return updated;
       });
       toast.success("Documento cargado");
@@ -336,6 +356,12 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   const saveDocStatus = async (newApproved, newRejected) => {
     try {
+      // For new drivers, just update local state - don't persist to DB yet
+      if (!driver?.id || driver?._isNewDriver) {
+        setDocApproved(newApproved);
+        setDocRejected(newRejected);
+        return;
+      }
       const approvedList = Object.keys(newApproved).filter(k => newApproved[k]);
       const rejectedList = Object.keys(newRejected).filter(k => newRejected[k]);
       await supabaseApi.drivers.update(driver.id, {
@@ -417,6 +443,10 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
   const saveVehicles = async (updated) => {
     try {
       update("vehicles", updated);
+      // For new drivers, just update local state - don't persist to DB yet
+      if (!driver?.id || driver?._isNewDriver) {
+        return;
+      }
       await supabaseApi.drivers.update(driver.id, { vehicles: updated });
       queryClient.setQueryData(["drivers"], (old = []) =>
         old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)

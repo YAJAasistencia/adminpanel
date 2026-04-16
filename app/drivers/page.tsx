@@ -115,28 +115,33 @@ export default function DriversPage() {
     }
   };
 
-  const handleNewDriver = async () => {
-    try {
-      const code = "DRV" + String(Math.floor(Math.random() * 99999)).padStart(5, "0");
-      const created = await supabaseApi.drivers.create({
-        full_name: "Nuevo conductor",
-        license_plate: "",
-        status: "offline",
-        approval_status: "pending",
-        access_code: code,
-        total_rides: 0,
-        rating: 5,
-        // Let the DB set `created_at`; do not send `created_date` which may not exist.
-      });
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      // Accept either direct row or array-like return; keep defensive assignment
-      const row = Array.isArray(created) ? created[0] : created;
-      setSelectedDriver(row);
-      setShowDetail(true);
-      toast.success("Conductor creado");
-    } catch (error: any) {
-      toast.error(`Error al crear conductor: ${error?.message || JSON.stringify(error)}`);
-    }
+  const handleNewDriver = () => {
+    // Create a template driver object without saving to DB yet
+    const newDriver = {
+      id: undefined, // No ID yet - will be created on save
+      full_name: "",
+      email: "",
+      phone: "",
+      license_plate: "",
+      vehicle_brand: "",
+      vehicle_model: "",
+      vehicle_year: "",
+      vehicle_color: "",
+      city_id: "",
+      city_name: "",
+      status: "offline",
+      approval_status: "pending",
+      total_rides: 0,
+      rating: 5,
+      service_type_ids: [],
+      service_type_names: [],
+      photo_url: "",
+      vehicles: [],
+      // This flag tells DriverDetailDialog this is a new driver
+      _isNewDriver: true,
+    };
+    setSelectedDriver(newDriver);
+    setShowDetail(true);
   };
 
   const copyShareLink = (driver: any) => {
