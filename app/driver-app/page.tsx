@@ -1361,7 +1361,7 @@ export default function DriverApp() {
             driver_accepted_at: acceptedAt,
             driver_accepted: true,
           })
-          .eq("id", ride.id)
+          .eq("id", ride.id),
         supabase
           .from("Driver")
           .update({ status: "busy" })
@@ -1375,7 +1375,7 @@ export default function DriverApp() {
             driver_accepted_at: acceptedAt,
             driver_accepted: true,
           })
-          .eq("id", ride.id)
+          .eq("id", ride.id),
         supabase
           .from("Driver")
           .update({ status: "busy" })
