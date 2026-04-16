@@ -42,7 +42,7 @@ export const supabaseApi = {
   // ─── Drivers ──────────────────────────────────────────────────────────────
   drivers: {
     list: async (filters?: any) => {
-      let query = supabase.from('Driver').select('*').order('created_date', { ascending: false });
+      let query = supabase.from('Driver').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);

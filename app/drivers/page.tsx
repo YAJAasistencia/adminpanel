@@ -126,7 +126,7 @@ export default function DriversPage() {
         access_code: code,
         total_rides: 0,
         rating: 5,
-        created_date: new Date().toISOString(),
+        // Let the DB set `created_at`; do not send `created_date` which may not exist.
       });
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       // Accept either direct row or array-like return; keep defensive assignment
