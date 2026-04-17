@@ -47,7 +47,7 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4">
+      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle>Calificar conductor</DialogTitle>
         </DialogHeader>

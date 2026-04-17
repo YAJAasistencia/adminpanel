@@ -249,7 +249,7 @@ export default function AdminUsersPage() {
 
         {/* Edit dialog */}
         <Dialog open={showDialog} onOpenChange={(v) => { setShowDialog(v); if (!v) setEditing(null); }}>
-          <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
+          <DialogContent className="dialog-size-2xl max-h-[90vh] overflow-y-auto p-4">
             <DialogHeader>
               <DialogTitle>{editing?.id ? "Editar usuario" : "Nuevo usuario"}</DialogTitle>
             </DialogHeader>

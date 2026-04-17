@@ -755,7 +755,7 @@ function WalletsTab({ users, rides, settings }) {
       </Card>
 
       <Dialog open={!!walletModal} onOpenChange={(open) => !open && setWalletModal(null)}>
-        <DialogContent className="max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto p-4">
+        <DialogContent className="dialog-size-lg max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader><DialogTitle>{walletAction === "load" ? "Cargar saldo a wallet" : "Retirar saldo del wallet"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {walletModal && (<>
@@ -887,7 +887,7 @@ function DriverPayoutsTab({ rides, drivers, settings }) {
       </Card>
 
       <Dialog open={!!payoutModal} onOpenChange={(open) => !open && setPayoutModal(null)}>
-        <DialogContent className="max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto p-4">
+        <DialogContent className="dialog-size-lg max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader><DialogTitle>Confirmar pago a conductor</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {payoutModal && (() => {

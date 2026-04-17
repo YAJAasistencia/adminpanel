@@ -144,7 +144,7 @@ export default function CitiesPage() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) setEditCity(null); }}>
-        <DialogContent className="max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto p-4">
+        <DialogContent className="dialog-size-lg max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>{editCity?.id ? "Editar ciudad" : "Nueva ciudad"}</DialogTitle>
           </DialogHeader>

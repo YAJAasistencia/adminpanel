@@ -271,7 +271,7 @@ export default function ServiceTypes() {
 
 		{/* Rename category dialog */}
 		<Dialog open={!!editingCat} onOpenChange={open => { if (!open) setEditingCat(null); }}>
-			<DialogContent className="max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto p-4">
+			<DialogContent className="dialog-size-lg max-h-[90vh] overflow-y-auto p-4">
 				<DialogHeader><DialogTitle>Renombrar categoría</DialogTitle></DialogHeader>
 				<div className="py-2 space-y-2">
 					<label className="text-sm text-slate-500">Nuevo nombre de la categoría</label>
@@ -293,7 +293,7 @@ export default function ServiceTypes() {
 
 		{/* Main edit dialog */}
 		<Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) setEditService(null); }}>
-			<DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
+			<DialogContent className="dialog-size-2xl max-h-[90vh] overflow-y-auto p-4">
 				<DialogHeader>
 					<DialogTitle>{editService?.id ? "Editar subcategoría" : "Nueva subcategoría"}</DialogTitle>
 				</DialogHeader>

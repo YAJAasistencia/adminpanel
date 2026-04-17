@@ -48,7 +48,6 @@ html { font-size: 14px; }
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    
     --radius: 0.5rem;
   }
 
@@ -96,13 +95,39 @@ html { font-size: 14px; }
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Dialog sizes increased by 30% */
+  .dialog-size-lg {
+    @apply max-w-[604px];
+  }
+
+  .dialog-size-xl {
+    @apply max-w-[748px];
+  }
+
+  .dialog-size-2xl {
+    @apply max-w-[874px];
+  }
+
+  .dialog-size-3xl {
+    @apply max-w-[998px];
+  }
+
+  .dialog-size-4xl {
+    @apply max-w-[1165px];
+  }
+
+  .dialog-size-5xl {
+    @apply max-w-[1331px];
   }
 }

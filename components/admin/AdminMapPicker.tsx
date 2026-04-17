@@ -107,7 +107,7 @@ export default function AdminMapPicker({ open, onOpenChange, lat, lon, label, is
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-3xl max-h-[90vh] overflow-hidden p-0 gap-0">
+      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-hidden p-0 gap-0">
         <DialogHeader className="px-5 pt-4 pb-2 border-b border-slate-100">
           <DialogTitle className="flex items-center gap-2 text-base">
             <MapPin className="w-4 h-4 text-slate-500" />
