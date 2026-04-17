@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import AddressSearch from "./AddressSearch";
 import MapPreview from "./MapPreview";
 import AdminMapPicker from "./AdminMapPicker";
@@ -300,87 +301,159 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const isGasolineService = /gasolina/i.test(form.service_type_name || "") || /gasolina/i.test(form.notes || "");
 
   const handleCreate = async () => {
-    if (detectedRedZone) {
-      alert(`No se puede crear el servicio: ZONA ROJA - ${detectedRedZone.name}`);
+    // Validaciones previas
+    if (!form.passenger_name?.trim()) {
+      toast.error("Ingresa el nombre del pasajero");
       return;
     }
+    if (!form.pickup_address?.trim()) {
+      toast.error("Ingresa la dirección de recogida");
+      return;
+    }
+    if (!pickupCoords) {
+      toast.error("Selecciona un punto de recogida en el mapa");
+      return;
+    }
+    if (!form.service_type_name) {
+      toast.error("Selecciona un tipo de servicio");
+      return;
+    }
+    if (!form.payment_method) {
+      toast.error("Selecciona un método de pago");
+      return;
+    }
+    if (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) {
+      toast.error("Ingresa fecha y hora para el viaje programado");
+      return;
+    }
+    if (destinationRequired && !form.dropoff_address?.trim()) {
+      toast.error("La dirección de destino es obligatoria para este servicio");
+      return;
+    }
+    if (form.dropoff_address && !dropoffCoords && !isVial) {
+      toast.error("Selecciona un punto de destino válido en el mapa");
+      return;
+    }
+
+    if (detectedRedZone) {
+      toast.error(`❌ No se puede crear el servicio: ZONA ROJA - ${detectedRedZone.name}`);
+      return;
+    }
+
     setSaving(true);
     try {
-    const company = form.company_id ? companies.find(c => c.id === form.company_id) : null;
-    const isAuction = form.assignment_mode === "auction";
-    const auctionExpiresAt = isAuction
-      ? new Date(Date.now() + (settings?.auction_timeout_seconds || 30) * 1000).toISOString()
-      : undefined;
+      const company = form.company_id ? companies.find(c => c.id === form.company_id) : null;
+      const isAuction = form.assignment_mode === "auction";
+      const auctionExpiresAt = isAuction
+        ? new Date(Date.now() + (settings?.auction_timeout_seconds || 30) * 1000).toISOString()
+        : undefined;
 
-    // Corporate vs normal pricing
-    const isCorporate = !!form.company_id;
-    const basePrice = form.estimated_price ? parseFloat(form.estimated_price) : 0;
-    const extraCost = form.extra_company_cost ? parseFloat(form.extra_company_cost) : 0;
-    const totalPrice = basePrice + extraCost;
+      // Corporate vs normal pricing
+      const isCorporate = !!form.company_id;
+      const basePrice = form.estimated_price ? parseFloat(form.estimated_price) : 0;
+      const extraCost = form.extra_company_cost ? parseFloat(form.extra_company_cost) : 0;
+      const totalPrice = basePrice + extraCost;
 
-    // For corporate: company_price = what company pays, driver_estimated_price = what driver receives
-    const companyPrice = isCorporate ? (form.company_price ? parseFloat(form.company_price) + extraCost : totalPrice) : undefined;
-    const driverEstimated = isCorporate
-      ? (form.driver_estimated_price ? parseFloat(form.driver_estimated_price) : calcDriverPayFromCompanyPrice(basePrice, form.service_type_name))
-      : undefined;
+      // For corporate: company_price = what company pays, driver_estimated_price = what driver receives
+      const companyPrice = isCorporate ? (form.company_price ? parseFloat(form.company_price) + extraCost : totalPrice) : undefined;
+      const driverEstimated = isCorporate
+        ? (form.driver_estimated_price ? parseFloat(form.driver_estimated_price) : calcDriverPayFromCompanyPrice(basePrice, form.service_type_name))
+        : undefined;
 
-    const data = {
-      ...form,
-      service_id: generateServiceId(),
-      requested_at: nowCDMX(),
-      // estimated_price: for normal = total; for corporate = driver's amount (driver-visible)
-      estimated_price: isCorporate ? (driverEstimated || undefined) : (totalPrice > 0 ? totalPrice : undefined),
-      company_price: companyPrice > 0 ? companyPrice : undefined,
-      extra_company_cost: extraCost > 0 ? extraCost : undefined,
-      distance_km: form.distance_km ? parseFloat(form.distance_km) : undefined,
-      duration_minutes: form.duration_minutes ? parseFloat(form.duration_minutes) : undefined,
-      status: form.is_scheduled ? "scheduled" : isAuction ? "auction" : "pending",
-      assignment_mode: form.assignment_mode,
-      auction_expires_at: auctionExpiresAt,
-      geo_zone_id: detectedZone?.id || undefined,
-      geo_zone_name: detectedZone?.name || undefined,
-      company_name: company?.razon_social || undefined,
-      ride_type: form.company_id ? "corporativo" : "normal",
-      proof_photo_required: form.require_proof_photo,
-      require_admin_approval: form.require_admin_approval || false,
-      show_phone_to_driver: form.show_phone_to_driver,
-      // ── Coordenadas de recogida y destino (necesarias para ETA y auto-asignación) ──
-      pickup_lat: pickupCoords?.lat || undefined,
-      pickup_lon: pickupCoords?.lon || pickupCoords?.lng || undefined,
-      dropoff_lat: dropoffCoords?.lat || undefined,
-      dropoff_lon: dropoffCoords?.lon || dropoffCoords?.lng || undefined,
-      scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
-        ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
-        : undefined,
-      questionnaire_answers: isGrua && Object.keys(questionnaireAnswers).length > 0
-        ? Object.entries(questionnaireAnswers).map(([i, v]) => ({
-            question: selectedServiceType?.questionnaire?.[i]?.question || "",
-            answer: v
-          }))
-        : undefined,
-      custom_field_answers: selectedServiceType?.custom_fields?.length > 0
-        ? selectedServiceType.custom_fields.map(f => ({
-            key: f.key,
-            label: f.label,
-            answer: customFieldAnswers[f.key] || ""
-          })).filter(f => f.answer)
-        : undefined,
-      folio_data: company && (company.folio_fields || []).length > 0 ? folioAnswers : undefined,
-      is_gasoline: isGasolineService,
-      gasoline_liters: isGasolineService ? (form.gasoline_liters || undefined) : undefined,
-      is_red_zone_blocked: !!detectedRedZone,
-    };
-    await supabaseApi.rideRequests.create(data);
-    queryClient.invalidateQueries({ queryKey: ["rides"] });
-    onOpenChange(false);
-    setForm({ passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", show_phone_to_driver: true });
-    setSelectedCategory("");
-    setQuestionnaireAnswers({});
-    setCustomFieldAnswers({});
-    setFolioAnswers({});
-    setPickupCoords(null);
-    setDropoffCoords(null);
-    setDetectedZone(null);
+      const data = {
+        ...form,
+        service_id: generateServiceId(),
+        requested_at: nowCDMX(),
+        // estimated_price: for normal = total; for corporate = driver's amount (driver-visible)
+        estimated_price: isCorporate ? (driverEstimated || undefined) : (totalPrice > 0 ? totalPrice : undefined),
+        company_price: companyPrice > 0 ? companyPrice : undefined,
+        extra_company_cost: extraCost > 0 ? extraCost : undefined,
+        distance_km: form.distance_km ? parseFloat(form.distance_km) : undefined,
+        duration_minutes: form.duration_minutes ? parseFloat(form.duration_minutes) : undefined,
+        status: form.is_scheduled ? "scheduled" : isAuction ? "auction" : "pending",
+        assignment_mode: form.assignment_mode,
+        auction_expires_at: auctionExpiresAt,
+        geo_zone_id: detectedZone?.id || undefined,
+        geo_zone_name: detectedZone?.name || undefined,
+        company_name: company?.razon_social || undefined,
+        ride_type: form.company_id ? "corporativo" : "normal",
+        proof_photo_required: form.require_proof_photo,
+        require_admin_approval: form.require_admin_approval || false,
+        show_phone_to_driver: form.show_phone_to_driver,
+        // ── Coordenadas de recogida y destino (necesarias para ETA y auto-asignación) ──
+        pickup_lat: pickupCoords?.lat || undefined,
+        pickup_lon: pickupCoords?.lon || pickupCoords?.lng || undefined,
+        dropoff_lat: dropoffCoords?.lat || undefined,
+        dropoff_lon: dropoffCoords?.lon || dropoffCoords?.lng || undefined,
+        scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
+          ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
+          : undefined,
+        questionnaire_answers: isGrua && Object.keys(questionnaireAnswers).length > 0
+          ? Object.entries(questionnaireAnswers).map(([i, v]) => ({
+              question: selectedServiceType?.questionnaire?.[i]?.question || "",
+              answer: v
+            }))
+          : undefined,
+        custom_field_answers: selectedServiceType?.custom_fields?.length > 0
+          ? selectedServiceType.custom_fields.map(f => ({
+              key: f.key,
+              label: f.label,
+              answer: customFieldAnswers[f.key] || ""
+            })).filter(f => f.answer)
+          : undefined,
+        folio_data: company && (company.folio_fields || []).length > 0 ? folioAnswers : undefined,
+        is_gasoline: isGasolineService,
+        gasoline_liters: isGasolineService ? (form.gasoline_liters || undefined) : undefined,
+        is_red_zone_blocked: !!detectedRedZone,
+      };
+
+      console.log("[CreateRideDialog] Creando viaje con datos:", {
+        passenger_name: data.passenger_name,
+        pickup_address: data.pickup_address,
+        service_type: data.service_type_name,
+        status: data.status,
+        assignment_mode: data.assignment_mode,
+      });
+
+      const result = await supabaseApi.rideRequests.create(data);
+      console.log("[CreateRideDialog] Viaje creado exitosamente:", result);
+      
+      toast.success("✅ Viaje creado exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["rides"] });
+      onOpenChange(false);
+      
+      // Reset form
+      setForm({ 
+        passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", 
+        service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", 
+        duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", 
+        assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, 
+        is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", 
+        show_phone_to_driver: true 
+      });
+      setSelectedCategory("");
+      setQuestionnaireAnswers({});
+      setCustomFieldAnswers({});
+      setFolioAnswers({});
+      setPickupCoords(null);
+      setDropoffCoords(null);
+      setDetectedZone(null);
+    } catch (error) {
+      console.error("[CreateRideDialog] Error al crear viaje:", error);
+      
+      // Determinar el mensaje de error apropiado
+      let errorMsg = "Error al crear el viaje";
+      if (error?.message?.includes("RLS")) {
+        errorMsg = "❌ Permiso denegado: revisa la configuración de seguridad en la base de datos";
+      } else if (error?.message?.includes("violates")) {
+        errorMsg = `❌ Datos inválidos: ${error.message}`;
+      } else if (error?.message?.includes("not-null constraint")) {
+        errorMsg = "❌ Faltan campos obligatorios en los datos";
+      } else if (error?.message) {
+        errorMsg = `❌ ${error.message}`;
+      }
+      
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -882,19 +955,45 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
             <Textarea value={form.notes} onChange={e => update("notes", e.target.value)} placeholder="Instrucciones especiales..." rows={2} />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleCreate} disabled={
-            !form.passenger_name || !form.pickup_address || !form.service_type_name || !form.payment_method ||
-            !pickupCoords ||
-            (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) ||
-            ((destinationRequired || (form.dropoff_address && !dropoffCoords)) && !isVial && !dropoffCoords) ||
-            (selectedCompany && (selectedCompany.folio_fields || []).some(f => f.required && !folioAnswers[f.key])) ||
-            (selectedServiceType?.custom_fields || []).some(f => f.required && !customFieldAnswers[f.key]) ||
-            saving
-          }>
-            {saving ? "Creando..." : "Crear viaje"}
-          </Button>
+        <DialogFooter className="flex flex-col gap-3">
+          {/* Validation messages */}
+          {(() => {
+            const issues = [];
+            if (!form.passenger_name?.trim()) issues.push("Ingresa el nombre del pasajero");
+            if (!form.pickup_address?.trim()) issues.push("Ingresa la dirección de recogida");
+            if (!pickupCoords) issues.push("Selecciona la dirección de recogida del listado de sugerencias");
+            if (!form.service_type_name) issues.push("Selecciona un tipo de servicio");
+            if (!form.payment_method) issues.push("Selecciona un método de pago");
+            if (!isVial && (destinationRequired || form.dropoff_address) && !dropoffCoords) 
+              issues.push("Selecciona la dirección de destino del listado de sugerencias");
+            if (form.is_scheduled && !form.scheduled_date) issues.push("Ingresa la fecha del viaje programado");
+            if (form.is_scheduled && !form.scheduled_time) issues.push("Ingresa la hora del viaje programado");
+
+            return issues.length > 0 ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1">
+                <p className="text-xs font-semibold text-red-800 flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Completa los campos requeridos:
+                </p>
+                {issues.map((issue, idx) => (
+                  <p key={idx} className="text-xs text-red-700">• {issue}</p>
+                ))}
+              </div>
+            ) : null;
+          })()}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={
+              !form.passenger_name || !form.pickup_address || !form.service_type_name || !form.payment_method ||
+              !pickupCoords ||
+              (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) ||
+              ((destinationRequired || (form.dropoff_address && !dropoffCoords)) && !isVial && !dropoffCoords) ||
+              (selectedCompany && (selectedCompany.folio_fields || []).some(f => f.required && !folioAnswers[f.key])) ||
+              (selectedServiceType?.custom_fields || []).some(f => f.required && !customFieldAnswers[f.key]) ||
+              saving
+            }>
+              {saving ? "Creando..." : "Crear viaje"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
