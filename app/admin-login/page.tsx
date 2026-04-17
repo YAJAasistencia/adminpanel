@@ -113,8 +113,8 @@ export default function AdminLoginPage() {
         JSON.stringify({
           id: user.id,
           email: user.email,
-          role: user.role,
           name: user.name,
+          role: user.role,
           allowed_pages: [],
         })
       );

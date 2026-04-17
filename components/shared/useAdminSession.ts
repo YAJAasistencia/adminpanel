@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 export interface AdminSession {
   id: string;
   email: string;
-  name?: string;
+  full_name?: string;
   role?: string;
   allowed_pages?: string[];
   is_active?: boolean;
@@ -49,19 +49,16 @@ export function useAdminSession() {
       }
 
       try {
-        // ✅ Usar endpoint del backend en lugar de queries directas
-        const response = await fetch('/api/auth/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: stored.email,
-            password: '', // No necesitamos la contraseña para validar la sesión
-          }),
-        });
+        const { data, error } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("email", stored.email)
+          .limit(1);
 
-        const result = await response.json();
+        if (error) throw error;
 
-        if (!result.success || !result.user) {
+        const user = data?.[0];
+        if (!user || user.is_active === false) {
           clearSession();
           setSession(null);
           if (typeof window !== "undefined") {
@@ -70,14 +67,13 @@ export function useAdminSession() {
           return;
         }
 
-        const user = result.user;
         const fresh: AdminSession = {
           id: user.id,
           email: user.email,
-          name: user.name,
+          full_name: user.full_name,
           role: user.role,
-          allowed_pages: [],
-          is_active: true,
+          allowed_pages: user.allowed_pages || [],
+          is_active: user.is_active,
         };
 
         if (typeof window !== "undefined") {
@@ -86,7 +82,6 @@ export function useAdminSession() {
         setSession(fresh);
       } catch (error) {
         console.warn("Session revalidation failed:", error);
-        setSession(stored); // Mantener sesión local si la validación falla
       } finally {
         setValidated(true);
       }
