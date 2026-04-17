@@ -25,9 +25,10 @@ const empty = {
   contacto: "", telefono: "", limite_credito: 0, limite_por_servicio: 0, is_active: true, notas: "",
   billing_type: "general", zone_prices: [], tax_pct: 0, folio_fields: [], folio_secundario_fields: [],
   parent_company_id: "", parent_company_name: "", sub_company_limit: 0,
-  sub_accounts: [],
+  sub_accounts: [], // [{id, name, limit_per_service}]
 };
 
+// ─── Price Correction Tab ─────────────────────────────────────────────────────
 function PriceCorrectionTab({ rides, company }) {
   const [corrections, setCorrections] = useState({});
   const [saving, setSaving] = useState({});
@@ -58,7 +59,7 @@ function PriceCorrectionTab({ rides, company }) {
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
         <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-amber-700">
-          <strong>Solo ajusta el costo empresa.</strong> El pago al conductor NO se modifica.
+          <strong>Solo ajusta el costo empresa.</strong> El pago al conductor NO se modifica. Úsalo para corregir el monto que se cobra a la empresa sin afectar la liquidación del conductor.
         </p>
       </div>
       <div className="relative">
@@ -78,7 +79,7 @@ function PriceCorrectionTab({ rides, company }) {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-sm font-medium text-slate-800">{ride.passenger_name}</p>
-                    <p className="text-xs text-slate-400">{formatCDMX(ride.created_date, "shortdatetime")} · Folio: {ride.service_id || "—"}</p>
+                    <p className="text-xs text-slate-400">{formatCDMX(ride.created_at || ride.created_date, "shortdatetime")} · Folio: {ride.service_id || "—"}</p>
                     <p className="text-xs text-slate-400 truncate max-w-[260px]">{ride.pickup_address}</p>
                   </div>
                   <div className="text-right text-xs">
@@ -114,6 +115,14 @@ function PriceCorrectionTab({ rides, company }) {
                     </Button>
                   </div>
                 </div>
+                {isEdited && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Original: ${currentCompanyPrice.toFixed(0)} → Nuevo: ${parseFloat(corrections[ride.id] || 0).toFixed(0)}
+                    {parseFloat(corrections[ride.id]) > currentCompanyPrice && (
+                      <span className="ml-2 text-blue-600">(+${(parseFloat(corrections[ride.id]) - currentCompanyPrice).toFixed(0)} excedente)</span>
+                    )}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -130,6 +139,8 @@ function CompanyKPIs({ rides }) {
   const avgTicket = completed.length ? totalRev / completed.length : 0;
   const avgDist = completed.filter(r => r.distance_km).length
     ? completed.reduce((s, r) => s + (r.distance_km || 0), 0) / completed.filter(r => r.distance_km).length : 0;
+  const avgDur = completed.filter(r => r.duration_minutes).length
+    ? completed.reduce((s, r) => s + (r.duration_minutes || 0), 0) / completed.filter(r => r.duration_minutes).length : 0;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
@@ -138,6 +149,8 @@ function CompanyKPIs({ rides }) {
         { label: "Completados", value: completed.length, icon: TrendingUp, color: "emerald" },
         { label: "Total facturado", value: `$${totalRev.toFixed(0)}`, icon: DollarSign, color: "green" },
         { label: "Ticket promedio", value: `$${avgTicket.toFixed(0)}`, icon: BarChart3, color: "purple" },
+        { label: "Distancia prom.", value: `${avgDist.toFixed(1)} km`, icon: Car, color: "slate" },
+        { label: "Cancelaciones", value: cancelled.length, icon: XCircle, color: "red" },
       ].map(kpi => (
         <div key={kpi.label} className={`bg-${kpi.color}-50 rounded-xl p-3 text-center`}>
           <p className="text-lg font-bold text-slate-800">{kpi.value}</p>
@@ -153,7 +166,7 @@ function InvoiceTable({ rides, company }) {
   const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
 
   const filtered = rides.filter(r => {
-    const d = moment(r.created_date);
+    const d = moment(r.created_at || r.created_date);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day") && r.status === "completed";
   });
 
@@ -162,6 +175,55 @@ function InvoiceTable({ rides, company }) {
   const taxAmt = subtotal * (taxPct / 100);
   const total = subtotal + taxAmt;
   const driverTotal = filtered.reduce((s, r) => s + (r.driver_earnings || r.estimated_price || 0), 0);
+
+  const exportCSV = () => {
+    const folioFields = company?.folio_fields || [];
+    const folioHeaders = folioFields.map(f => f.label);
+
+    const headers = [
+      "Fecha","Folio","Pasajero","Telefono","Origen","Destino",
+      "Servicio","Ciudad","Conductor","Placa","Pago",
+      "Precio Estimado","Costo Empresa","Pago Conductor",
+      "Distancia km","Duracion min",
+      "Zona Tarifaria","Notas","Estado",
+      ...folioHeaders,
+    ];
+
+    const rows = filtered.map(r => {
+      const folioAnswers = folioFields.map(f => {
+        const ans = (r.questionnaire_answers || []).find(a => a.question === f.label || a.question === f.key);
+        return ans?.answer || "";
+      });
+      return [
+        formatCDMX(r.created_at || r.created_date, "shortdatetime"),
+        r.service_id || r.id?.slice(0,8) || "",
+        r.passenger_name || "",
+        r.passenger_phone || "",
+        r.pickup_address || "",
+        r.dropoff_address || "",
+        r.service_type_name || "",
+        r.city_name || "",
+        r.driver_name || "",
+        "", // placa
+        r.payment_method || "",
+        (r.estimated_price || 0).toFixed(2),
+        (r.company_price || r.final_price || r.estimated_price || 0).toFixed(2),
+        (r.driver_earnings || r.estimated_price || 0).toFixed(2),
+        r.distance_km || "",
+        r.duration_minutes || "",
+        r.geo_zone_name || "",
+        r.notes || "",
+        r.status || "",
+        ...folioAnswers,
+      ];
+    });
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = `facturacion_${company.razon_social}_${dateFrom}_${dateTo}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-4">
@@ -174,6 +236,9 @@ function InvoiceTable({ rides, company }) {
           <Label className="text-xs">Hasta</Label>
           <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36 mt-1 text-sm" />
         </div>
+        <Button variant="outline" size="sm" className="rounded-xl" onClick={exportCSV}>
+          <Download className="w-3.5 h-3.5 mr-1.5" /> Exportar CSV
+        </Button>
       </div>
 
       {filtered.length === 0 ? (
@@ -192,7 +257,7 @@ function InvoiceTable({ rides, company }) {
               <tbody>
                 {filtered.map(r => (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="px-3 py-2 text-slate-500">{formatCDMX(r.created_date, "shortdatetime")}</td>
+                    <td className="px-3 py-2 text-slate-500">{formatCDMX(r.created_at || r.created_date, "shortdatetime")}</td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-400">{r.service_id || "—"}</td>
                     <td className="px-3 py-2 font-medium">{r.passenger_name}</td>
                     <td className="px-3 py-2 text-slate-500 max-w-[120px] truncate">{r.pickup_address}</td>
@@ -208,6 +273,7 @@ function InvoiceTable({ rides, company }) {
           <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-slate-500">Subtotal ({filtered.length} servicios)</span><span className="font-medium text-blue-700">${subtotal.toFixed(2)}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">Impuesto ({taxPct}%)</span><span className="font-medium">${taxAmt.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Total pago a conductores</span><span className="font-medium text-emerald-600">${driverTotal.toFixed(2)}</span></div>
             <div className="flex justify-between border-t pt-2"><span className="font-bold text-slate-900">Total a facturar</span><span className="font-bold text-blue-700 text-base">${total.toFixed(2)}</span></div>
           </div>
         </>
@@ -219,7 +285,7 @@ function InvoiceTable({ rides, company }) {
 function CompanyDetailDialog({ company, rides, onClose }) {
   return (
     <Dialog open={!!company} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="dialog-size-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto" style={{ width: '90vw', maxWidth: '1000px' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-slate-600" />
@@ -232,7 +298,7 @@ function CompanyDetailDialog({ company, rides, onClose }) {
               <TabsTrigger value="kpis">KPI</TabsTrigger>
               <TabsTrigger value="billing">Facturación</TabsTrigger>
               <TabsTrigger value="rides">Historial</TabsTrigger>
-              <TabsTrigger value="corrections">Correcciones</TabsTrigger>
+              <TabsTrigger value="corrections" className="text-amber-600 data-[state=active]:bg-amber-50">Correcciones</TabsTrigger>
             </TabsList>
             <TabsContent value="kpis">
               <CompanyKPITab company={company} rides={rides} />
@@ -248,7 +314,7 @@ function CompanyDetailDialog({ company, rides, onClose }) {
                     <div>
                       <p className="font-medium text-slate-900">{r.passenger_name}</p>
                       <p className="text-xs text-slate-400">{r.pickup_address}</p>
-                      <p className="text-xs text-slate-300">{formatCDMX(r.created_date, "shortdatetime")}</p>
+                      <p className="text-xs text-slate-300">{formatCDMX(r.created_at || r.created_date, "shortdatetime")}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-emerald-600">${(r.final_price || r.estimated_price || 0).toFixed(0)}</p>
@@ -272,51 +338,43 @@ export default function Companies() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-
-  const { data: zones = [] } = useQuery({
-    queryKey: ["geoZones"],
-    queryFn: async () => {
-      const all = await supabaseApi.geoZones.list();
-      return all.filter(z => z.is_active === true);
-    },
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-  });
-  const { data: serviceTypes = [] } = useQuery({
-    queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      const all = await supabaseApi.serviceTypes.list();
-      return all.filter(s => s.is_active === true);
-    },
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-  });
   const [expandedZones, setExpandedZones] = useState({});
   const [detailCompany, setDetailCompany] = useState(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
 
+  const { data: zones = [] } = useQuery({
+    queryKey: ["geoZones"],
+    queryFn: () => supabaseApi.geoZones.list(),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
+
+  const { data: serviceTypes = [] } = useQuery({
+    queryKey: ["serviceTypes"],
+    queryFn: () => supabaseApi.serviceTypes.list(),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
+
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: () => supabaseApi.companies.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
-    queryFn: async () => {
-      const all = await supabaseApi.surveys.list();
-      return all.filter(s => s.is_active === true);
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    queryFn: () => supabaseApi.surveys.list(),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
     queryFn: () => supabaseApi.rideRequests.list(),
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
@@ -368,19 +426,28 @@ export default function Companies() {
       sub_company_limit: parseFloat(editing.sub_company_limit) || 0,
       sub_accounts: editing.sub_accounts || [],
     };
-    if (editing.id) await supabaseApi.companies.update(editing.id, data);
-    else await supabaseApi.companies.create(data);
-    queryClient.invalidateQueries({ queryKey: ["companies"] });
-    setSaving(false);
-    setShowForm(false);
-    toast.success("Empresa guardada");
+    try {
+      if (editing.id) await supabaseApi.companies.update(editing.id, data);
+      else await supabaseApi.companies.create(data);
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      setSaving(false);
+      setShowForm(false);
+      toast.success("Empresa guardada");
+    } catch (error: any) {
+      setSaving(false);
+      toast.error(error.message || "Error al guardar empresa");
+    }
   };
 
   const handleDelete = async (c) => {
     if (!window.confirm(`¿Eliminar empresa "${c.razon_social}"?`)) return;
-    await supabaseApi.companies.delete(c.id);
-    queryClient.invalidateQueries({ queryKey: ["companies"] });
-    toast.success("Empresa eliminada");
+    try {
+      await supabaseApi.companies.delete(c.id);
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Empresa eliminada");
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar empresa");
+    }
   };
 
   const filteredCompanies = companies.filter(c =>
@@ -438,6 +505,11 @@ export default function Companies() {
               <div className="space-y-1 text-sm mb-3">
                 {c.contacto && <p className="text-slate-600 text-xs">{c.contacto} · {c.telefono}</p>}
                 {c.correo_facturacion && <p className="text-slate-400 text-xs">{c.correo_facturacion}</p>}
+                {c.parent_company_name && (
+                  <p className="text-xs text-violet-600 flex items-center gap-1">
+                    <GitBranch className="w-3 h-3" /> Sub-empresa de: {c.parent_company_name}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2 bg-slate-50 rounded-xl p-2.5 mb-4">
                 <div className="text-center flex-1">
@@ -452,6 +524,12 @@ export default function Companies() {
                   <p className="text-xs text-slate-400">Crédito</p>
                   <p className="font-bold text-blue-600">${c.limite_credito || 0}</p>
                 </div>
+                {(c.limite_por_servicio > 0 || c.sub_company_limit > 0) && (
+                  <div className="text-center flex-1">
+                    <p className="text-xs text-slate-400">Límite/servicio</p>
+                    <p className="font-bold text-violet-600">${c.sub_company_limit || c.limite_por_servicio || 0}</p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button size="sm" className="flex-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs" onClick={() => setDetailCompany(c)}>
@@ -482,7 +560,7 @@ export default function Companies() {
               </div>
               <div>
                 <Label>RFC</Label>
-                <Input value={editing.rfc} onChange={e => up("rfc", e.target.value)} className="mt-1" />
+                <Input value={editing.rfc} onChange={e => up("rfc", e.target.value)} className="mt-1" placeholder="XAXX010101000" />
               </div>
               <div>
                 <Label>Correo facturación</Label>
@@ -509,15 +587,231 @@ export default function Companies() {
                   <Shield className="w-3.5 h-3.5 text-blue-500" />
                   Límite por servicio ($)
                 </Label>
+                <p className="text-xs text-slate-400 mt-0.5">Cobertura máxima por servicio individual. Si el costo supera esto, el excedente lo paga el pasajero.</p>
                 <Input type="number" value={editing.limite_por_servicio || 0} onChange={e => up("limite_por_servicio", parseFloat(e.target.value) || 0)} className="mt-1" />
               </div>
               <div className="flex items-center gap-3 pt-5">
                 <Switch checked={editing.is_active} onCheckedChange={v => up("is_active", v)} />
                 <Label>Empresa activa</Label>
               </div>
+
+              {/* Sub-cuentas */}
+              <div className="col-span-2 border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-500" />
+                    <Label className="text-base font-semibold">Sub-cuentas</Label>
+                  </div>
+                  <Button size="sm" variant="outline" type="button" className="rounded-lg text-xs" onClick={() => {
+                    const accs = editing.sub_accounts || [];
+                    up("sub_accounts", [...accs, { id: `sa_${Date.now()}`, name: "", limit_per_service: 0 }]);
+                  }}>
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Agregar sub-cuenta
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">
+                  Sub-cuentas dentro de esta empresa (departamentos, empleados, etc.). Cada una puede tener su propio límite de cobertura por servicio.
+                </p>
+                {(!editing.sub_accounts || editing.sub_accounts.length === 0) && (
+                  <p className="text-xs text-slate-400 text-center py-3">Sin sub-cuentas. Agrega las que necesites.</p>
+                )}
+                <div className="space-y-2">
+                  {(editing.sub_accounts || []).map((acc, idx) => (
+                    <div key={acc.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                      <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <Input
+                        value={acc.name}
+                        onChange={e => {
+                          const accs = [...(editing.sub_accounts || [])];
+                          accs[idx] = { ...accs[idx], name: e.target.value };
+                          up("sub_accounts", accs);
+                        }}
+                        placeholder="Nombre sub-cuenta"
+                        className="flex-1 text-sm h-8"
+                      />
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="text-xs text-slate-500 whitespace-nowrap">Límite $</span>
+                        <Input
+                          type="number"
+                          value={acc.limit_per_service || 0}
+                          onChange={e => {
+                            const accs = [...(editing.sub_accounts || [])];
+                            accs[idx] = { ...accs[idx], limit_per_service: parseFloat(e.target.value) || 0 };
+                            up("sub_accounts", accs);
+                          }}
+                          className="w-24 text-sm h-8"
+                          placeholder="0"
+                        />
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-red-400 h-8 w-8 flex-shrink-0" type="button" onClick={() => {
+                        const accs = (editing.sub_accounts || []).filter((_, i) => i !== idx);
+                        up("sub_accounts", accs);
+                      }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="col-span-2">
                 <Label>Notas internas</Label>
                 <Textarea value={editing.notas} onChange={e => up("notas", e.target.value)} rows={2} className="mt-1" />
+              </div>
+
+              {/* Survey assignment */}
+              <div className="col-span-2 border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ClipboardList className="w-4 h-4 text-blue-500" />
+                  <Label className="text-base font-semibold">Encuesta de servicio</Label>
+                </div>
+                <Select
+                  value={editing.survey_id || "none"}
+                  onValueChange={v => {
+                    const sv = surveys.find(s => s.id === v);
+                    up("survey_id", v === "none" ? "" : v);
+                    up("survey_title", sv?.title || "");
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Sin encuesta asignada" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin encuesta</SelectItem>
+                    {surveys.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tax/IVA */}
+              <div className="col-span-2 border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Percent className="w-4 h-4 text-slate-500" />
+                  <Label className="text-base font-semibold">Impuesto para facturación (%)</Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input type="number" min={0} max={100} step={0.01} value={editing.tax_pct ?? 0} onChange={e => up("tax_pct", parseFloat(e.target.value) || 0)} className="max-w-[120px]" />
+                  <span className="text-sm text-slate-500">%</span>
+                </div>
+              </div>
+
+              {/* Folio fields */}
+              <div className="col-span-2 border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-slate-500" />
+                    <Label className="text-base font-semibold">Campos de folio</Label>
+                  </div>
+                  <Button size="sm" variant="outline" type="button" onClick={() => {
+                    const fields = editing.folio_fields || [];
+                    up("folio_fields", [...fields, { key: `field_${Date.now()}`, label: "", required: false }]);
+                  }} className="rounded-lg text-xs">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Agregar campo
+                  </Button>
+                </div>
+                {(!editing.folio_fields || editing.folio_fields.length === 0) && (
+                  <p className="text-xs text-slate-400 py-3 text-center">Sin campos de folio.</p>
+                )}
+                <div className="space-y-2">
+                  {(editing.folio_fields || []).map((field, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <Input
+                        value={field.label}
+                        onChange={e => {
+                          const fields = [...(editing.folio_fields || [])];
+                          fields[idx] = { ...fields[idx], label: e.target.value };
+                          up("folio_fields", fields);
+                        }}
+                        placeholder="Nombre del campo"
+                        className="flex-1 text-sm"
+                      />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-slate-500">Obligatorio</span>
+                        <Switch
+                          checked={!!field.required}
+                          onCheckedChange={v => {
+                            const fields = [...(editing.folio_fields || [])];
+                            fields[idx] = { ...fields[idx], required: v };
+                            up("folio_fields", fields);
+                          }}
+                        />
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-red-400 h-8 w-8 flex-shrink-0" type="button" onClick={() => {
+                        const fields = (editing.folio_fields || []).filter((_, i) => i !== idx);
+                        up("folio_fields", fields);
+                      }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Billing type */}
+              <div className="col-span-2 border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Layers className="w-4 h-4 text-slate-500" />
+                  <Label className="text-base font-semibold">Tipo de cobro corporativo</Label>
+                </div>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => up("billing_type", "general")}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all ${editing.billing_type === "general" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 text-slate-600 hover:border-slate-400"}`}
+                  >
+                    Pago general
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => up("billing_type", "geocercas")}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all ${editing.billing_type === "geocercas" ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 text-slate-600 hover:border-slate-400"}`}
+                  >
+                    <MapPin className="w-4 h-4 inline mr-1" />Por geocercas
+                  </button>
+                </div>
+                {editing.billing_type === "geocercas" && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-slate-600 mb-2">Precio por zona y tipo de servicio:</p>
+                    {zones.length === 0 && <p className="text-xs text-slate-400">No hay zonas configuradas.</p>}
+                    {zones.map(zone => {
+                      const isExpanded = expandedZones[zone.id] !== false;
+                      return (
+                        <div key={zone.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 bg-slate-50 px-3 py-2.5 hover:bg-slate-100"
+                            onClick={() => setExpandedZones(prev => ({ ...prev, [zone.id]: !isExpanded }))}
+                          >
+                            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: zone.color || "#3B82F6" }} />
+                            <span className="text-sm font-medium text-slate-700 flex-1 text-left">{zone.name}</span>
+                            {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                          </button>
+                          {isExpanded && (
+                            <div className="divide-y divide-slate-100">
+                              {serviceTypes.map(svc => (
+                                <div key={svc.id} className="flex items-center gap-3 px-4 py-2 bg-white">
+                                  <span className="text-sm text-slate-600 flex-1">{svc.name}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-slate-400">$</span>
+                                    <Input
+                                      type="number"
+                                      className="w-24 h-8 text-sm"
+                                      placeholder="Precio"
+                                      value={getServicePrice(zone.id, svc.id)}
+                                      onChange={e => updateServicePrice(zone.id, zone.name, svc.id, svc.name, e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
