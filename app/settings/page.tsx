@@ -200,15 +200,34 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      // ✅ Obtener sesión de admin del localStorage
+      const adminSession = localStorage.getItem('adminSession');
+      if (!adminSession) {
+        toast.error("Sesión expirada - inicia sesión nuevamente");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", file);
-      const response = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!response.ok) throw new Error("Error en upload");
+      
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          "x-admin-session": adminSession,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error en upload");
+      }
+      
       const { url } = await response.json();
       update("logo_url", url);
       toast.success("Logo subido");
-    } catch (error) {
-      toast.error("Error al subir logo");
+    } catch (error: any) {
+      toast.error(error.message || "Error al subir logo");
     }
   };
 

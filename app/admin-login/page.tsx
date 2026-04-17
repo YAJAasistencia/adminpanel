@@ -10,6 +10,7 @@ import { LogIn, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import useAppSettings from "@/components/shared/useAppSettings";
 import { ADMIN_SESSION_KEY } from "@/components/shared/useAdminSession";
+import * as bcryptjs from 'bcryptjs';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutos
@@ -89,8 +90,32 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Verificar contraseña almacenada en la tabla
-      if (adminUser.password !== password) {
+      // Verificar contraseña - Prioridad: password_hash > password (migración)
+      let passwordValid = false;
+
+      if (adminUser.password_hash) {
+        // ✅ Si existe password_hash (usuario migrado), verificar contra HASH
+        passwordValid = await bcryptjs.compare(password, adminUser.password_hash);
+      } else if (adminUser.password) {
+        // ⚠️ Si no existe hash pero existe password (usuario antiguo), comparar directo
+        passwordValid = adminUser.password === password;
+        
+        // Auto-hashear la contraseña en background para siguiente login
+        if (passwordValid) {
+          try {
+            const hash = await bcryptjs.hash(password, 10);
+            await supabase
+              .from('admin_users')
+              .update({ password_hash: hash })
+              .eq('id', adminUser.id);
+          } catch (hashError) {
+            console.warn('Background hashing failed:', hashError);
+            // No bloquear login si falla el auto-hashing
+          }
+        }
+      }
+
+      if (!passwordValid) {
         setError("Credenciales incorrectas.");
         setLoading(false);
         return;

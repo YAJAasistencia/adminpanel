@@ -8,11 +8,45 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ AUTENTICACIÓN: Verificar que la solicitud viene del admin autenticado
+    const authHeader = request.headers.get('authorization');
+    const adminSession = request.headers.get('x-admin-session');
+
+    // Nota: Para mayor seguridad, validar contra sesión en servidor
+    // Por ahora, requerimos que exista un header de sesión
+    if (!adminSession) {
+      console.warn('[upload] ⚠️ Intento de upload sin sesión de admin');
+      return NextResponse.json(
+        { error: 'Unauthorized - Admin session required' },
+        { status: 401 }
+      );
+    }
+
+    // Validar que el archivo no sea muy grande (5MB)
+    const contentLength = request.headers.get('content-length');
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (contentLength && parseInt(contentLength) > maxSize) {
+      return NextResponse.json(
+        { error: 'File too large - max 5MB' },
+        { status: 413 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    // ✅ VALIDACIÓN: Solo permitir tipos de imagen
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file type - only images allowed' },
+        { status: 400 }
+      );
     }
 
     // Generar nombre único para la imagen
@@ -25,6 +59,8 @@ export async function POST(request: NextRequest) {
     const buffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(buffer);
 
+    console.log(`[upload] 📤 Subiendo archivo: ${fileName} (${file.size} bytes)`);
+
     // Subir a Supabase Storage
     const { data, error } = await supabase.storage
       .from('uploads')
@@ -34,7 +70,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Supabase upload error:', error);
+      console.error('[upload] ❌ Supabase error:', error);
       return NextResponse.json(
         { error: `Upload failed: ${error.message}` },
         { status: 500 }
@@ -46,12 +82,14 @@ export async function POST(request: NextRequest) {
       .from('uploads')
       .getPublicUrl(data.path);
 
+    console.log(`[upload] ✅ Archivo subido: ${data.path}`);
+
     return NextResponse.json({
       url: publicUrlData.publicUrl,
       path: data.path,
     });
   } catch (error: any) {
-    console.error('Upload error:', error);
+    console.error('[upload] ❌ Error:', error);
     return NextResponse.json(
       { error: error.message || 'Upload failed' },
       { status: 500 }

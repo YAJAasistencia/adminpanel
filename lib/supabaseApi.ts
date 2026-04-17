@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import * as bcryptjs from 'bcryptjs';
 
 // ─── Supabase API Functions ──────────────────────────────────────────────────
 // Tabla → nombre real en Supabase
@@ -346,6 +347,12 @@ export const supabaseApi = {
       return data;
     },
     create: async (user: any) => {
+      // Hashear contraseña si se proporciona
+      if (user.password) {
+        user.password_hash = await bcryptjs.hash(user.password, 10);
+        delete user.password; // No guardar contraseña en texto plano
+      }
+      
       const { data, error } = await supabase.from('AdminUser').insert(user).select().single();
       if (error) throw error;
       return data;
