@@ -301,44 +301,57 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const isGasolineService = /gasolina/i.test(form.service_type_name || "") || /gasolina/i.test(form.notes || "");
 
   const handleCreate = async () => {
+    console.log('[CreateRideDialog] handleCreate called');
+    
     // Validaciones previas
     if (!form.passenger_name?.trim()) {
+      console.log('[CreateRideDialog] Validation: Missing passenger name');
       toast.error("Ingresa el nombre del pasajero");
       return;
     }
     if (!form.pickup_address?.trim()) {
+      console.log('[CreateRideDialog] Validation: Missing pickup address');
       toast.error("Ingresa la dirección de recogida");
       return;
     }
     if (!pickupCoords) {
+      console.log('[CreateRideDialog] Validation: Missing pickup coordinates');
       toast.error("Selecciona un punto de recogida en el mapa");
       return;
     }
     if (!form.service_type_name) {
+      console.log('[CreateRideDialog] Validation: Missing service type');
       toast.error("Selecciona un tipo de servicio");
       return;
     }
     if (!form.payment_method) {
+      console.log('[CreateRideDialog] Validation: Missing payment method');
       toast.error("Selecciona un método de pago");
       return;
     }
     if (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) {
+      console.log('[CreateRideDialog] Validation: Missing scheduled date/time');
       toast.error("Ingresa fecha y hora para el viaje programado");
       return;
     }
     if (destinationRequired && !form.dropoff_address?.trim()) {
+      console.log('[CreateRideDialog] Validation: Destination required but missing');
       toast.error("La dirección de destino es obligatoria para este servicio");
       return;
     }
     if (form.dropoff_address && !dropoffCoords && !isVial) {
+      console.log('[CreateRideDialog] Validation: Dropoff address without coordinates');
       toast.error("Selecciona un punto de destino válido en el mapa");
       return;
     }
 
     if (detectedRedZone) {
+      console.log('[CreateRideDialog] Validation: Red zone detected');
       toast.error(`❌ No se puede crear el servicio: ZONA ROJA - ${detectedRedZone.name}`);
       return;
     }
+    
+    console.log('[CreateRideDialog] All validations passed, proceeding with ride creation');
 
     setSaving(true);
     try {
@@ -474,7 +487,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4">
+      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1000px' }}>
         <DialogHeader>
           <DialogTitle>Nuevo viaje</DialogTitle>
         </DialogHeader>
@@ -984,15 +997,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           })()}
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={
-              !form.passenger_name || !form.pickup_address || !form.service_type_name || !form.payment_method ||
-              !pickupCoords ||
-              (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) ||
-              ((destinationRequired || (form.dropoff_address && !dropoffCoords)) && !isVial && !dropoffCoords) ||
-              (selectedCompany && (selectedCompany.folio_fields || []).some(f => f.required && !folioAnswers[f.key])) ||
-              (selectedServiceType?.custom_fields || []).some(f => f.required && !customFieldAnswers[f.key]) ||
-              saving
-            }>
+            <Button onClick={() => {
+              console.log('[CreateRideDialog] Button clicked! Saving:', saving);
+              console.log('[CreateRideDialog] Form state:', { passenger: form.passenger_name, pickup: form.pickup_address, service: form.service_type_name, payment: form.payment_method, coords: !!pickupCoords });
+              handleCreate();
+            }} disabled={saving}>
               {saving ? "Creando..." : "Crear viaje"}
             </Button>
           </div>
