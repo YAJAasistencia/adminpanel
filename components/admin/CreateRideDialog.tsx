@@ -42,6 +42,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     // Corporate: company_price = what company pays, driver sees only driver_estimated_price
     company_price: "",
     driver_estimated_price: "",
+    gasoline_liters: "",
   });
 
   const { data: zones = [] } = useQuery({
@@ -119,7 +120,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   // Build category list from active serviceTypes
   const categoryList = useMemo(() => {
-    const cats = new Set();
+    const cats = new Set<string>();
     (serviceTypes || []).filter(s => s.is_active).forEach(s => cats.add(s.category?.trim() || "Servicios"));
     return Array.from(cats).sort();
   }, [serviceTypes]);
@@ -449,7 +450,10 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
         duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", 
         assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, 
         is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", 
-        show_phone_to_driver: true 
+        show_phone_to_driver: true,
+        company_price: "",
+        driver_estimated_price: "",
+        gasoline_liters: ""
       });
       setSelectedCategory("");
       setQuestionnaireAnswers({});
@@ -730,8 +734,8 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   <button
                     key={liters}
                     type="button"
-                    onClick={() => update("gasoline_liters", liters)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${form.gasoline_liters === liters ? "bg-amber-600 border-amber-600 text-white" : "bg-white border-amber-200 text-amber-700"}`}
+                    onClick={() => update("gasoline_liters", String(liters))}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${parseFloat(form.gasoline_liters) === liters ? "bg-amber-600 border-amber-600 text-white" : "bg-white border-amber-200 text-amber-700"}`}
                   >
                     {liters} litros
                   </button>
@@ -813,7 +817,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                 <Input type="number" value={form.extra_company_cost} onChange={e => update("extra_company_cost", e.target.value)} placeholder="$0" className="mt-1" />
                 {form.extra_company_cost && parseFloat(form.extra_company_cost) > 0 && (
                   <p className="text-xs text-blue-600 mt-1">
-                    Total con extra: ${(parseFloat(form.estimated_price || 0) + parseFloat(form.extra_company_cost)).toFixed(0)}
+                    Total con extra: ${(parseFloat(form.estimated_price || "0") + parseFloat(form.extra_company_cost || "0")).toFixed(0)}
                   </p>
                 )}
               </div>
