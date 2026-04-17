@@ -94,10 +94,19 @@ export default function AdminLoginPage() {
       let passwordValid = false;
 
       if (adminUser.password_hash) {
-        // ✅ Si existe password_hash (usuario migrado), verificar contra HASH
-        passwordValid = await bcryptjs.compare(password, adminUser.password_hash);
-      } else if (adminUser.password) {
-        // ⚠️ Si no existe hash pero existe password (usuario antiguo), comparar directo
+        // ✅ Si existe password_hash, intentar verificar contra HASH
+        try {
+          passwordValid = await bcryptjs.compare(password, adminUser.password_hash);
+        } catch (bcryptError) {
+          // Si bcryptjs falla (hash incompatible), caer a fallback
+          console.warn('bcryptjs verification failed, trying fallback:', bcryptError);
+          passwordValid = adminUser.password === password;
+        }
+      }
+      
+      // Si password_hash falló o está vacío, fallback a password plano
+      if (!passwordValid && adminUser.password) {
+        // ⚠️ Fallback: comparar contraseña en texto plano
         passwordValid = adminUser.password === password;
         
         // Auto-hashear la contraseña en background para siguiente login
@@ -108,6 +117,7 @@ export default function AdminLoginPage() {
               .from('admin_users')
               .update({ password_hash: hash })
               .eq('id', adminUser.id);
+            console.log('Password auto-hashed for next login');
           } catch (hashError) {
             console.warn('Background hashing failed:', hashError);
             // No bloquear login si falla el auto-hashing
