@@ -38,7 +38,7 @@ export default function Dashboard() {
         return await supabaseApi.sosAlerts.list() || [];
       } catch { return []; }
     },
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000, // 1 minute - has real-time subscription
     gcTime: 10 * 60 * 1000,
   });
 
@@ -46,7 +46,7 @@ export default function Dashboard() {
     queryKey: ["rides"],
     queryFn: async () => {
       try {
-        return await supabaseApi.rideRequests.list();
+        return await supabaseApi.rideRequests.listForDashboard();
       } catch { return []; }
     },
     staleTime: 30 * 1000,
@@ -60,8 +60,9 @@ export default function Dashboard() {
         return await supabaseApi.drivers.list();
       } catch { return []; }
     },
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 30 * 1000, // Increased from 5s to 30s - we have real-time updates via subscription
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: undefined, // Removed - subscription handles updates
   });
 
   const { data: cities = [] } = useQuery({
@@ -71,8 +72,8 @@ export default function Dashboard() {
         return await supabaseApi.cities.list();
       } catch { return []; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: geoZones = [] } = useQuery({
@@ -82,8 +83,8 @@ export default function Dashboard() {
         return await supabaseApi.geoZones.list();
       } catch { return []; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
@@ -93,8 +94,8 @@ export default function Dashboard() {
         return await supabaseApi.serviceTypes.list();
       } catch { return []; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: policies = [] } = useQuery({
@@ -104,8 +105,8 @@ export default function Dashboard() {
         return await supabaseApi.cancellationPolicies.list();
       } catch { return []; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: settings = {} } = useQuery({
@@ -116,8 +117,8 @@ export default function Dashboard() {
         return data?.[0] || {};
       } catch { return {}; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
+    gcTime: 60 * 60 * 1000,
   });
 
   useEffect(() => {

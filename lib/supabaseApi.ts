@@ -74,6 +74,13 @@ export const supabaseApi = {
       if (error) throw error;
       return data || [];
     },
+    // Optimized version for dashboard - only essential fields
+    listForDashboard: async () => {
+      const fields = 'id,name,phone,status,vehicle_license_plate,registration_status,average_rating,total_rides,created_at';
+      const { data, error } = await supabase.from('Driver').select(fields).order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
     get: async (id: string) => {
       const { data, error } = await supabase.from('Driver').select('*').eq('id', id).single();
       if (error) throw error;
@@ -104,6 +111,13 @@ export const supabaseApi = {
         });
       }
       const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    // Optimized version for dashboard - only essential fields
+    listForDashboard: async () => {
+      const fields = 'id,status,created_at,driver_id,passenger_id,start_location,end_location,estimated_fare,final_fare,rating,created_at';
+      const { data, error } = await supabase.from('RideRequest').select(fields).order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
