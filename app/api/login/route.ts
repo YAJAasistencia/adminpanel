@@ -9,18 +9,34 @@ import * as bcryptjs from 'bcryptjs';
  * This endpoint uses SERVICE_ROLE_KEY which has full access regardless of RLS
  */
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
-                           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-if (!supabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                               process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    if (!supabaseUrl) {
+      console.error('[API LOGIN] ❌ NEXT_PUBLIC_SUPABASE_URL not defined');
+      return NextResponse.json(
+        { error: 'Error de configuración del servidor' },
+        { status: 500 }
+      );
+    }
+
+    if (!supabaseServiceKey) {
+      console.error('[API LOGIN] ❌ Ni SUPABASE_SERVICE_ROLE_KEY ni ANON_KEY definidas');
+      return NextResponse.json(
+        { error: 'Error de configuración del servidor' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log('[API LOGIN] ✅ Supabase client creado');
+    console.log('[API LOGIN] URL:', supabaseUrl.substring(0, 30) + '...');
+    console.log('[API LOGIN] Key (primeros 20 chars):', supabaseServiceKey.substring(0, 20) + '...');
+
     const { email, password } = await request.json();
 
     if (!email || !password) {

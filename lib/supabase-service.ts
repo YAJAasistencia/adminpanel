@@ -10,36 +10,53 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-// Inicializar cliente Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// 🔧 Getter dinámico para cliente Supabase (se reinicializa en cada llamada)
+function getSupabaseClient(useServiceRole: boolean = true) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+
+  const key = useServiceRole && supabaseServiceKey ? supabaseServiceKey : supabaseAnonKey;
+  
+  console.log('[SUPABASE_SERVICE] Client initialized', {
+    url: supabaseUrl.substring(0, 30) + '...',
+    isServiceRole: useServiceRole && !!supabaseServiceKey,
+    keyPrefix: key.substring(0, 20) + '...',
+  });
+
+  return createClient<Database>(supabaseUrl, key);
 }
 
-// Cliente para operaciones públicas
+// Cliente para operaciones públicas (mantener para compatibilidad)
 export const supabaseClient = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
-// Cliente para operaciones del servidor (con service role)
-export const supabaseServer = createClient<Database>(
-  supabaseUrl,
-  supabaseServiceKey || supabaseAnonKey
-);
+// Función para obtener cliente con service role
+export const getSupabaseServerClient = () => getSupabaseClient(true);
+export const getSupabaseAnonClient = () => getSupabaseClient(false);
+
+// Para compatibilidad backward - retorna cliente dinámico
+export const supabaseServer = getSupabaseClient(true);
 
 /**
  * Service genérico para operaciones CRUD en Supabase
  */
 export class SupabaseService {
   private table: string;
-  private client = supabaseServer;
 
   constructor(tableName: string) {
     this.table = tableName;
+  }
+
+  // Getter dinámico para el cliente (se reinicializa en cada llamada)
+  private getClient() {
+    return getSupabaseServerClient();
   }
 
   /**
@@ -47,7 +64,7 @@ export class SupabaseService {
    */
   async getAll(filters?: Record<string, any>, options?: any) {
     try {
-      let query = this.client.from(this.table).select(options?.select || '*');
+      let query = this.getClient().from(this.table).select(options?.select || '*');
 
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -72,7 +89,7 @@ export class SupabaseService {
    */
   async getById(id: string, options?: any) {
     try {
-      const { data, error } = await this.client
+      const { data, error } = await this.getClient()
         .from(this.table)
         .select(options?.select || '*')
         .eq('id', id)
@@ -91,7 +108,7 @@ export class SupabaseService {
    */
   async create(data: any, options?: any) {
     try {
-      const { data: created, error } = await this.client
+      const { data: created, error } = await this.getClient()
         .from(this.table)
         .insert([data])
         .select(options?.select || '*');
@@ -109,7 +126,7 @@ export class SupabaseService {
    */
   async update(id: string, data: any, options?: any) {
     try {
-      const { data: updated, error } = await this.client
+      const { data: updated, error } = await this.getClient()
         .from(this.table)
         .update(data)
         .eq('id', id)
@@ -128,7 +145,7 @@ export class SupabaseService {
    */
   async delete(id: string) {
     try {
-      const { error } = await this.client
+      const { error } = await this.getClient()
         .from(this.table)
         .delete()
         .eq('id', id);
@@ -146,7 +163,7 @@ export class SupabaseService {
    */
   async search(searchTerm: string, columns: string[]) {
     try {
-      let query = this.client.from(this.table).select('*');
+      let query = this.getClient().from(this.table).select('*');
 
       columns.forEach((col, index) => {
         if (index === 0) {
@@ -171,7 +188,7 @@ export class SupabaseService {
    */
   async count(filters?: Record<string, any>) {
     try {
-      let query = this.client.from(this.table).select('id', { count: 'exact', head: true });
+      let query = this.getClient().from(this.table).select('id', { count: 'exact', head: true });
 
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -196,7 +213,7 @@ export class SupabaseService {
    */
   async batchCreate(dataArray: any[]) {
     try {
-      const { data, error } = await this.client
+      const { data, error } = await this.getClient()
         .from(this.table)
         .insert(dataArray)
         .select('*');
@@ -214,7 +231,7 @@ export class SupabaseService {
    */
   async query(filters: any, options?: any) {
     try {
-      let query = this.client.from(this.table).select(options?.select || '*');
+      let query = this.getClient().from(this.table).select(options?.select || '*');
 
       Object.entries(filters).forEach(([key, value]) => {
         if (Array.isArray(value)) {
