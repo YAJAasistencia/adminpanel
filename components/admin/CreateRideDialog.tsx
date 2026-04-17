@@ -634,6 +634,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               value={form.pickup_address}
               onChange={handlePickupChange}
               placeholder="¿Dónde recogemos?"
+              label="Dirección de recogida"
             />
             {detectedRedZone && (
               <div className="mt-1.5 flex items-center gap-2 bg-red-50 border border-red-300 rounded-xl px-3 py-2">
@@ -666,6 +667,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   if (pickupCoords) fetchRoute(pickupCoords, coords);
                 }}
                 placeholder={destinationRequired ? "¿A dónde va? (obligatorio)" : "¿A dónde va? (opcional)"}
+                label="Dirección de destino"
               />
             </div>
           )}

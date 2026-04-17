@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import useAppSettings from "@/components/shared/useAppSettings";
 import { useAdminSession, PUBLIC_PAGES } from "@/components/shared/useAdminSession";
 import { ALL_PAGES, DEFAULT_NAV_CONFIG } from "@/components/shared/navPages";
-import useAdminBadges from "@/components/shared/useAdminBadges.ts";
+import useAdminBadges from "@/components/shared/useAdminBadges";
 import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";

@@ -136,7 +136,7 @@ export default function Liquidaciones() {
   };
 
   return (
-    <Layout>
+    <Layout currentPageName="Liquidaciones">
       <div className="space-y-6">
       <div className="flex items-center gap-3">
         <FileText className="w-6 h-6 text-blue-600" />

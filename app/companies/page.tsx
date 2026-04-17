@@ -390,7 +390,7 @@ export default function Companies() {
   const companyRides = (companyId) => rides.filter(r => r.company_id === companyId);
 
   return (
-    <Layout>
+    <Layout currentPageName="Companies">
       <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

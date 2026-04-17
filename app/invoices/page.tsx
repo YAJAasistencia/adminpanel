@@ -385,7 +385,7 @@ export default function Invoices() {
   const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + (i.total||0), 0);
 
   return (
-    <Layout>
+    <Layout currentPageName="Invoices">
       <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

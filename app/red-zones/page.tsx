@@ -91,7 +91,7 @@ export default function RedZones() {
   const scheduledCount = zones.filter(z => z.use_schedule).length;
 
   return (
-    <Layout>
+    <Layout currentPageName="RedZones">
       <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
