@@ -14,11 +14,13 @@ import * as bcryptjs from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar clave secreta de migración
+    // Verificar clave secreta de migración (solo en producción)
+    // En desarrollo local, permitir sin clave
+    const isProduction = process.env.NODE_ENV === 'production';
     const migrationKey = request.headers.get('x-migration-key');
     const expectedKey = process.env.MIGRATION_SECRET_KEY;
 
-    if (!expectedKey || migrationKey !== expectedKey) {
+    if (isProduction && (!expectedKey || migrationKey !== expectedKey)) {
       console.warn(`[migrate-passwords] ⚠️ Intento de acceso sin clave válida`);
       return NextResponse.json(
         { error: 'Unauthorized - Invalid migration key' },
