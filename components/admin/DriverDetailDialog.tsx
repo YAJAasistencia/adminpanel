@@ -552,6 +552,35 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 </Select>
               </div>
             </div>
+
+            {/* City selection */}
+            <div>
+              <Label className="text-sm flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5" />
+                Ciudad
+              </Label>
+              <Select value={editDriver.city_id || ""} onValueChange={v => {
+                const selectedCity = cities.find(c => c.id === v);
+                update("city_id", v);
+                if (selectedCity) update("city_name", selectedCity.name);
+              }}>
+                <SelectTrigger className="h-7 text-sm"><SelectValue placeholder="Seleccionar ciudad" /></SelectTrigger>
+                <SelectContent>
+                  {cities.map(city => (
+                    <SelectItem key={city.id} value={city.id}>
+                      {city.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editDriver.city_name && (
+                <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  Ciudad asignada: <span className="font-semibold text-slate-700">{editDriver.city_name}</span>
+                </p>
+              )}
+            </div>
+
             {/* Suspension reason — shown when status is suspended or blocked */}
             {(editDriver.status === "suspended" || editDriver.status === "blocked") && (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 space-y-1">
