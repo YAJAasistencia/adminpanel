@@ -58,8 +58,8 @@ export default function DriversPage() {
         return await supabaseApi.cities.list();
       } catch { return []; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
@@ -69,8 +69,8 @@ export default function DriversPage() {
         return await supabaseApi.serviceTypes.list();
       } catch { return []; }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({

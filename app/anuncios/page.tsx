@@ -36,15 +36,15 @@ function AnunciosContent() {
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
     queryFn: () => supabaseApi.announcements.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: () => supabaseApi.cities.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({

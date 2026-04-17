@@ -77,8 +77,7 @@ export default function ChatsPage() {
         return [];
       }
     },
-    refetchInterval: 5000,
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 

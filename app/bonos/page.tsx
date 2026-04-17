@@ -50,43 +50,43 @@ export default function BonosPage() {
   const { data: rules = [] } = useQuery({
     queryKey: ["bonusRules"],
     queryFn: () => supabaseApi.bonusRules.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: logs = [] } = useQuery({
     queryKey: ["bonusLogs"],
     queryFn: () => supabaseApi.bonusLogs.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers_bonus"],
     queryFn: () => supabaseApi.drivers.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["rides_bonus"],
     queryFn: () => supabaseApi.rideRequests.list(),
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: () => supabaseApi.cities.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: () => supabaseApi.serviceTypes.list(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const saveMutation = useMutation({

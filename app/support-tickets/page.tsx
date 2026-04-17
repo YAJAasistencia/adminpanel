@@ -45,9 +45,8 @@ function SupportTicketsContent() {
   const { data: tickets = [] } = useQuery({
     queryKey: ["supportTickets"],
     queryFn: () => supabaseApi.supportTickets.list(),
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 15000,
   });
 
   const filtered = tickets.filter(t => {

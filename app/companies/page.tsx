@@ -279,8 +279,8 @@ export default function Companies() {
       const all = await supabaseApi.geoZones.list();
       return all.filter(z => z.is_active === true);
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
@@ -288,8 +288,8 @@ export default function Companies() {
       const all = await supabaseApi.serviceTypes.list();
       return all.filter(s => s.is_active === true);
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
   const [expandedZones, setExpandedZones] = useState({});
   const [detailCompany, setDetailCompany] = useState(null);

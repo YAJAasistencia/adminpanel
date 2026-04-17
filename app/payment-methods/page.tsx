@@ -1037,11 +1037,11 @@ export default function PaymentMethods() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
-  const { data: settingsList = [] } = useQuery({ queryKey: ["appSettings"], queryFn: () => supabaseApi.settings.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
-  const { data: serviceTypes = [] } = useQuery({ queryKey: ["serviceTypes"], queryFn: () => supabaseApi.serviceTypes.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
-  const { data: rides = [] } = useQuery({ queryKey: ["rides"], queryFn: () => supabaseApi.rideRequests.list(), staleTime: 30 * 1000, gcTime: 60 * 1000 });
-  const { data: drivers = [] } = useQuery({ queryKey: ["drivers"], queryFn: () => supabaseApi.drivers.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
-  const { data: users = [] } = useQuery({ queryKey: ["passUsers"], queryFn: () => supabaseApi.roadAssistUsers.list(), staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 });
+  const { data: settingsList = [] } = useQuery({ queryKey: ["appSettings"], queryFn: () => supabaseApi.settings.list(), staleTime: 30 * 60 * 1000, gcTime: 60 * 60 * 1000 });
+  const { data: serviceTypes = [] } = useQuery({ queryKey: ["serviceTypes"], queryFn: () => supabaseApi.serviceTypes.list(), staleTime: 30 * 60 * 1000, gcTime: 60 * 60 * 1000 });
+  const { data: rides = [] } = useQuery({ queryKey: ["rides"], queryFn: () => supabaseApi.rideRequests.list(), staleTime: 60 * 1000, gcTime: 10 * 60 * 1000 });
+  const { data: drivers = [] } = useQuery({ queryKey: ["drivers"], queryFn: () => supabaseApi.drivers.list(), staleTime: 30 * 60 * 1000, gcTime: 60 * 60 * 1000 });
+  const { data: users = [] } = useQuery({ queryKey: ["passUsers"], queryFn: () => supabaseApi.roadAssistUsers.list(), staleTime: 30 * 60 * 1000, gcTime: 60 * 60 * 1000 });
 
   const settings = settingsList[0];
 

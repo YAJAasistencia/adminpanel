@@ -233,7 +233,9 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       const { data } = await supabase.from("Driver").select("*").eq("status", "available").eq("approval_status", "approved");
       return data || [];
     },
-    refetchInterval: 15000,
+    staleTime: 30 * 1000, // 30s - drivers change status frequently but not every 15s
+    gcTime: 10 * 60 * 1000,
+    // Real-time updates via postgres_changes subscription in parent component
   });
 
   const activeServices = useMemo(() => serviceTypes.filter(s => s.is_active), [serviceTypes]);
