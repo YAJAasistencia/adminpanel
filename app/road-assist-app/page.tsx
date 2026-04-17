@@ -394,7 +394,7 @@ export default function RoadAssistApp() {
               </div>
             )}
             <div className="text-left">
-              <p className="text-white font-bold text-sm leading-tight">{settings?.company_name || "Asistencia Vial"}</p>
+              <p className="text-white font-bold text-sm leading-tight">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA Asistencia"}</p>
               <p className="text-white/60 text-[11px]">Hola, {user.full_name?.split(" ")[0]}</p>
             </div>
           </div>

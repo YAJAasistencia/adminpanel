@@ -159,7 +159,7 @@ export default function AdminLoginPage() {
             )}
           </motion.div>
           <h1 className="text-3xl font-black text-white tracking-tight">
-            {settings?.company_name || "Panel de Admin"}
+            {(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}
           </h1>
           <p className="text-sm text-slate-400 mt-2">Acceso seguro al panel administrativo</p>
         </div>

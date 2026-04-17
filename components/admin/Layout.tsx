@@ -27,7 +27,7 @@ function usePWAManifest(currentPageName: string, companyName?: string) {
   useEffect(() => {
     const isPassenger = currentPageName === "RoadAssistApp";
     const isDriver = currentPageName === "DriverApp";
-    const company = companyName || "YAJA Asistencia";
+    const company = (companyName && companyName !== "RideFlow") ? companyName : "YAJA Asistencia";
     const appTitle = isPassenger ? "Pasajero" : isDriver ? `${company} Conductor` : company;
 
     // Update iOS PWA title (does not affect the manifest — that is static)
@@ -163,7 +163,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-slate-100">
           <Menu className="w-5 h-5 text-slate-600" />
         </button>
-        <h1 className="font-bold text-slate-900 text-sm">{settings?.company_name || "Panel"}</h1>
+        <h1 className="font-bold text-slate-900 text-sm">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</h1>
         <Button variant="outline" size="sm" className="h-8 w-8" onClick={shareAdminLink}>
           <Share2 className="w-4 h-4" />
         </Button>
@@ -183,11 +183,11 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                 <img src={settings.logo_url} alt="Logo" className="w-9 h-9 rounded-xl object-contain" />
               ) : (
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow" style={{ backgroundColor: accentColor }}>
-                  {(settings?.company_name || "P").charAt(0).toUpperCase()}
+                  {((settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA").charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
-                <p className="font-bold text-slate-900 text-sm leading-tight">{settings?.company_name || "Panel"}</p>
+                <p className="font-bold text-slate-900 text-sm leading-tight">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</p>
                 <p className="text-[10px] text-slate-400">Panel administrativo</p>
               </div>
             </div>
