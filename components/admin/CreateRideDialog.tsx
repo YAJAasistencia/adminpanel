@@ -366,34 +366,38 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       const basePrice = form.estimated_price ? parseFloat(form.estimated_price) : 0;
       const extraCost = form.extra_company_cost ? parseFloat(form.extra_company_cost) : 0;
       const totalPrice = basePrice + extraCost;
-
-      // For corporate: company_price = what company pays, driver_estimated_price = what driver receives
-      const companyPrice = isCorporate ? (form.company_price ? parseFloat(form.company_price) + extraCost : totalPrice) : undefined;
       const driverEstimated = isCorporate
-        ? (form.driver_estimated_price ? parseFloat(form.driver_estimated_price) : calcDriverPayFromCompanyPrice(basePrice, form.service_type_name))
+        ? calcDriverPayFromCompanyPrice(basePrice, form.service_type_name)
         : undefined;
+      const companyPrice = isCorporate ? totalPrice : undefined;
 
+      // Build explicit data object without spreading form to avoid unknown fields
       const data = {
-        ...form,
+        passenger_name: form.passenger_name,
+        passenger_phone: form.passenger_phone,
+        pickup_address: form.pickup_address,
+        dropoff_address: form.dropoff_address || undefined,
+        service_type_name: form.service_type_name,
+        service_type_id: form.service_type_id,
+        payment_method: form.payment_method,
+        notes: form.notes || undefined,
         service_id: generateServiceId(),
         requested_at: nowCDMX(),
-        // estimated_price: for normal = total; for corporate = driver's amount (driver-visible)
-        estimated_price: isCorporate ? (driverEstimated || undefined) : (totalPrice > 0 ? totalPrice : undefined),
+        estimated_price: isCorporate ? driverEstimated : (totalPrice > 0 ? totalPrice : undefined),
         company_price: companyPrice > 0 ? companyPrice : undefined,
-        extra_company_cost: extraCost > 0 ? extraCost : undefined,
         distance_km: form.distance_km ? parseFloat(form.distance_km) : undefined,
         duration_minutes: form.duration_minutes ? parseFloat(form.duration_minutes) : undefined,
         status: form.is_scheduled ? "scheduled" : isAuction ? "auction" : "pending",
         assignment_mode: form.assignment_mode,
         auction_expires_at: auctionExpiresAt,
-        geo_zone_id: detectedZone?.id || undefined,
-        geo_zone_name: detectedZone?.name || undefined,
+        company_id: form.company_id || undefined,
         company_name: company?.razon_social || undefined,
         ride_type: form.company_id ? "corporativo" : "normal",
+        geo_zone_id: detectedZone?.id || undefined,
+        geo_zone_name: detectedZone?.name || undefined,
         proof_photo_required: form.require_proof_photo,
         require_admin_approval: form.require_admin_approval || false,
         show_phone_to_driver: form.show_phone_to_driver,
-        // ── Coordenadas de recogida y destino (necesarias para ETA y auto-asignación) ──
         pickup_lat: pickupCoords?.lat || undefined,
         pickup_lon: pickupCoords?.lon || pickupCoords?.lng || undefined,
         dropoff_lat: dropoffCoords?.lat || undefined,
@@ -426,7 +430,10 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
         service_type: data.service_type_name,
         status: data.status,
         assignment_mode: data.assignment_mode,
+        estimated_price: data.estimated_price,
+        company_price: data.company_price,
       });
+      console.log("[CreateRideDialog] Datos completos:", JSON.stringify(Object.keys(data).sort()));
 
       const result = await supabaseApi.rideRequests.create(data);
       console.log("[CreateRideDialog] Viaje creado exitosamente:", result);
