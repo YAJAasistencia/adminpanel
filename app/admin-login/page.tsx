@@ -77,9 +77,9 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      // Buscar usuario directamente en la tabla admin_users
+      // Buscar usuario en la tabla AdminUser (tabla correcta en Supabase)
       const { data: adminUser, error: fetchError } = await supabase
-        .from("admin_users")
+        .from("AdminUser")
         .select("*")
         .eq("email", email.trim().toLowerCase())
         .single();
@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
           try {
             const hash = await bcryptjs.hash(password, 10);
             await supabase
-              .from('admin_users')
+              .from('AdminUser')
               .update({ password_hash: hash })
               .eq('id', adminUser.id);
             console.log('Password auto-hashed for next login');

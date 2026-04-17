@@ -50,7 +50,7 @@ export function useAdminSession() {
 
       try {
         const { data, error } = await supabase
-          .from("admin_users")
+          .from(\"AdminUser\")
           .select("*")
           .eq("email", stored.email)
           .limit(1);
