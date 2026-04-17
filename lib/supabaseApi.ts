@@ -337,12 +337,12 @@ export const supabaseApi = {
   // ─── Admin Users ──────────────────────────────────────────────────────────
   adminUsers: {
     list: async () => {
-      const { data, error } = await supabase.from('AdminUser').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('admin_users').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('AdminUser').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('admin_users').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
@@ -353,18 +353,18 @@ export const supabaseApi = {
         delete user.password; // No guardar contraseña en texto plano
       }
       
-      const { data, error } = await supabase.from('AdminUser').insert(user).select().single();
+      const { data, error } = await supabase.from('admin_users').insert(user).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
       const { password, ...safeUpdates } = updates;
-      const { data, error } = await supabase.from('AdminUser').update(safeUpdates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('admin_users').update(safeUpdates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('AdminUser').delete().eq('id', id);
+      const { error } = await supabase.from('admin_users').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },

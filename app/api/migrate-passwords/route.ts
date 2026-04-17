@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener usuarios sin password_hash pero con password
     const { data: users, error: fetchError } = await supabase
-      .from('AdminUser')
+      .from('admin_users')
       .select('id, email, password')
       .is('password_hash', null)
       .not('password', 'is', null);
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         const hash = await bcryptjs.hash(user.password, 10);
 
         const { error: updateError } = await supabase
-          .from('AdminUser')
+          .from('admin_users')
           .update({ password_hash: hash })
           .eq('id', user.id);
 
