@@ -249,7 +249,7 @@ export type Database = {
           email: string;
           password: string | null;
           name: string | null;
-          role: string;
+          role: 'admin' | 'manager' | 'operator' | 'viewer' | 'Administrador' | 'Gestor' | 'Operador';
           permissions: any;
           is_active: boolean;
           last_login: string | null;
