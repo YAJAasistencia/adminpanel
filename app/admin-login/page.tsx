@@ -78,65 +78,93 @@ export default function AdminLoginPage() {
 
     try {
       // Buscar usuario directamente en la tabla admin_users
+      console.log('[LOGIN] Searching for user:', email.trim().toLowerCase());
+      
       const { data: adminUser, error: fetchError } = await supabase
         .from("admin_users")
         .select("*")
         .eq("email", email.trim().toLowerCase())
         .single();
 
+      console.log('[LOGIN] Fetch result:', { 
+        fetchError: fetchError?.message || 'none', 
+        fetchErrorCode: fetchError?.code,
+        userFound: !!adminUser,
+        adminUserData: adminUser ? { email: adminUser.email, id: adminUser.id, is_active: adminUser.is_active, has_password: !!adminUser.password, has_password_hash: !!adminUser.password_hash } : null
+      });
+
       if (fetchError || !adminUser) {
+        console.error('[LOGIN] ❌ User not found or fetch error:', fetchError?.message);
         setError("Credenciales incorrectas.");
         setLoading(false);
         return;
       }
 
+      console.log('[LOGIN] User found, verifying password...');
+      
       // Verificar contraseña - Prioridad: password_hash > password (migración)
       let passwordValid = false;
 
       if (adminUser.password_hash) {
         // ✅ Si existe password_hash, intentar verificar contra HASH
         try {
+          console.log('[LOGIN] Verifying against password_hash...');
           passwordValid = await bcryptjs.compare(password, adminUser.password_hash);
+          console.log('[LOGIN] Hash verification result:', passwordValid);
         } catch (bcryptError) {
           // Si bcryptjs falla (hash incompatible), caer a fallback
-          console.warn('bcryptjs verification failed, trying fallback:', bcryptError);
+          console.warn('[LOGIN] ⚠️ bcryptjs verification failed:', bcryptError);
           passwordValid = adminUser.password === password;
         }
       }
       
       // Si password_hash falló o está vacío, fallback a password plano
       if (!passwordValid && adminUser.password) {
+        console.log('[LOGIN] Using plaintext fallback...');
+        console.log('[LOGIN] Comparison:', { 
+          inputPassword: password,
+          storedPassword: adminUser.password,
+          match: adminUser.password === password
+        });
+        
         // ⚠️ Fallback: comparar contraseña en texto plano
         passwordValid = adminUser.password === password;
         
         // Auto-hashear la contraseña en background para siguiente login
         if (passwordValid) {
           try {
+            console.log('[LOGIN] Password valid, auto-hashing for next login...');
             const hash = await bcryptjs.hash(password, 10);
             await supabase
               .from('admin_users')
               .update({ password_hash: hash })
               .eq('id', adminUser.id);
-            console.log('Password auto-hashed for next login');
+            console.log('[LOGIN] ✅ Password auto-hashed for next login');
           } catch (hashError) {
-            console.warn('Background hashing failed:', hashError);
+            console.warn('[LOGIN] ⚠️ Background hashing failed:', hashError);
             // No bloquear login si falla el auto-hashing
           }
         }
       }
 
+      console.log('[LOGIN] Final password validation:', passwordValid);
+
       if (!passwordValid) {
+        console.error('[LOGIN] ❌ Password invalid');
         setError("Credenciales incorrectas.");
         setLoading(false);
         return;
       }
 
       if (adminUser.is_active === false) {
+        console.warn('[LOGIN] ⚠️ Account inactive');
         setError("Tu cuenta se encuentra desactivada. Contacta al administrador.");
         setLoading(false);
         return;
       }
 
+      console.log('[LOGIN] ✅ Login successful!');
+      
       // Login exitoso: limpiar contador de intentos
       resetAttempts();
 
@@ -155,6 +183,7 @@ export default function AdminLoginPage() {
       // Redirigir al dashboard
       router.push("/dashboard");
     } catch (error: any) {
+      console.error('[LOGIN] ❌ Exception:', error);
       setError(error.message || "Error al iniciar sesión");
       setLoading(false);
     }
