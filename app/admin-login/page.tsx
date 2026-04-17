@@ -3,14 +3,12 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogIn, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import useAppSettings from "@/components/shared/useAppSettings";
 import { ADMIN_SESSION_KEY } from "@/components/shared/useAdminSession";
-import * as bcryptjs from 'bcryptjs';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutos
@@ -77,94 +75,35 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      // Buscar usuario directamente en la tabla admin_users
-      console.log('[LOGIN] Searching for user:', email.trim().toLowerCase());
+      console.log('[LOGIN] Calling /api/login endpoint...');
       
-      const { data: adminUser, error: fetchError } = await supabase
-        .from("admin_users")
-        .select("*")
-        .eq("email", email.trim().toLowerCase())
-        .single();
-
-      console.log('[LOGIN] Fetch result:', { 
-        fetchError: fetchError?.message || 'none', 
-        fetchErrorCode: fetchError?.code,
-        userFound: !!adminUser,
-        adminUserData: adminUser ? { email: adminUser.email, id: adminUser.id, is_active: adminUser.is_active, has_password: !!adminUser.password, has_password_hash: !!adminUser.password_hash } : null
+      // Use backend endpoint to bypass RLS and browser limitations
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
 
-      if (fetchError || !adminUser) {
-        console.error('[LOGIN] ❌ User not found or fetch error:', fetchError?.message);
-        setError("Credenciales incorrectas.");
+      const result = await response.json();
+      
+      console.log('[LOGIN] API Response:', {
+        status: response.status,
+        success: result.success,
+        error: result.error,
+        userEmail: result.user?.email,
+      });
+
+      if (!response.ok || !result.success) {
+        console.error('[LOGIN] ❌ API returned error:', result.error);
+        setError(result.error || "Credenciales incorrectas.");
         setLoading(false);
         return;
       }
 
-      console.log('[LOGIN] User found, verifying password...');
-      
-      // Verificar contraseña - Prioridad: password_hash > password (migración)
-      let passwordValid = false;
+      const { user } = result;
 
-      if (adminUser.password_hash) {
-        // ✅ Si existe password_hash, intentar verificar contra HASH
-        try {
-          console.log('[LOGIN] Verifying against password_hash...');
-          passwordValid = await bcryptjs.compare(password, adminUser.password_hash);
-          console.log('[LOGIN] Hash verification result:', passwordValid);
-        } catch (bcryptError) {
-          // Si bcryptjs falla (hash incompatible), caer a fallback
-          console.warn('[LOGIN] ⚠️ bcryptjs verification failed:', bcryptError);
-          passwordValid = adminUser.password === password;
-        }
-      }
-      
-      // Si password_hash falló o está vacío, fallback a password plano
-      if (!passwordValid && adminUser.password) {
-        console.log('[LOGIN] Using plaintext fallback...');
-        console.log('[LOGIN] Comparison:', { 
-          inputPassword: password,
-          storedPassword: adminUser.password,
-          match: adminUser.password === password
-        });
-        
-        // ⚠️ Fallback: comparar contraseña en texto plano
-        passwordValid = adminUser.password === password;
-        
-        // Auto-hashear la contraseña en background para siguiente login
-        if (passwordValid) {
-          try {
-            console.log('[LOGIN] Password valid, auto-hashing for next login...');
-            const hash = await bcryptjs.hash(password, 10);
-            await supabase
-              .from('admin_users')
-              .update({ password_hash: hash })
-              .eq('id', adminUser.id);
-            console.log('[LOGIN] ✅ Password auto-hashed for next login');
-          } catch (hashError) {
-            console.warn('[LOGIN] ⚠️ Background hashing failed:', hashError);
-            // No bloquear login si falla el auto-hashing
-          }
-        }
-      }
+      console.log('[LOGIN] ✅ Authentication successful, storing session...');
 
-      console.log('[LOGIN] Final password validation:', passwordValid);
-
-      if (!passwordValid) {
-        console.error('[LOGIN] ❌ Password invalid');
-        setError("Credenciales incorrectas.");
-        setLoading(false);
-        return;
-      }
-
-      if (adminUser.is_active === false) {
-        console.warn('[LOGIN] ⚠️ Account inactive');
-        setError("Tu cuenta se encuentra desactivada. Contacta al administrador.");
-        setLoading(false);
-        return;
-      }
-
-      console.log('[LOGIN] ✅ Login successful!');
-      
       // Login exitoso: limpiar contador de intentos
       resetAttempts();
 
@@ -172,14 +111,16 @@ export default function AdminLoginPage() {
       localStorage.setItem(
         ADMIN_SESSION_KEY,
         JSON.stringify({
-          id: adminUser.id,
-          email: adminUser.email,
-          role: "admin",
-          full_name: adminUser.full_name || adminUser.email,
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          full_name: user.full_name,
           allowed_pages: [],
         })
       );
 
+      console.log('[LOGIN] ✅ Session stored, redirecting to dashboard...');
+      
       // Redirigir al dashboard
       router.push("/dashboard");
     } catch (error: any) {
