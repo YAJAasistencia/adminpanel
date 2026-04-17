@@ -28,7 +28,7 @@ export default function useAppSettings() {
   });
 
   const settings = data?.[0] || {
-    company_name: "RideFlow",
+    company_name: "YAJA",
     primary_color: "#0F172A",
     accent_color: "#3B82F6",
     secondary_color: "#10B981",
