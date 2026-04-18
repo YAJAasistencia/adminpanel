@@ -108,14 +108,14 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const handlePhoneBlur = async (phone) => {
     if (!phone || phone.length < 8) return;
     try {
-      const { data, error } = await supabase.from("RoadAssistUser").select("*").eq("phone", phone.trim());
+      const { data, error } = await supabase.from("road_assist_users").select("*").eq("phone", phone.trim());
       if (error || !data) return;
       if (data.length > 0) {
         const p = data[0];
         setForm(prev => ({ ...prev, passenger_name: p.full_name || prev.passenger_name }));
       }
     } catch (err) {
-      console.error("Error fetching RoadAssistUser:", err);
+      console.error("Error fetching road_assist_users:", err);
     }
   };
 

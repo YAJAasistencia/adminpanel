@@ -307,7 +307,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
       payment_status: fee > 0 ? "debt" : "not_required",
     }).eq("id", currentRide.id);
     if (currentRide.driver_id) await supabase.from("Driver").update({ status: "available" }).eq("id", currentRide.driver_id);
-    if (fee > 0 && user?.id) await supabase.from("RoadAssistUser").update({ pending_balance: (user.pending_balance || 0) + fee }).eq("id", user.id);
+    if (fee > 0 && user?.id) await supabase.from("road_assist_users").update({ pending_balance: (user.pending_balance || 0) + fee }).eq("id", user.id);
     setCancelling(false);
     setShowCancelConfirm(false);
     setSummaryRide(cancelledRide);

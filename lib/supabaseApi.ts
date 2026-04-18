@@ -3,7 +3,7 @@ import * as bcryptjs from 'bcryptjs';
 
 // ─── Supabase API Functions ──────────────────────────────────────────────────
 // Tabla → nombre real en Supabase
-// PascalCase (datos de Base44): Driver, RideRequest, City, RoadAssistUser,
+// PascalCase (datos de Base44): Driver, RideRequest, City,
 //   ServiceType, Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
 //   SosAlert, SupportTicket, SurveyResponse, DriverNotification, AdminUser, AppSettings
 // snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
@@ -304,23 +304,23 @@ export const supabaseApi = {
   // ─── Passengers / Road Assist Users ──────────────────────────────────────
   passengers: {
     list: async () => {
-      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('road_assist_users').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('RoadAssistUser').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('road_assist_users').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (passenger: any) => {
-      return createWithFallback('RoadAssistUser', passenger);
+      return createWithFallback('road_assist_users', passenger);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('RoadAssistUser', id, updates);
+      return updateWithFallback('road_assist_users', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('RoadAssistUser').delete().eq('id', id);
+      const { error } = await supabase.from('road_assist_users').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
@@ -699,17 +699,17 @@ export const supabaseApi = {
   // ─── Road Assist Users (alias de passengers) ──────────────────────────────
   roadAssistUsers: {
     list: async () => {
-      const { data, error } = await supabase.from('RoadAssistUser').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('road_assist_users').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('RoadAssistUser').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('road_assist_users').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('RoadAssistUser', id, updates);
+      return updateWithFallback('road_assist_users', id, updates);
     },
   },
 

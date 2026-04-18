@@ -1255,14 +1255,14 @@ export default function DriverApp() {
           if (Math.abs(walletAdjustment) > 0.01) {
             try {
               const { data: users, error: err } = await supabase
-                .from("RoadAssistUser")
+                .from("road_assist_users")
                 .select("*")
                 .eq("id", ride.passenger_user_id)
                 .single();
 
               if (!err && users && walletAdjustment > 0) {
                 await supabase
-                  .from("RoadAssistUser")
+                  .from("road_assist_users")
                   .update({ wallet_balance: (users.wallet_balance || 0) + walletAdjustment })
                   .eq("id", users.id);
                 updates.wallet_refund_amount = walletAdjustment;

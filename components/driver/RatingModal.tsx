@@ -42,7 +42,7 @@ export default function RatingModal({ ride, raterRole, targetName, targetPhoto, 
           if (newRated.length > 0) {
             const avg = newRated.reduce((s, r) => s + r.driver_rating_for_passenger, 0) / newRated.length;
             try {
-              await supabase.from("RoadAssistUser").update({
+              await supabase.from("road_assist_users").update({
                 rating: parseFloat(avg.toFixed(1)),
                 rating_count: newRated.length,
               }).eq("id", ride.passenger_user_id);

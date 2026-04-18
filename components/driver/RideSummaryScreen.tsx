@@ -110,10 +110,10 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
       // Add to passenger pending balance if we have user_id
       if (ride.passenger_user_id) {
         try {
-          const { data: users, error } = await supabase.from("RoadAssistUser").select("*").eq("id", ride.passenger_user_id).limit(1);
+          const { data: users, error } = await supabase.from("road_assist_users").select("*").eq("id", ride.passenger_user_id).limit(1);
           if (!error && users && users[0]) {
             const u = users[0];
-            await supabase.from("RoadAssistUser").update({
+            await supabase.from("road_assist_users").update({
               pending_balance: (u.pending_balance || 0) + price,
             }).eq("id", u.id);
           }
@@ -138,15 +138,15 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
       await supabaseApi.rideRequests.update(ride.id, {
         driver_rating_for_passenger: rating,
       });
-      // Update passenger's aggregate rating on RoadAssistUser
+      // Update passenger's aggregate rating on road_assist_users
       if (ride.passenger_user_id) {
         try {
-          const { data: users, error } = await supabase.from("RoadAssistUser").select("*").eq("id", ride.passenger_user_id).limit(1);
+          const { data: users, error } = await supabase.from("road_assist_users").select("*").eq("id", ride.passenger_user_id).limit(1);
           if (!error && users && users[0]) {
             const u = users[0];
             const count = (u.rating_count || 0) + 1;
             const newRating = parseFloat((((u.rating || 5) * (count - 1) + rating) / count).toFixed(2));
-            await supabase.from("RoadAssistUser").update({ rating: newRating, rating_count: count }).eq("id", u.id);
+            await supabase.from("road_assist_users").update({ rating: newRating, rating_count: count }).eq("id", u.id);
           }
         } catch (err) {
           console.error("Error updating passenger rating:", err);

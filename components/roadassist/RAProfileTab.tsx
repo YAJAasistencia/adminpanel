@@ -100,7 +100,7 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
       // Get public URL
       const file_url = supabase.storage.from("user-photos").getPublicUrl(`${user.id}/${file.name}`).data.publicUrl;
       // Update user record
-      await supabase.from("RoadAssistUser").update({ photo_url: file_url }).eq("id", user.id);
+      await supabase.from("road_assist_users").update({ photo_url: file_url }).eq("id", user.id);
       onUserUpdate({ ...user, photo_url: file_url });
     } catch (err) {
       console.error("Photo upload error:", err);
@@ -126,7 +126,7 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     setPwError("");
     const code = genToken();
     const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-    await supabase.from("RoadAssistUser").update({ reset_token: code, reset_token_expires: expires }).eq("id", user.id);
+    await supabase.from("road_assist_users").update({ reset_token: code, reset_token_expires: expires }).eq("id", user.id);
     // TODO: Implement via Supabase Edge Function for email sending
     // await supabase.functions.invoke("send-email", { body: { to: user.email, subject, body } });
     console.warn("Email sending requires Edge Function implementation. Code:", code);
@@ -139,13 +139,13 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     if (!token || !newPassword) { setPwError("Ingresa el código y la nueva contraseña"); return; }
     setPwLoading(true);
     setPwError("");
-    const { data: fresh } = await supabase.from("RoadAssistUser").select("*").eq("email", user.email);
+    const { data: fresh } = await supabase.from("road_assist_users").select("*").eq("email", user.email);
     const u = fresh?.[0];
     if (!u) { setPwError("Error al verificar. Intenta de nuevo."); setPwLoading(false); return; }
     if (u.reset_token !== token.trim().toUpperCase()) { setPwError("Código incorrecto"); setPwLoading(false); return; }
     if (new Date() > new Date(u.reset_token_expires)) { setPwError("Código expirado. Solicita uno nuevo."); setPwLoading(false); return; }
 
-    await supabase.from("RoadAssistUser").update({ password: newPassword, reset_token: null, reset_token_expires: null }).eq("id", user.id);
+    await supabase.from("road_assist_users").update({ password: newPassword, reset_token: null, reset_token_expires: null }).eq("id", user.id);
     // TODO: Implement via Supabase Edge Function for email sending
     // await supabase.functions.invoke("send-email", { body: { to, subject, body } });
     console.warn("Email confirmation not implemented yet");
@@ -160,7 +160,7 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "ELIMINAR") return;
     setDeleting(true);
-    await supabase.from("RoadAssistUser").delete().eq("id", user.id);
+    await supabase.from("road_assist_users").delete().eq("id", user.id);
     if (onDeleteAccount) onDeleteAccount();
     else onLogout();
   };

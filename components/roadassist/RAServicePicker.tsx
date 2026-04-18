@@ -286,7 +286,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     setGeneratingTransferRef(true);
     const ref = "REF-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 6).toUpperCase();
     // Save pending ref on user record
-    await supabase.from("RoadAssistUser").update({
+    await supabase.from("road_assist_users").update({
       wallet_pending_ref: ref,
       wallet_pending_amount: amount,
       wallet_pending_ref_created: new Date().toISOString(),
@@ -382,7 +382,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     setGeneratingRef(true);
     const ref = "REF-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2,6).toUpperCase();
     // Store ref on user record
-    await supabase.from("RoadAssistUser").update({
+    await supabase.from("road_assist_users").update({
       wallet_pending_ref: ref,
       wallet_pending_amount: +walletRechargeAmount,
       wallet_pending_ref_created: new Date().toISOString(),
@@ -414,12 +414,12 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       const deduct = Math.min(walletBalance, estimated);
       if (deduct > 0) {
         const newBal = +(walletBalance - deduct).toFixed(2);
-        await supabase.from("RoadAssistUser").update({ wallet_balance: newBal }).eq("id", user.id);
+        await supabase.from("road_assist_users").update({ wallet_balance: newBal }).eq("id", user.id);
         walletDeducted = deduct;
       }
     } else if (useWalletPartial && walletAmountNum > 0 && walletBalance >= walletAmountNum) {
       const newBal = +(walletBalance - walletAmountNum).toFixed(2);
-      await supabase.from("RoadAssistUser").update({ wallet_balance: newBal }).eq("id", user.id);
+      await supabase.from("road_assist_users").update({ wallet_balance: newBal }).eq("id", user.id);
       walletDeducted = walletAmountNum;
     }
 
