@@ -1353,7 +1353,7 @@ export default function DriverApp() {
         }
         if (survey) {
           const { data: existing, error } = await supabase
-            .from("SurveyResponse")
+            .from("survey_responses")
             .select("*")
             .eq("ride_id", ride.id);
 

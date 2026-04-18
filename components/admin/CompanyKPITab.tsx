@@ -41,7 +41,7 @@ export default function CompanyKPITab({ company, rides }) {
     queryKey: ["surveyResponses", company.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("SurveyResponse").select("*").eq("company_id", company.id);
+        const { data, error } = await supabase.from("survey_responses").select("*").eq("company_id", company.id);
         if (error) throw error;
         return data || [];
       } catch (err) {
