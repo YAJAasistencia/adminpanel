@@ -75,10 +75,10 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      console.log('[LOGIN] Calling /api/auth/login endpoint...');
+      console.log('[LOGIN] Calling /api/login endpoint...');
       
       // Use backend endpoint to bypass RLS and browser limitations
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
