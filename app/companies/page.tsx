@@ -350,7 +350,11 @@ export default function Companies() {
 
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: () => supabaseApi.geoZones.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/geo-zones');
+      if (!res.ok) throw new Error('Failed to fetch geo zones');
+      return res.json();
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });

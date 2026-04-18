@@ -47,7 +47,11 @@ export default function CitiesPage() {
 
   const { data: geoZones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: () => supabaseApi.geoZones.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/geo-zones');
+      if (!res.ok) throw new Error('Failed to fetch geo zones');
+      return res.json();
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

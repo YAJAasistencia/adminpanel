@@ -91,7 +91,9 @@ export default function Dashboard() {
     queryKey: ["geoZones"],
     queryFn: async () => {
       try {
-        return await supabaseApi.geoZones.list();
+        const res = await fetch('/api/geo-zones');
+        if (!res.ok) throw new Error('Failed to fetch geo zones');
+        return await res.json();
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes

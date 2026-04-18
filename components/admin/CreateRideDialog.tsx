@@ -47,7 +47,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: () => supabaseApi.geoZones.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/geo-zones');
+      if (!res.ok) throw new Error('Failed to fetch geo zones');
+      return res.json();
+    },
     enabled: open,
   });
 

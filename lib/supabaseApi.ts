@@ -161,23 +161,23 @@ export const supabaseApi = {
   // ─── Geo Zones ────────────────────────────────────────────────────────────
   geoZones: {
     list: async () => {
-      const { data, error } = await supabase.from('GeoZone').select('*').order('name');
+      const { data, error } = await supabase.from('geo_zones').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('GeoZone').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('geo_zones').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (geoZone: any) => {
-      return createWithFallback('GeoZone', geoZone);
+      return createWithFallback('geo_zones', geoZone);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('GeoZone', id, updates);
+      return updateWithFallback('geo_zones', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('GeoZone').delete().eq('id', id);
+      const { error } = await supabase.from('geo_zones').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },

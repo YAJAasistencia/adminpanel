@@ -86,7 +86,11 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
   // Load GeoZones to display on map
   const { data: geoZones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: () => supabaseApi.geoZones.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/geo-zones');
+      if (!res.ok) throw new Error('Failed to fetch geo zones');
+      return res.json();
+    },
     enabled: open,
     staleTime: 60000,
   });
