@@ -267,28 +267,28 @@ export const supabaseApi = {
     },
   },
 
-  // ─── Settings (AppSettings) ───────────────────────────────────────────────
+  // ─── Settings (app_settings) ───────────────────────────────────────────────
   settings: {
     list: async () => {
-      const { data, error } = await supabase.from('AppSettings').select('*').order('created_at', { ascending: false }).limit(1);
+      const { data, error } = await supabase.from('app_settings').select('*').order('created_at', { ascending: false }).limit(1);
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('AppSettings').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('app_settings').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (setting: any) => {
-      const { data, error } = await supabase.from('AppSettings').insert(setting).select().single();
+      const { data, error } = await supabase.from('app_settings').insert(setting).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('AppSettings', id, updates);
+      return updateWithFallback('app_settings', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('AppSettings').delete().eq('id', id);
+      const { error } = await supabase.from('app_settings').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
@@ -489,39 +489,39 @@ export const supabaseApi = {
     },
   },
 
-  // ─── Payment Methods (dentro de AppSettings) ──────────────────────────────
+  // ─── Payment Methods (dentro de app_settings) ──────────────────────────────
   paymentMethods: {
     list: async () => {
-      const { data, error } = await supabase.from('AppSettings').select('payment_methods').limit(1);
+      const { data, error } = await supabase.from('app_settings').select('payment_methods').limit(1);
       if (error) throw error;
       return data?.[0]?.payment_methods || [];
     },
     create: async (method: any) => {
-      const { data: current } = await supabase.from('AppSettings').select('*').limit(1);
+      const { data: current } = await supabase.from('app_settings').select('*').limit(1);
       const settings = current?.[0];
-      if (!settings) throw new Error('No AppSettings found');
+      if (!settings) throw new Error('No app_settings found');
       const methods = [...(settings.payment_methods || []), method];
-      const { error } = await supabase.from('AppSettings').update({ payment_methods: methods }).eq('id', settings.id);
+      const { error } = await supabase.from('app_settings').update({ payment_methods: methods }).eq('id', settings.id);
       if (error) throw error;
       return method;
     },
     update: async (id: string, updates: any) => {
-      const { data: current } = await supabase.from('AppSettings').select('*').limit(1);
+      const { data: current } = await supabase.from('app_settings').select('*').limit(1);
       const settings = current?.[0];
-      if (!settings) throw new Error('No AppSettings found');
+      if (!settings) throw new Error('No app_settings found');
       const methods = (settings.payment_methods || []).map((m: any) =>
         m.id === id || m.key === id ? { ...m, ...updates } : m
       );
-      const { error } = await supabase.from('AppSettings').update({ payment_methods: methods }).eq('id', settings.id);
+      const { error } = await supabase.from('app_settings').update({ payment_methods: methods }).eq('id', settings.id);
       if (error) throw error;
       return updates;
     },
     delete: async (id: string) => {
-      const { data: current } = await supabase.from('AppSettings').select('*').limit(1);
+      const { data: current } = await supabase.from('app_settings').select('*').limit(1);
       const settings = current?.[0];
-      if (!settings) throw new Error('No AppSettings found');
+      if (!settings) throw new Error('No app_settings found');
       const methods = (settings.payment_methods || []).filter((m: any) => m.id !== id && m.key !== id);
-      const { error } = await supabase.from('AppSettings').update({ payment_methods: methods }).eq('id', settings.id);
+      const { error } = await supabase.from('app_settings').update({ payment_methods: methods }).eq('id', settings.id);
       if (error) throw error;
       return { success: true };
     },

@@ -117,7 +117,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
+        const { data, error } = await supabase.from("app_settings").select("*").limit(1);
         if (error || !data) return [];
         return data;
       } catch (err) {

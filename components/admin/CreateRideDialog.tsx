@@ -88,11 +88,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
+        const { data, error } = await supabase.from("app_settings").select("*").limit(1);
         if (error) throw error;
         return data || [];
       } catch (err) {
-        console.error("Error fetching AppSettings:", err);
+        console.error("Error fetching app_settings:", err);
         return [];
       }
     },

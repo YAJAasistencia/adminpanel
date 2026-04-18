@@ -1,12 +1,12 @@
--- Migration: Create AppSettings Table with Comprehensive Schema
+-- Migration: Create app_settings Table with Comprehensive Schema
 -- Date: 2026-04-18
--- Purpose: Define complete AppSettings structure required by admin panel code
+-- Purpose: Define complete app_settings structure required by admin panel code
 
--- Drop existing if necessary (WARNING: This deletes data)
--- DROP TABLE IF EXISTS "AppSettings" CASCADE;
+-- Drop old AppSettings table if it exists
+DROP TABLE IF EXISTS "AppSettings" CASCADE;
 
--- Create AppSettings table with all required fields
-CREATE TABLE IF NOT EXISTS "AppSettings" (
+-- Create app_settings table (lowercase with underscore to match code)
+CREATE TABLE IF NOT EXISTS app_settings (
   -- Primary Key & Timestamps
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
@@ -183,13 +183,13 @@ CREATE TABLE IF NOT EXISTS "AppSettings" (
 -- ============================================================================
 
 -- Index for updated_at for real-time queries
-CREATE INDEX IF NOT EXISTS "idx_appsettings_updated_at" ON "AppSettings"(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_app_settings_updated_at ON app_settings(updated_at DESC);
 
 -- Index for created_at for historical queries
-CREATE INDEX IF NOT EXISTS "idx_appsettings_created_at" ON "AppSettings"(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_app_settings_created_at ON app_settings(created_at DESC);
 
 -- Index for updated_by for auditing
-CREATE INDEX IF NOT EXISTS "idx_appsettings_updated_by" ON "AppSettings"(updated_by);
+CREATE INDEX IF NOT EXISTS idx_app_settings_updated_by ON app_settings(updated_by);
 
 -- ============================================================================
 -- TRIGGERS
@@ -204,26 +204,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS update_appsettings_timestamp_trigger ON "AppSettings";
+DROP TRIGGER IF EXISTS update_app_settings_timestamp_trigger ON app_settings;
 
-CREATE TRIGGER update_appsettings_timestamp_trigger
-BEFORE UPDATE ON "AppSettings"
+CREATE TRIGGER update_app_settings_timestamp_trigger
+BEFORE UPDATE ON app_settings
 FOR EACH ROW
-EXECUTE FUNCTION update_appsettings_timestamp();
+EXECUTE FUNCTION update_app_settings_timestamp();
 
 -- ============================================================================
 -- RLS (ROW LEVEL SECURITY) - ADD IF NEEDED
 -- ============================================================================
 
 -- Uncomment and modify based on your auth requirements:
--- ALTER TABLE "AppSettings" ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 -- 
--- CREATE POLICY "AppSettings readable by authenticated users" 
---   ON "AppSettings" FOR SELECT 
+-- CREATE POLICY "app_settings readable by authenticated users" 
+--   ON app_settings FOR SELECT 
 --   USING (auth.role() = 'authenticated');
 --
--- CREATE POLICY "AppSettings writable by admin users" 
---   ON "AppSettings" FOR UPDATE 
+-- CREATE POLICY "app_settings writable by admin users" 
+--   ON app_settings FOR UPDATE 
 --   USING (auth.role() = 'authenticated' AND auth.jwt() ->> 'role' = 'admin');
 
 -- ============================================================================
@@ -258,7 +258,7 @@ END $$;
 /*
 CAMBIOS REALIZADOS:
 
-1. CREACIÓN DE TABLA AppSettings
+1. CREACIÓN DE TABLA app_settings
    - 80+ campos para almacenar configuración global de la plataforma
    - Tipos de datos apropiados (DECIMAL para dinero, JSONB para estructuras)
    - Constraints para validar rangos de valores
@@ -292,8 +292,8 @@ PRÓXIMOS PASOS DESPUÉS DE MIGRACIÓN:
 1. Regenerar database.types.ts desde Supabase:
    npx supabase gen types typescript > lib/database.types.ts
 
-2. Verificar que AppSettings tenga al menos 1 registro:
-   INSERT INTO "AppSettings" (company_name) 
+2. Verificar que app_settings tenga al menos 1 registro:
+   INSERT INTO app_settings (company_name) 
    VALUES ('YAJAasistencia') 
    ON CONFLICT DO NOTHING;
 

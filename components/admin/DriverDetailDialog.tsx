@@ -217,7 +217,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
     queryFn: async () => {
       try {
         const { data: settings, error } = await supabase
-          .from("AppSettings")
+          .from("app_settings")
           .select("*")
           .limit(1);
         

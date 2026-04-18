@@ -854,7 +854,7 @@ export default function DriverApp() {
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
+      const { data, error } = await supabase.from("app_settings").select("*").limit(1);
       if (error) throw error;
       return data || [];
     },
