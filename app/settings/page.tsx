@@ -160,7 +160,7 @@ export default function SettingsPage() {
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
-      const res = await fetch('/api/settings');
+      const res = await fetchWithAuth('/api/settings');
       if (!res.ok) throw new Error('Failed to fetch settings');
       const json = await res.json();
       return json.data ? [json.data] : [];
