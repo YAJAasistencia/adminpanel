@@ -300,12 +300,25 @@ function AnalyticsContent() {
     const completedRides = filteredRides.filter(r => r.status === "completed").length;
     const cancelledRides = filteredRides.filter(r => r.status === "cancelled").length;
     const totalRevenue = filteredRides.reduce((sum, r) => sum + (r.final_price || 0), 0);
+    
+    // Calculate driver payments (estimate: 70-80% of fare goes to driver)
+    // Using a platform commission rate of 20% (80% to driver)
+    const driverPayments = filteredRides.reduce((sum, r) => sum + (r.final_price || 0) * 0.80, 0);
+    const netRevenue = totalRevenue - driverPayments;
+    
+    // Calculate average acceptance rate
+    const avgAcceptance = drivers.length > 0 
+      ? drivers.reduce((sum, d) => sum + (d.acceptance_rate || 100), 0) / drivers.length 
+      : 100;
+    
     return {
       avgRating: avgRating.toFixed(2),
+      avgAcceptance: avgAcceptance.toFixed(1),
       totalDrivers: drivers.length,
       completedRides,
       cancelledRides,
       totalRevenue: totalRevenue.toFixed(2),
+      netRevenue: netRevenue.toFixed(2),
       completionRate: ((completedRides / (completedRides + cancelledRides)) * 100 || 0).toFixed(1),
     };
   }, [filteredRides, drivers]);
@@ -337,6 +350,41 @@ function AnalyticsContent() {
     else if (filterCompany !== "all") filtered = filtered.filter(r => r.company_id === filterCompany);
     return filtered.map(r => [r.pickup_lat, r.pickup_lon, 1]);
   }, [filteredRides, filterService, filterCompany]);
+
+  const revenueByServiceType = useMemo(() => {
+    const typeMap = {};
+    filteredRides.forEach(ride => {
+      const typeName = ride.service_type_name || "Sin categoría";
+      if (!typeMap[typeName]) typeMap[typeName] = 0;
+      typeMap[typeName] += ride.final_price || 0;
+    });
+    return Object.entries(typeMap)
+      .map(([name, revenue]) => ({ name, revenue: parseFloat(revenue.toFixed(2)) }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [filteredRides]);
+
+  const topDrivers = useMemo(() => {
+    const driverStats = {};
+    filteredRides.filter(r => r.status === "completed").forEach(ride => {
+      if (!ride.driver_id) return;
+      if (!driverStats[ride.driver_id]) {
+        const driver = drivers.find(d => d.id === ride.driver_id);
+        driverStats[ride.driver_id] = {
+          id: ride.driver_id,
+          name: driver?.full_name || "Desconocido",
+          rides: 0,
+          earnings: 0,
+          rating: driver?.rating || 0,
+          acceptance_rate: driver?.acceptance_rate || 100,
+        };
+      }
+      driverStats[ride.driver_id].rides += 1;
+      driverStats[ride.driver_id].earnings += ride.driver_earning || (ride.final_price || 0) * 0.8;
+    });
+    return Object.values(driverStats)
+      .sort((a, b) => b.rides - a.rides)
+      .slice(0, 10);
+  }, [filteredRides, drivers]);
 
   const heatCenter = heatPoints.length > 0 ? [heatPoints[0][0], heatPoints[0][1]] : [19.4326, -99.1332];
 
@@ -378,13 +426,14 @@ function AnalyticsContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {[
           { label: "Rating Promedio", value: kpis.avgRating, sub: `de ${kpis.totalDrivers} conductores`, color: "text-slate-900" },
+          { label: "Aceptación", value: `${kpis.avgAcceptance}%`, sub: "promedio conductores", color: "text-emerald-600" },
           { label: "Viajes Completados", value: kpis.completedRides, sub: `${kpis.completionRate}% tasa`, color: "text-emerald-600" },
           { label: "Cancelados", value: kpis.cancelledRides, sub: "en el período", color: "text-red-600" },
-          { label: "Ingresos Totales", value: `$${kpis.totalRevenue}`, sub: "MXN", color: "text-slate-900" },
-          { label: "Total Servicios", value: filteredRides.length, sub: "solicitados", color: "text-blue-600" },
+          { label: "Ingresos Brutos", value: `$${kpis.totalRevenue}`, sub: "MXN", color: "text-slate-900" },
+          { label: "Ingreso Neto", value: `$${kpis.netRevenue}`, sub: "ganancia plataforma", color: "text-blue-600" },
         ].map(k => (
           <Card key={k.label}>
             <CardContent className="pt-6 text-center">
@@ -394,6 +443,69 @@ function AnalyticsContent() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-600" />
+              Ingresos por Tipo de Servicio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revenueByServiceType.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-12">Sin datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={revenueByServiceType} dataKey="revenue" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                    {COLORS.map((color, idx) => <Cell key={idx} fill={color} />)}
+                  </Pie>
+                  <Tooltip formatter={(value) => `$${value.toFixed(0)}`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600" />
+              Top 10 Conductores
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topDrivers.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-12">Sin datos</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {topDrivers.map((driver, idx) => (
+                  <div key={driver.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-400 w-6 text-center">#{idx + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-900 truncate">{driver.name}</p>
+                        <p className="text-[10px] text-slate-400">{driver.rides} viajes</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-emerald-600">${driver.earnings.toFixed(0)}</p>
+                      <div className="flex items-center gap-1 justify-end mt-0.5">
+                        <span className="text-[10px] text-amber-600">⭐ {driver.rating.toFixed(1)}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${driver.acceptance_rate >= 80 ? "bg-emerald-100 text-emerald-700" : driver.acceptance_rate >= 60 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                          {driver.acceptance_rate.toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
