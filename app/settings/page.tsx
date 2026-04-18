@@ -317,6 +317,28 @@ export default function SettingsPage() {
 
             <Card className="p-6 border-0 shadow-sm">
               <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-green-50 text-green-600"><Phone className="w-5 h-5" /></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Soporte WhatsApp</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Información de contacto para pasajeros y conductores</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>Número WhatsApp de soporte</Label>
+                  <Input value={form.support_whatsapp_number || ""} onChange={e => update("support_whatsapp_number", e.target.value)} placeholder="+1 (555) 123-4567" />
+                  <p className="text-xs text-slate-400 mt-1">Formato: +código_país número</p>
+                </div>
+                <div>
+                  <Label>Mensaje predeterminado</Label>
+                  <Textarea value={form.support_whatsapp_message || ""} onChange={e => update("support_whatsapp_message", e.target.value)} placeholder="Hola, necesito ayuda con mi viaje..." rows={2} />
+                  <p className="text-xs text-slate-400 mt-1">Mensaje sugerido al hacer clic en WhatsApp</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-sky-50 text-sky-600"><Globe className="w-5 h-5" /></div>
                 <div>
                   <h2 className="font-semibold text-slate-900">Zona horaria</h2>
@@ -413,6 +435,9 @@ export default function SettingsPage() {
                   { key: "scheduling", label: "Viajes programados", desc: "Permite programar viajes a futuro", direct: false },
                   { key: "promotions", label: "Promociones y descuentos", desc: "Habilita códigos de promoción", direct: false },
                   { key: "driver_earnings_panel", label: "Panel de ganancias del conductor", desc: "El conductor puede ver sus ganancias", direct: false },
+                  { key: "proof_photo", label: "Foto de prueba al finalizar", desc: "Requerir que conductores tomen foto al completar viaje", direct: false },
+                  { key: "geo_assignment", label: "Asignación por geo-zona", desc: "Usar geozonas para asignación automática de viajes", direct: false },
+                  { key: "show_app_install_section", label: "Mostrar banner de instalación de app", desc: "Mostrar sección PWA en landing page", direct: false },
                 ].map(item => (
                   <div key={item.key} className="flex items-start justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
                     <div>
@@ -428,26 +453,6 @@ export default function SettingsPage() {
               </div>
             </Card>
 
-            <Card className="p-6 border-0 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-xl bg-sky-50 text-sky-600"><Car className="w-5 h-5" /></div>
-                <div>
-                  <h2 className="font-semibold text-slate-900">Tiempo de Llegada (ETA)</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Configura cómo se calcula el ETA del conductor</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <Label>Velocidad promedio urbana (km/h)</Label>
-                  <Input type="number" min={5} max={120} value={form.eta_speed_kmh ?? 30} onChange={e => update("eta_speed_kmh", parseFloat(e.target.value) || 30)} />
-                  <p className="text-xs text-slate-400 mt-1">Se usa para calcular ETA</p>
-                </div>
-                <div>
-                  <Label>Intervalo de actualización ETA (seg)</Label>
-                  <Input type="number" min={5} max={300} value={form.eta_update_interval_seconds ?? 15} onChange={e => update("eta_update_interval_seconds", parseFloat(e.target.value) || 15)} />
-                </div>
-              </div>
-            </Card>
           </TabsContent>
 
           <TabsContent value="auction" className="space-y-5 mt-5">
@@ -650,6 +655,26 @@ export default function SettingsPage() {
                 </div>
               </div>
             </Card>
+
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-amber-50 text-amber-600"><Scissors className="w-5 h-5" /></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Cortes de caja</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Configuración del período de corte para conductores</p>
+                </div>
+              </div>
+              <div>
+                <Label>Intervalo de corte (días)</Label>
+                <p className="text-xs text-slate-400 mb-2">Cada cuántos días se realiza el corte de caja del conductor</p>
+                <Input
+                  type="number" min={1} max={30}
+                  value={form.cutoff_interval_days ?? 7}
+                  onChange={e => update("cutoff_interval_days", parseFloat(e.target.value) || 7)}
+                  className="max-w-[120px]"
+                />
+              </div>
+            </Card>
           </TabsContent>
 
           <TabsContent value="alerts" className="space-y-5 mt-5">
@@ -720,26 +745,6 @@ export default function SettingsPage() {
                     className="max-w-[120px]"
                   />
                 </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 border-0 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-xl bg-amber-50 text-amber-600"><Scissors className="w-5 h-5" /></div>
-                <div>
-                  <h2 className="font-semibold text-slate-900">Cortes de caja</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Configuración del período de corte para conductores</p>
-                </div>
-              </div>
-              <div>
-                <Label>Intervalo de corte (días)</Label>
-                <p className="text-xs text-slate-400 mb-2">Cada cuántos días se realiza el corte de caja del conductor</p>
-                <Input
-                  type="number" min={1} max={30}
-                  value={form.cutoff_interval_days ?? 7}
-                  onChange={e => update("cutoff_interval_days", parseFloat(e.target.value) || 7)}
-                  className="max-w-[120px]"
-                />
               </div>
             </Card>
           </TabsContent>
@@ -1077,6 +1082,63 @@ export default function SettingsPage() {
                       </div>
                       <Button variant="ghost" size="icon" className="text-red-400 h-9 w-9 flex-shrink-0" onClick={() => {
                         update("driver_required_docs", (form.driver_required_docs || []).filter((_, idx) => idx !== i));
+                      }}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-cyan-50 text-cyan-600"><Truck className="w-5 h-5" /></div>
+                  <div>
+                    <h2 className="font-semibold text-slate-900">Documentos del vehículo</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Requeridos para registrar vehículos</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => {
+                  const docs = form.driver_vehicle_docs || [];
+                  update("driver_vehicle_docs", [...docs, { key: `vdoc_${Date.now()}`, label: "", required: true, require_expiry: false, applies_to: "both" }]);
+                }} className="rounded-lg">
+                  <Plus className="w-4 h-4 mr-1" /> Agregar
+                </Button>
+              </div>
+              {(!form.driver_vehicle_docs || form.driver_vehicle_docs.length === 0) && (
+                <p className="text-sm text-slate-400 text-center py-6">No hay documentos de vehículo configurados.</p>
+              )}
+              <div className="space-y-3">
+                {(form.driver_vehicle_docs || []).map((doc, i) => (
+                  <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <Label className="text-xs">Nombre del documento</Label>
+                        <Input value={doc.label} onChange={e => {
+                          const docs = [...(form.driver_vehicle_docs || [])];
+                          docs[i] = { ...docs[i], label: e.target.value };
+                          update("driver_vehicle_docs", docs);
+                        }} placeholder="Ej: Tarjeta de circulación, Póliza de seguro..." className="mt-1" />
+                      </div>
+                      <div className="w-24">
+                        <Label className="text-xs">Aplica a</Label>
+                        <Select value={doc.applies_to || "both"} onValueChange={v => {
+                          const docs = [...(form.driver_vehicle_docs || [])];
+                          docs[i] = { ...docs[i], applies_to: v };
+                          update("driver_vehicle_docs", docs);
+                        }}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="both">Ambos</SelectItem>
+                            <SelectItem value="car">🚗 Carro</SelectItem>
+                            <SelectItem value="moto">🏍️ Moto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-red-400 h-9 w-9 flex-shrink-0" onClick={() => {
+                        update("driver_vehicle_docs", (form.driver_vehicle_docs || []).filter((_, idx) => idx !== i));
                       }}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </div>
