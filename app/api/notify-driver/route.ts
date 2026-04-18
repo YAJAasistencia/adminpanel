@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Create notification record in database
     const { data: notification, error: notificationError } = await supabase
-      .from('driver_notifications')
+      .from('driver_notificaciones')
       .insert({
         driver_id,
         ride_id,

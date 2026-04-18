@@ -763,13 +763,13 @@ export default function DriverApp() {
     if (!driver?.id) return;
     
     const channel = supabase
-      .channel(`driver_notifications:${driver.id}`)
+      .channel(`driver_notificaciones:${driver.id}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "driver_notifications",
+          table: "driver_notificaciones",
           filter: `driver_ids=cs.{${driver.id}}`,
         },
         (payload) => {
