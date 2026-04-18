@@ -417,7 +417,7 @@ export const supabaseApi = {
   // ─── Invoices ─────────────────────────────────────────────────────────────
   invoices: {
     list: async (filters?: any) => {
-      let query = supabase.from('Invoice').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('invoices').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -428,20 +428,20 @@ export const supabaseApi = {
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('Invoice').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('invoices').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (invoice: any) => {
-      const { data, error } = await supabase.from('Invoice').insert(invoice).select().single();
+      const { data, error } = await supabase.from('invoices').insert(invoice).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('Invoice', id, updates);
+      return updateWithFallback('invoices', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('Invoice').delete().eq('id', id);
+      const { error } = await supabase.from('invoices').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },

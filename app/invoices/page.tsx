@@ -70,19 +70,24 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
   const handleSave = async () => {
     if (!companyId || selectedRides.length === 0) return;
     setSaving(true);
-    await supabaseApi.invoices.create({
-      invoice_number: invoiceNumber,
-      company_id: companyId,
-      company_name: company.razon_social,
-      ride_ids: selectedRides.map(r => r.id),
-      service_ids: selectedRides.map(r => r.service_id).filter(Boolean),
-      period_from: new Date(dateFrom).toISOString(),
-      period_to: new Date(dateTo).toISOString(),
-      subtotal, tax_pct: taxPct, tax_amount: taxAmount, total,
-      ride_count: selectedRides.length,
-      status: "draft",
-      notes,
+    const res = await fetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoice_number: invoiceNumber,
+        company_id: companyId,
+        company_name: company.razon_social,
+        ride_ids: selectedRides.map(r => r.id),
+        service_ids: selectedRides.map(r => r.service_id).filter(Boolean),
+        period_from: new Date(dateFrom).toISOString(),
+        period_to: new Date(dateTo).toISOString(),
+        subtotal, tax_pct: taxPct, tax_amount: taxAmount, total,
+        ride_count: selectedRides.length,
+        status: "draft",
+        notes,
+      })
     });
+    if (!res.ok) throw new Error('Failed to create invoice');
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
     setSaving(false);
     toast.success("Factura creada");
@@ -341,7 +346,11 @@ export default function Invoices() {
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
-    queryFn: () => supabaseApi.invoices.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/invoices');
+      if (!res.ok) throw new Error('Failed to fetch invoices');
+      return res.json();
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -361,7 +370,12 @@ export default function Invoices() {
   const handleStatusChange = async (invoice, newStatus) => {
     const updates = { status: newStatus };
     if (newStatus === "paid") updates.paid_at = new Date().toISOString();
-    await supabaseApi.invoices.update(invoice.id, updates);
+    const res = await fetch(`/api/invoices?id=${invoice.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update invoice');
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
     setSelectedInvoice(prev => prev?.id === invoice.id ? { ...prev, ...updates } : prev);
     toast.success(`Factura marcada como ${STATUS_MAP[newStatus]?.label}`);
@@ -369,7 +383,10 @@ export default function Invoices() {
 
   const handleDelete = async (invoice) => {
     if (!window.confirm(`¿Eliminar permanentemente la factura ${invoice.invoice_number}? Esta acción no se puede deshacer.`)) return;
-    await supabaseApi.invoices.delete(invoice.id);
+    const res = await fetch(`/api/invoices?id=${invoice.id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete invoice');
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
     toast.success("Factura eliminada");
   };
