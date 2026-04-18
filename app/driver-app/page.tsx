@@ -913,7 +913,7 @@ export default function DriverApp() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("City").select("*");
+      const { data, error } = await supabase.from("cities").select("*");
       if (error) throw error;
       return data || [];
     },

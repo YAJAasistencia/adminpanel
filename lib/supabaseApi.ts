@@ -60,23 +60,23 @@ export const supabaseApi = {
   // ─── Cities ───────────────────────────────────────────────────────────────
   cities: {
     list: async () => {
-      const { data, error } = await supabase.from('City').select('*').order('name');
+      const { data, error } = await supabase.from('cities').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('City').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('cities').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (city: any) => {
-      return createWithFallback('City', city);
+      return createWithFallback('cities', city);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('City', id, updates);
+      return updateWithFallback('cities', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('City').delete().eq('id', id);
+      const { error } = await supabase.from('cities').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },

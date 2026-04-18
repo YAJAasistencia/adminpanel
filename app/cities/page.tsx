@@ -29,7 +29,11 @@ export default function CitiesPage() {
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: () => supabaseApi.cities.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/cities');
+      if (!res.ok) throw new Error('Failed to fetch cities');
+      return res.json();
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

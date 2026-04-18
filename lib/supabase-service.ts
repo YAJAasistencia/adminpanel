@@ -263,7 +263,7 @@ export class SupabaseService {
 /**
  * Servicios específicos para cada tabla
  */
-export const cityService = new SupabaseService('City');
+export const cityService = new SupabaseService('cities');
 export const driverService = new SupabaseService('Driver');
 export const companyService = new SupabaseService('Company');
 export const rideRequestService = new SupabaseService('RideRequest');
