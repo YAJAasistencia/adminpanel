@@ -165,14 +165,37 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (settings) {
+      // Merge inteligente: no sobrescribir arrays/objetos complejos
       setForm({
         ...defaults,
         ...settings,
+        // Arrays: mergear, NO sobrescribir
+        payment_methods: (settings.payment_methods && settings.payment_methods.length > 0) 
+          ? settings.payment_methods 
+          : defaults.payment_methods,
+        driver_required_docs: (settings.driver_required_docs && settings.driver_required_docs.length > 0)
+          ? settings.driver_required_docs
+          : defaults.driver_required_docs,
+        driver_vehicle_docs: (settings.driver_vehicle_docs && settings.driver_vehicle_docs.length > 0)
+          ? settings.driver_vehicle_docs
+          : defaults.driver_vehicle_docs,
+        nav_config: (settings.nav_config && settings.nav_config.length > 0)
+          ? settings.nav_config
+          : defaults.nav_config,
+        promotions: (settings.promotions && settings.promotions.length > 0)
+          ? settings.promotions
+          : defaults.promotions,
+        // Objetos anidados: mergear properties
         features_enabled: {
           ...defaults.features_enabled,
           ...(settings.features_enabled || {}),
         },
+        landing_config: {
+          ...defaults.landing_config,
+          ...(settings.landing_config || {}),
+        },
       });
+      console.log("[Settings] Datos cargados desde Supabase:", settings);
     }
   }, [settings]);
 
@@ -191,15 +214,61 @@ export default function SettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      
+      // Validación crítica
+      if (!form.company_name?.trim()) {
+        throw new Error("El nombre de la empresa es obligatorio");
+      }
+      if (form.contact_email && !/^[^@]+@[^@]+\.[^@]+$/.test(form.contact_email)) {
+        throw new Error("Email de contacto inválido");
+      }
+      if (form.support_whatsapp_number && !/^\+?[0-9]{7,15}$/.test(form.support_whatsapp_number.replace(/[\s\-\(\)]/g, ''))) {
+        throw new Error("Número WhatsApp inválido (formato: +5491234567890)");
+      }
+      if (form.base_fare < 0 || form.price_per_km < 0 || form.price_per_minute < 0) {
+        throw new Error("Las tarifas no pueden ser negativas");
+      }
+      if (form.platform_commission_pct < 0 || form.platform_commission_pct > 100) {
+        throw new Error("La comisión debe estar entre 0 y 100%");
+      }
+      if (form.city_traffic_factor < 0.5 || form.city_traffic_factor > 2) {
+        throw new Error("Factor de tráfico debe estar entre 0.5 y 2");
+      }
+      if (form.eta_speed_kmh < 5 || form.eta_speed_kmh > 120) {
+        throw new Error("Velocidad ETA debe estar entre 5 y 120 km/h");
+      }
+      
+      // Validar códigos promo duplicados
+      const promoCodes = new Set((form.promotions || []).map(p => p.code));
+      if (promoCodes.size !== (form.promotions || []).length) {
+        throw new Error("Hay códigos de promoción duplicados");
+      }
+      
+      // Validar documentos con nombre
+      const docsWithoutName = [
+        ...(form.driver_required_docs || []).filter(d => !d.label?.trim()),
+        ...(form.driver_vehicle_docs || []).filter(d => !d.label?.trim()),
+      ];
+      if (docsWithoutName.length > 0) {
+        throw new Error("Todos los documentos deben tener un nombre");
+      }
+      
+      console.log("[Settings] Guardando configuración:", form);
+      
       if (settings?.id) {
+        console.log(`[Settings] UPDATE AppSettings id=${settings.id}`);
         await supabaseApi.settings.update(settings.id, form);
       } else {
+        console.log("[Settings] CREATE AppSettings");
         await supabaseApi.settings.create(form);
       }
-      queryClient.invalidateQueries({ queryKey: ["appSettings"] });
-      toast.success("Configuración guardada");
+      
+      // Invalidar y refetch
+      await queryClient.invalidateQueries({ queryKey: ["appSettings"] });
+      toast.success("✅ Configuración guardada correctamente");
     } catch (error: any) {
-      toast.error(error.message || "Error al guardar");
+      console.error("[Settings] Error al guardar:", error);
+      toast.error(error.message || "Error al guardar la configuración");
     } finally {
       setSaving(false);
     }
@@ -525,6 +594,11 @@ export default function SettingsPage() {
                   <Label>Velocidad promedio urbana (km/h)</Label>
                   <Input type="number" min={5} max={120} value={form.eta_speed_kmh ?? 30} onChange={e => update("eta_speed_kmh", parseFloat(e.target.value) || 30)} />
                   <p className="text-xs text-slate-500 mt-1">Se usa: distancia ÷ velocidad</p>
+                </div>
+                <div>
+                  <Label>Factor de tráfico (multiplicador)</Label>
+                  <Input type="number" min={0.5} max={2} step={0.1} value={form.city_traffic_factor ?? 1.0} onChange={e => update("city_traffic_factor", parseFloat(e.target.value) || 1.0)} />
+                  <p className="text-xs text-slate-500 mt-1">1.0 = Sin ajuste, 1.5 = 50% más tiempo por tráfico</p>
                 </div>
                 <div>
                   <Label>Intervalo actualización ETA (seg)</Label>
@@ -1084,6 +1158,24 @@ export default function SettingsPage() {
                         update("driver_required_docs", (form.driver_required_docs || []).filter((_, idx) => idx !== i));
                       }}><Trash2 className="w-4 h-4" /></Button>
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id={`req_${i}`} checked={!!doc.required} onChange={e => {
+                          const docs = [...(form.driver_required_docs || [])];
+                          docs[i] = { ...docs[i], required: e.target.checked };
+                          update("driver_required_docs", docs);
+                        }} />
+                        <Label htmlFor={`req_${i}`} className="text-xs cursor-pointer">Requerido</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id={`exp_${i}`} checked={!!doc.require_expiry} onChange={e => {
+                          const docs = [...(form.driver_required_docs || [])];
+                          docs[i] = { ...docs[i], require_expiry: e.target.checked };
+                          update("driver_required_docs", docs);
+                        }} />
+                        <Label htmlFor={`exp_${i}`} className="text-xs cursor-pointer">Requiere vencimiento</Label>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1140,6 +1232,24 @@ export default function SettingsPage() {
                       <Button variant="ghost" size="icon" className="text-red-400 h-9 w-9 flex-shrink-0" onClick={() => {
                         update("driver_vehicle_docs", (form.driver_vehicle_docs || []).filter((_, idx) => idx !== i));
                       }}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id={`vreq_${i}`} checked={!!doc.required} onChange={e => {
+                          const docs = [...(form.driver_vehicle_docs || [])];
+                          docs[i] = { ...docs[i], required: e.target.checked };
+                          update("driver_vehicle_docs", docs);
+                        }} />
+                        <Label htmlFor={`vreq_${i}`} className="text-xs cursor-pointer">Requerido</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id={`vexp_${i}`} checked={!!doc.require_expiry} onChange={e => {
+                          const docs = [...(form.driver_vehicle_docs || [])];
+                          docs[i] = { ...docs[i], require_expiry: e.target.checked };
+                          update("driver_vehicle_docs", docs);
+                        }} />
+                        <Label htmlFor={`vexp_${i}`} className="text-xs cursor-pointer">Vencimiento</Label>
+                      </div>
                     </div>
                   </div>
                 ))}
