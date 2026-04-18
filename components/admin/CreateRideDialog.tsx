@@ -59,7 +59,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     queryKey: ["redZones"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("RedZone").select("*");
+        const { data, error } = await supabase.from("red_zones").select("*");
         if (error) throw error;
         return data || [];
       } catch (err) {

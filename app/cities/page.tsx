@@ -58,7 +58,11 @@ export default function CitiesPage() {
 
   const { data: redZones = [] } = useQuery({
     queryKey: ["redZones"],
-    queryFn: () => supabaseApi.redZones.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/red-zones');
+      if (!res.ok) throw new Error('Failed to fetch red zones');
+      return res.json();
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

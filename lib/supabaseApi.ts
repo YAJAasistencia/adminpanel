@@ -533,20 +533,20 @@ export const supabaseApi = {
   // ─── Red Zones ────────────────────────────────────────────────────────────
   redZones: {
     list: async () => {
-      const { data, error } = await supabase.from('RedZone').select('*').order('name');
+      const { data, error } = await supabase.from('red_zones').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     create: async (zone: any) => {
-      const { data, error } = await supabase.from('RedZone').insert(zone).select().single();
+      const { data, error } = await supabase.from('red_zones').insert(zone).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('RedZone', id, updates);
+      return updateWithFallback('red_zones', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('RedZone').delete().eq('id', id);
+      const { error } = await supabase.from('red_zones').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
