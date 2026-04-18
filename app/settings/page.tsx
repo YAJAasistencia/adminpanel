@@ -255,16 +255,26 @@ export default function SettingsPage() {
       
       console.log("[Settings] Guardando configuración:", form);
       
+      let updated;
       if (settings?.id) {
         console.log(`[Settings] UPDATE AppSettings id=${settings.id}`);
-        await supabaseApi.settings.update(settings.id, form);
+        updated = await supabaseApi.settings.update(settings.id, form);
+        console.log("[Settings] UPDATE exitoso:", updated);
       } else {
         console.log("[Settings] CREATE AppSettings");
-        await supabaseApi.settings.create(form);
+        updated = await supabaseApi.settings.create(form);
+        console.log("[Settings] CREATE exitoso:", updated);
       }
       
-      // Invalidar y refetch
-      await queryClient.invalidateQueries({ queryKey: ["appSettings"] });
+      // Actualizar cache inmediatamente con datos guardados
+      if (updated) {
+        queryClient.setQueryData(["appSettings"], [updated]);
+        console.log("[Settings] Query cache actualizado");
+      }
+      
+      // Refetch para asegurar sincronización
+      await queryClient.refetchQueries({ queryKey: ["appSettings"] });
+      console.log("[Settings] Query refetchada");
       toast.success("✅ Configuración guardada correctamente");
     } catch (error: any) {
       console.error("[Settings] Error al guardar:", error);
@@ -348,7 +358,6 @@ export default function SettingsPage() {
             <TabsTrigger value="jornada">⏰ Jornada</TabsTrigger>
             <TabsTrigger value="vehicles">🚗 Vehículos</TabsTrigger>
             <TabsTrigger value="operations">⚙️ Operaciones</TabsTrigger>
-            <TabsTrigger value="payment">💳 Pagos</TabsTrigger>
             <TabsTrigger value="security">🔒 Seguridad</TabsTrigger>
             <TabsTrigger value="alerts">🔔 Alertas</TabsTrigger>
             <TabsTrigger value="rejection">⛔ Rechazos</TabsTrigger>
@@ -818,116 +827,6 @@ export default function SettingsPage() {
                     onChange={e => update("notification_interval_seconds", parseFloat(e.target.value) || 3)}
                     className="max-w-[120px]"
                   />
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="payment" className="space-y-5 mt-5">
-            <Card className="p-6 border-0 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-xl bg-green-50 text-green-600"><DollarSign className="w-5 h-5" /></div>
-                <div>
-                  <h2 className="font-semibold text-slate-900">Métodos de Pago</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Configura los métodos de pago disponibles</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <Label>Gateway de Pagos</Label>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div>
-                      <input
-                        type="radio"
-                        id="stripe"
-                        name="gateway"
-                        value="stripe"
-                        checked={form.payment_gateway === "stripe"}
-                        onChange={e => update("payment_gateway", e.target.value)}
-                        className="mr-2"
-                      />
-                      <label htmlFor="stripe" className="text-sm">Stripe</label>
-                    </div>
-                    <div>
-                      <input
-                        type="radio"
-                        id="paypal"
-                        name="gateway"
-                        value="paypal"
-                        checked={form.payment_gateway === "paypal"}
-                        onChange={e => update("payment_gateway", e.target.value)}
-                        className="mr-2"
-                      />
-                      <label htmlFor="paypal" className="text-sm">PayPal</label>
-                    </div>
-                    <div>
-                      <input
-                        type="radio"
-                        id="mercadopago"
-                        name="gateway"
-                        value="mercadopago"
-                        checked={form.payment_gateway === "mercadopago"}
-                        onChange={e => update("payment_gateway", e.target.value)}
-                        className="mr-2"
-                      />
-                      <label htmlFor="mercadopago" className="text-sm">Mercado Pago</label>
-                    </div>
-                    <div>
-                      <input
-                        type="radio"
-                        id="manual"
-                        name="gateway"
-                        value="manual"
-                        checked={form.payment_gateway === "manual"}
-                        onChange={e => update("payment_gateway", e.target.value)}
-                        className="mr-2"
-                      />
-                      <label htmlFor="manual" className="text-sm">Manual</label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="font-medium text-slate-800">Métodos Activos</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Métodos disponibles para pasajeros y conductores</p>
-                    </div>
-                    <Button size="sm" onClick={() => {
-                      const methods = form.payment_methods || [];
-                      update("payment_methods", [...methods, { id: `pm_${Date.now()}`, name: "", type: "card", is_active: true }]);
-                    }} className="rounded-lg"><Plus className="w-4 h-4 mr-1" />Agregar</Button>
-                  </div>
-                  {(!form.payment_methods || form.payment_methods.length === 0) && (
-                    <p className="text-sm text-slate-400 text-center py-6">Sin métodos configurados</p>
-                  )}
-                  <div className="space-y-3">
-                    {(form.payment_methods || []).map((method, i) => (
-                      <div key={i} className="border border-slate-200 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <Label className="text-xs">Nombre del método</Label>
-                            <Input value={method.name} onChange={e => {
-                              const methods = [...(form.payment_methods || [])];
-                              methods[i] = { ...methods[i], name: e.target.value };
-                              update("payment_methods", methods);
-                            }} placeholder="Ej: Tarjeta de crédito, PayPal..." className="mt-1" />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-xs">Activo</Label>
-                            <Switch checked={!!method.is_active} onCheckedChange={v => {
-                              const methods = [...(form.payment_methods || [])];
-                              methods[i] = { ...methods[i], is_active: v };
-                              update("payment_methods", methods);
-                            }} />
-                          </div>
-                          <Button variant="ghost" size="icon" className="text-red-400 h-9 w-9 flex-shrink-0" onClick={() => {
-                            update("payment_methods", (form.payment_methods || []).filter((_, idx) => idx !== i));
-                          }}><Trash2 className="w-4 h-4" /></Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
             </Card>
