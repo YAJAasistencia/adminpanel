@@ -301,7 +301,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4">
+      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ maxWidth: '1150px' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1">
             ✏️ Editar Viaje
