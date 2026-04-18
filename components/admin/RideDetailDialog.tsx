@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { MapPin, User, Car, CreditCard, Clock, DollarSign, Phone, Building2, Layers, FileText, Star, ChevronDown, ChevronUp, UserCheck, MessageCircle } from "lucide-react";
+import { MapPin, User, Car, CreditCard, Clock, DollarSign, Phone, Building2, Layers, FileText, Star, ChevronDown, ChevronUp, UserCheck } from "lucide-react";
 import { formatCDMX } from "@/components/shared/dateUtils";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import RideLiveMap from "@/components/admin/RideLiveMap";
 import RideRouteMap from "@/components/admin/RideRouteMap";
+import ChatWidget from "@/components/admin/ChatWidget";
 import useAppSettings from "@/components/shared/useAppSettings";
 
 const paymentLabels = { cash: "Efectivo", card: "Tarjeta", transfer: "Transferencia" };
@@ -186,29 +187,8 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [companyTicketPrice, setCompanyTicketPrice] = useState(null);
   const [editingCompanyPrice, setEditingCompanyPrice] = useState(false);
-  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => { setCompanyTicketPrice(null); setEditingCompanyPrice(false); }, [ride?.id]);
-
-  const { data: chatMessages = [] } = useQuery({
-    queryKey: ["rideDetailChat", ride?.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("chat_messages")
-          .select("*")
-          .eq("ride_id", ride.id)
-          .order("created_at", { ascending: true });
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching chat messages:", err);
-        return [];
-      }
-    },
-    enabled: !!ride?.id && open,
-    staleTime: 0,
-  });
 
   if (!ride) return null;
   const isActiveRide = ride && !["completed", "cancelled"].includes(ride.status) && ride.driver_id;
@@ -391,46 +371,8 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           {ride.cancellation_reason && <div className="bg-red-50 rounded-lg p-2 text-xs text-red-600">❌ Cancelado por {ride.cancelled_by}: {ride.cancellation_reason}</div>}
           {ride.proof_photo_url && <a href={ride.proof_photo_url} target="_blank" rel="noreferrer" className="block"><img src={ride.proof_photo_url} alt="Foto de servicio" className="w-full rounded-lg object-cover max-h-40" /></a>}
 
-          {/* Chat history */}
-          <div className="bg-slate-50 rounded-lg p-2">
-            <button
-              onClick={() => setShowChat(v => !v)}
-              className="w-full flex items-center justify-between"
-            >
-              <div className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                  Historial de chat {chatMessages.length > 0 ? `(${chatMessages.length})` : ""}
-                </span>
-              </div>
-              {showChat ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-            </button>
-            {showChat && (
-              <div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
-                {chatMessages.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-4">Sin mensajes en este servicio</p>
-                ) : chatMessages.map(msg => {
-                  const isAdmin = msg.sender_role === "admin";
-                  const isPassenger = msg.sender_role === "passenger";
-                  return (
-                    <div key={msg.id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] px-2.5 py-0.5 rounded-lg text-xs ${
-                        isAdmin ? "bg-slate-900 text-white" :
-                        isPassenger ? "bg-violet-100 text-violet-900" :
-                        "bg-blue-100 text-blue-900"
-                      }`}>
-                        {!isAdmin && <p className={`text-[10px] font-semibold mb-0.5 ${
-                          isPassenger ? "text-violet-600" : "text-blue-600"
-                        }`}>{msg.sender_name || (isPassenger ? "Pasajero" : "Conductor")}</p>}
-                        <p>{msg.message}</p>
-                        <p className="text-[9px] opacity-50 mt-0.5">{formatCDMX(msg.created_at, "time")}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* Chat Widget */}
+          <ChatWidget ride={ride} />
         </div>
 
         {/* Actions: two tickets */}
