@@ -2,12 +2,13 @@ import { supabase } from "@/lib/supabase";
 import * as bcryptjs from 'bcryptjs';
 
 // ─── Supabase API Functions ──────────────────────────────────────────────────
-// Tabla → nombre real en Supabase
-// PascalCase (datos de Base44): Driver, RideRequest, City,
-//   Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
-//   DriverNotification, AdminUser, AppSettings
-// snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
-//   cash_cutoffs, chat_messages, liquidations, notifications, surveys
+// Tabla → nombre real en Supabase (verificado contra schema)
+// PascalCase: Driver (única tabla PascalCase)
+// snake_case: admin_users, announcements, app_settings, bonus_logs, bonus_rules,
+//   cancellation_policies, cash_cutoffs, chat_messages, cities, companies,
+//   driver_notificaciones, geo_zones, invoices, red_zones, ride_requests,
+//   road_assist_users, service_types, sos_alerts, support_tickets,
+//   survey_responses, surveys
 
 // ─── Helper: Update with fallback to GET (handles RLS select() restrictions) ───
 // ─── Helper: Update without .select() to avoid PostgREST schema introspection ───
@@ -44,8 +45,8 @@ async function createWithFallback(tableName: string, record: any) {
       return insertedData[0];
     }
     
-    // Fallback: obtener el último record insertado
-    const { data, error: getError } = await supabase.from(tableName).select('*').order('created_at', { ascending: false }).limit(1).single();
+    // Fallback: obtener el último record insertado (usar 'id' ya que no todas las tablas tienen created_at)
+    const { data, error: getError } = await supabase.from(tableName).select('*').order('id', { ascending: false }).limit(1).single();
     if (getError) throw getError;
     console.log(`[supabaseApi] Data fetched after insert:`, data);
     return data;
@@ -97,7 +98,7 @@ export const supabaseApi = {
     },
     // Optimized version for dashboard - only essential fields
     listForDashboard: async () => {
-      const fields = 'id,name,phone,status,vehicle_license_plate,registration_status,average_rating,total_rides,created_at';
+      const fields = 'id,full_name,phone,status,license_plate,approval_status,rating,total_rides,created_at';
       const { data, error } = await supabase.from('Driver').select(fields).order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
@@ -123,7 +124,7 @@ export const supabaseApi = {
   // ─── Ride Requests ────────────────────────────────────────────────────────
   rideRequests: {
     list: async (filters?: any) => {
-      let query = supabase.from('ride_requests').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('ride_requests').select('*').order('requested_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -135,8 +136,8 @@ export const supabaseApi = {
     },
     // Optimized version for dashboard - only essential fields
     listForDashboard: async () => {
-      const fields = 'id,status,created_at,driver_id,passenger_id,start_location,end_location,estimated_fare,final_fare,rating,created_at';
-      const { data, error } = await supabase.from('ride_requests').select(fields).order('created_at', { ascending: false });
+      const fields = 'id,status,requested_at,driver_id,passenger_user_id,pickup_address,dropoff_address,estimated_price,final_price,passenger_rating_for_driver';
+      const { data, error } = await supabase.from('ride_requests').select(fields).order('requested_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -186,7 +187,7 @@ export const supabaseApi = {
   // ─── Support Tickets ──────────────────────────────────────────────────────
   supportTickets: {
     list: async (filters?: any) => {
-      let query = supabase.from('SupportTicket').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('support_tickets').select('*').order('id', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -197,18 +198,18 @@ export const supabaseApi = {
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('SupportTicket').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('support_tickets').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (ticket: any) => {
-      return createWithFallback('SupportTicket', ticket);
+      return createWithFallback('support_tickets', ticket);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('SupportTicket', id, updates);
+      return updateWithFallback('support_tickets', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('SupportTicket').delete().eq('id', id);
+      const { error } = await supabase.from('support_tickets').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
@@ -217,7 +218,7 @@ export const supabaseApi = {
   // ─── Chat Messages (snake_case — sin PascalCase) ──────────────────────────
   chats: {
     list: async (filters?: any) => {
-      let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('chat_messages').select('*').order('id', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined) query = (query as any).eq(key, value);
@@ -248,7 +249,7 @@ export const supabaseApi = {
   // ─── SOS Alerts ───────────────────────────────────────────────────────────
   sosAlerts: {
     list: async (filters?: any) => {
-      let query = supabase.from('sos_alerts').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('sos_alerts').select('*').order('id', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -304,7 +305,7 @@ export const supabaseApi = {
   // ─── Passengers / Road Assist Users ──────────────────────────────────────
   passengers: {
     list: async () => {
-      const { data, error } = await supabase.from('road_assist_users').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('road_assist_users').select('*').order('id', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -417,7 +418,7 @@ export const supabaseApi = {
   // ─── Invoices ─────────────────────────────────────────────────────────────
   invoices: {
     list: async (filters?: any) => {
-      let query = supabase.from('invoices').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('invoices').select('*').order('id', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -450,7 +451,7 @@ export const supabaseApi = {
   // ─── Bonus Rules ──────────────────────────────────────────────────────────
   bonusRules: {
     list: async () => {
-      const { data, error } = await supabase.from('bonus_rules').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('bonus_rules').select('*').order('id', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -472,7 +473,7 @@ export const supabaseApi = {
   // ─── Bonus Logs ───────────────────────────────────────────────────────────
   bonusLogs: {
     list: async (filters?: any) => {
-      let query = supabase.from('bonus_logs').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('bonus_logs').select('*').order('period_start', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -555,7 +556,7 @@ export const supabaseApi = {
   // ─── Surveys (snake_case — sin PascalCase) ────────────────────────────────
   surveys: {
     list: async () => {
-      const { data, error } = await supabase.from('surveys').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('surveys').select('*').order('id', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -574,10 +575,11 @@ export const supabaseApi = {
     },
   },
 
-  // ─── Notifications (snake_case — sin PascalCase) ──────────────────────────
+  // ─── Notifications (usa driver_notificaciones — tabla real en Supabase) ──────
+  // NOTA: La tabla 'notifications' NO existe. Se redirige a driver_notificaciones.
   notifications: {
     list: async (filters?: any) => {
-      let query = supabase.from('notifications').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('driver_notificaciones').select('*').order('id', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined) query = (query as any).eq(key, value);
@@ -588,52 +590,42 @@ export const supabaseApi = {
       return data || [];
     },
     create: async (notification: any) => {
-      const { data, error } = await supabase.from('notifications').insert(notification).select().single();
+      const { data, error } = await supabase.from('driver_notificaciones').insert(notification).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('notifications', id, updates);
+      return updateWithFallback('driver_notificaciones', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      const { error } = await supabase.from('driver_notificaciones').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
   },
 
-  // ─── Liquidations (snake_case — sin PascalCase) ───────────────────────────
+  // ─── Liquidations ─────────────────────────────────────────────────────────
+  // NOTA: La tabla 'liquidations' NO existe en Supabase. Retorna arrays vacíos.
   liquidations: {
-    list: async (filters?: any) => {
-      let query = supabase.from('liquidations').select('*').order('created_at', { ascending: false });
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) query = (query as any).eq(key, value);
-        });
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+    list: async (_filters?: any) => {
+      console.warn('[supabaseApi] liquidations table does not exist in Supabase');
+      return [];
     },
-    create: async (liquidation: any) => {
-      const { data, error } = await supabase.from('liquidations').insert(liquidation).select().single();
-      if (error) throw error;
-      return data;
+    create: async (_liquidation: any) => {
+      throw new Error('La tabla liquidations no existe en Supabase');
     },
-    update: async (id: string, updates: any) => {
-      return updateWithFallback('liquidations', id, updates);
+    update: async (_id: string, _updates: any) => {
+      throw new Error('La tabla liquidations no existe en Supabase');
     },
-    delete: async (id: string) => {
-      const { error } = await supabase.from('liquidations').delete().eq('id', id);
-      if (error) throw error;
-      return { success: true };
+    delete: async (_id: string) => {
+      throw new Error('La tabla liquidations no existe en Supabase');
     },
   },
 
   // ─── Announcements (snake_case — sin PascalCase) ──────────────────────────
   announcements: {
     list: async () => {
-      const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('announcements').select('*').order('id', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -677,7 +669,7 @@ export const supabaseApi = {
   // ─── Cash Cutoffs (snake_case — sin PascalCase) ───────────────────────────
   cashCutoffs: {
     list: async () => {
-      const { data, error } = await supabase.from('cash_cutoffs').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('cash_cutoffs').select('*').order('cutoff_date', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -699,7 +691,7 @@ export const supabaseApi = {
   // ─── Road Assist Users (alias de passengers) ──────────────────────────────
   roadAssistUsers: {
     list: async () => {
-      const { data, error } = await supabase.from('road_assist_users').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('road_assist_users').select('*').order('id', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -716,7 +708,7 @@ export const supabaseApi = {
   // ─── Survey Responses ─────────────────────────────────────────────────────
   surveyResponses: {
     list: async (filters?: any) => {
-      let query = supabase.from('SurveyResponse').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('survey_responses').select('*').order('id', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -727,12 +719,12 @@ export const supabaseApi = {
       return data || [];
     },
     create: async (response: any) => {
-      const { data, error } = await supabase.from('SurveyResponse').insert(response).select().single();
+      const { data, error } = await supabase.from('survey_responses').insert(response).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('SurveyResponse').delete().eq('id', id);
+      const { error } = await supabase.from('survey_responses').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
@@ -741,7 +733,7 @@ export const supabaseApi = {
   // ─── Driver Notifications ─────────────────────────────────────────────────
   driverNotifications: {
     list: async () => {
-      const { data, error } = await supabase.from('driver_notificaciones').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('driver_notificaciones').select('*').order('id', { ascending: false });
       if (error) throw error;
       return data || [];
     },

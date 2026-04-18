@@ -15,7 +15,7 @@ export default function DriverNotificationsPanel({ driver }) {
   const { data: notifications = [], refetch } = useQuery({
     queryKey: ["driverNotifs", driver?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("driver_notificaciones").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false }).limit(50);
+      const { data, error } = await supabase.from("driver_notificaciones").select("*").eq("driver_id", driver.id).order("id", { ascending: false }).limit(50);
       if (error) throw error;
       const all = data || [];
       return all.filter(n => !n.driver_ids?.length || n.driver_ids.includes(driver?.id));

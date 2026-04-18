@@ -309,7 +309,7 @@ function HomeMap({
       const { data, error } = await supabase
         .from("ride_requests")
         .select("*")
-        .order("created_at", { ascending: false })
+        .order("requested_at", { ascending: false })
         .limit(200);
 
       if (error) throw error;
@@ -319,7 +319,7 @@ function HomeMap({
       const relevant = (data || []).filter(
         (r) =>
           r.status !== "cancelled" &&
-          new Date(r.requested_at || r.created_at).getTime() > since
+          new Date(r.requested_at).getTime() > since
       );
       setFlowRides(relevant);
     } catch (_) {}
@@ -884,7 +884,7 @@ export default function DriverApp() {
         .from("ride_requests")
         .select("*")
         .eq("driver_id", driver.id)
-        .order("created_at", { ascending: false });
+        .order("requested_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -1220,7 +1220,7 @@ export default function DriverApp() {
       const { data, error } = await supabase
         .from("surveys")
         .select("*")
-        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(50);
       if (error) throw error;
       return data || [];

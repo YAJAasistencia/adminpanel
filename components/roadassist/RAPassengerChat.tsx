@@ -13,7 +13,7 @@ export default function RAPassengerChat({ ride, user, onClose }) {
   const { data: messages = [] } = useQuery({
     queryKey: ["passengerChat", ride.id],
     queryFn: async () => {
-      const { data } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("created_at", { ascending: true });
+      const { data } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("id", { ascending: true });
       return data || [];
     },
     refetchInterval: false,

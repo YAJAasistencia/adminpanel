@@ -18,7 +18,7 @@ export default function DriverChat({ driver, ride }) {
     queryKey: ["chatMessages", ride.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("created_at", { ascending: true });
+        const { data, error } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("id", { ascending: true });
         if (error) throw error;
         return data || [];
       } catch (err) {

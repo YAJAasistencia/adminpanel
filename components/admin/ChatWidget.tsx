@@ -35,7 +35,7 @@ export default function ChatWidget({ ride }: { ride: any }) {
           .from("chat_messages")
           .select("*")
           .eq("ride_id", ride.id)
-          .order("created_at", { ascending: true });
+          .order("id", { ascending: true });
         if (error) throw error;
         return data || [];
       } catch (err) {
