@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { driverNotificationService } from '@/lib/supabase-service';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 /**
  * GET /api/driver-notifications/[id]
@@ -16,6 +17,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const result = await driverNotificationService.getById(params.id);
 
     if (!result.success) {
@@ -51,6 +58,12 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const result = await driverNotificationService.update(params.id, body);
@@ -81,6 +94,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const result = await driverNotificationService.delete(params.id);
 
     if (!result.success) {

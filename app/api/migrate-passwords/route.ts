@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcryptjs from 'bcryptjs';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 export async function POST(request: NextRequest) {
   try {

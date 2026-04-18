@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { rideRequestService } from '@/lib/supabase-service';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 /**
  * GET /api/rides/[id]
@@ -16,6 +17,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const result = await rideRequestService.getById(params.id);
 
     if (!result.success) {
@@ -42,6 +49,12 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const result = await rideRequestService.update(params.id, body);
@@ -66,6 +79,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const result = await rideRequestService.delete(params.id);
 
     if (!result.success) {

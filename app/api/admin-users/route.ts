@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { adminUserService } from '@/lib/supabase-service';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     let result;
@@ -21,6 +28,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
     const result = await adminUserService.create(body);
     if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 });
@@ -33,6 +46,12 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
@@ -48,6 +67,12 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 /**
  * POST /api/assign-ride

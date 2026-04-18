@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { cityService } from '@/lib/supabase-service';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 /**
  * GET /api/cities
@@ -13,6 +14,12 @@ import { cityService } from '@/lib/supabase-service';
  */
 export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const isActive = searchParams.get('isActive');
 
@@ -50,6 +57,12 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validar campos requeridos

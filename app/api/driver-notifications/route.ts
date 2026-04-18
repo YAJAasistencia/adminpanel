@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { driverNotificationService } from '@/lib/supabase-service';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 /**
  * GET /api/driver-notifications
@@ -13,6 +14,12 @@ import { driverNotificationService } from '@/lib/supabase-service';
  */
 export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -53,6 +60,12 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const result = await driverNotificationService.create(body);
@@ -77,6 +90,12 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const body = await request.json();
@@ -107,6 +126,12 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
