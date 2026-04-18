@@ -10,25 +10,48 @@ import * as bcryptjs from 'bcryptjs';
 //   cash_cutoffs, chat_messages, liquidations, notifications, surveys
 
 // ─── Helper: Update with fallback to GET (handles RLS select() restrictions) ───
+// ─── Helper: Update without .select() to avoid PostgREST schema introspection ───
 async function updateWithFallback(tableName: string, id: string, updates: any) {
   try {
     console.log(`[supabaseApi] UPDATE ${tableName} id=${id}`, updates);
-    const { data, error } = await supabase.from(tableName).update(updates).eq('id', id).select().single();
-    if (error) throw error;
-    console.log(`[supabaseApi] UPDATE SUCCESS (with .select())`, data);
+    // Realizar update SIN .select() para evitar introspección de schema
+    const { error: updateError } = await supabase.from(tableName).update(updates).eq('id', id);
+    if (updateError) throw updateError;
+    console.log(`[supabaseApi] UPDATE SUCCESS (without .select())`);
+    
+    // Luego hacer GET para obtener los datos actualizados
+    const { data, error: getError } = await supabase.from(tableName).select('*').eq('id', id).single();
+    if (getError) throw getError;
+    console.log(`[supabaseApi] Data fetched after update:`, data);
     return data;
-  } catch (selectError: any) {
-    console.warn(`[supabaseApi] UPDATE .select() failed on ${tableName} (fallback to GET):`, selectError?.message);
-    // Fallback: fetch the updated record separately
-    try {
-      const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
-      if (error) throw error;
-      console.log(`[supabaseApi] UPDATE SUCCESS (via GET fallback)`, data);
-      return data;
-    } catch (fetchError: any) {
-      console.error(`[supabaseApi] UPDATE FAILED on ${tableName}:`, fetchError);
-      throw new Error(`Actualización fallida en ${tableName}: ${fetchError?.message || 'Falló seleccionar después del update'}`);
+  } catch (fetchError: any) {
+    console.error(`[supabaseApi] UPDATE FAILED on ${tableName}:`, fetchError);
+    throw new Error(`Actualización fallida en ${tableName}: ${fetchError?.message || 'Error en actualización'}`);
+  }
+}
+
+// ─── Helper: Create without .select() to avoid PostgREST schema introspection ───
+async function createWithFallback(tableName: string, record: any) {
+  try {
+    console.log(`[supabaseApi] INSERT ${tableName}`, record);
+    // Realizar insert SIN .select() para evitar introspección de schema
+    const { data: insertedData, error: insertError } = await supabase.from(tableName).insert(record);
+    if (insertError) throw insertError;
+    console.log(`[supabaseApi] INSERT SUCCESS (without .select())`);
+    
+    // Si el insert devolvió datos, usarlos; si no, hacer GET
+    if (insertedData && insertedData.length > 0) {
+      return insertedData[0];
     }
+    
+    // Fallback: obtener el último record insertado
+    const { data, error: getError } = await supabase.from(tableName).select('*').order('created_at', { ascending: false }).limit(1).single();
+    if (getError) throw getError;
+    console.log(`[supabaseApi] Data fetched after insert:`, data);
+    return data;
+  } catch (fetchError: any) {
+    console.error(`[supabaseApi] INSERT FAILED on ${tableName}:`, fetchError);
+    throw new Error(`Inserción fallida en ${tableName}: ${fetchError?.message || 'Error en inserción'}`);
   }
 }
 
@@ -47,9 +70,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (city: any) => {
-      const { data, error } = await supabase.from('City').insert(city).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('City', city);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('City', id, updates);
@@ -87,9 +108,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (driver: any) => {
-      const { data, error } = await supabase.from('Driver').insert(driver).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('Driver', driver);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('Driver', id, updates);
@@ -127,9 +146,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (rideRequest: any) => {
-      const { data, error } = await supabase.from('RideRequest').insert(rideRequest).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('RideRequest', rideRequest);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('RideRequest', id, updates);
@@ -154,9 +171,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (geoZone: any) => {
-      const { data, error } = await supabase.from('GeoZone').insert(geoZone).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('GeoZone', geoZone);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('GeoZone', id, updates);
@@ -187,9 +202,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (ticket: any) => {
-      const { data, error } = await supabase.from('SupportTicket').insert(ticket).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('SupportTicket', ticket);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('SupportTicket', id, updates);
@@ -220,9 +233,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (chat: any) => {
-      const { data, error } = await supabase.from('chat_messages').insert(chat).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('chat_messages', chat);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('chat_messages', id, updates);
@@ -253,9 +264,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (alert: any) => {
-      const { data, error } = await supabase.from('SosAlert').insert(alert).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('SosAlert', alert);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('SosAlert', id, updates);
@@ -280,9 +289,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (setting: any) => {
-      const { data, error } = await supabase.from('app_settings').insert(setting).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('app_settings', setting);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('app_settings', id, updates);
@@ -307,9 +314,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (passenger: any) => {
-      const { data, error } = await supabase.from('RoadAssistUser').insert(passenger).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('RoadAssistUser', passenger);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('RoadAssistUser', id, updates);
@@ -334,9 +339,7 @@ export const supabaseApi = {
       return data;
     },
     create: async (serviceType: any) => {
-      const { data, error } = await supabase.from('ServiceType').insert(serviceType).select().single();
-      if (error) throw error;
-      return data;
+      return createWithFallback('ServiceType', serviceType);
     },
     update: async (id: string, updates: any) => {
       return updateWithFallback('ServiceType', id, updates);
