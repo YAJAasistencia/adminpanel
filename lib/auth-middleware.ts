@@ -1,4 +1,4 @@
-import jwt_decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 export interface AuthPayload {
   iss: string;
@@ -23,7 +23,7 @@ export function requireAdmin(token?: string): boolean {
   if (!token) return false;
 
   try {
-    const decoded = jwt_decode<AuthPayload>(token);
+    const decoded = jwtDecode<AuthPayload>(token);
     
     // Check if token is expired
     if (decoded.exp && decoded.exp * 1000 < Date.now()) {
