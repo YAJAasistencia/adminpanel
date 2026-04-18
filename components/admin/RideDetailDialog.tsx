@@ -19,9 +19,23 @@ import useAppSettings from "@/components/shared/useAppSettings";
 const paymentLabels = { cash: "Efectivo", card: "Tarjeta", transfer: "Transferencia" };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+function getRidePrice(ride) {
+  // For cancelled rides: show cancellation fee or 0
+  if (ride.status === "cancelled") {
+    return ride.cancellation_fee ?? 0;
+  }
+  // For completed rides: show final_price (actual cost charged)
+  if (ride.status === "completed") {
+    return ride.final_price ?? ride.estimated_price ?? 0;
+  }
+  // For active rides: show estimated price
+  return ride.estimated_price ?? 0;
+}
+
 function calcTotals(ride) {
   const extras = Array.isArray(ride.extra_charges) ? ride.extra_charges : [];
-  const basePrice = ride.estimated_price || 0;
+  // Use actual ride price based on status (not just estimated)
+  const basePrice = getRidePrice(ride);
   const totalExtras = extras.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const extrasForDriver = extras.filter(c => c.paid_to_driver).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const extrasWithCommission = extras.filter(c => !c.paid_to_driver).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
@@ -348,7 +362,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
               { label: "Conductor en camino", ts: ride.en_route_at, icon: "🚗" },
               { label: "Inicio del servicio", ts: ride.in_progress_at, icon: "▶️" },
               { label: "Finalización", ts: ride.completed_at, icon: "✅" },
-              { label: "Cancelación", ts: ride.status === "cancelled" ? ride.updated_date : null, icon: "❌" },
+              { label: "Cancelación", ts: ride.status === "cancelled" ? ride.updated_at : null, icon: "❌" },
             ].filter(s => s.ts && !s.hide);
             if (steps.length === 0) return null;
             return (
@@ -363,6 +377,30 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
                     </div>
                   ))}
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* Cost indicator based on ride status */}
+          {(() => {
+            if (ride.status === "cancelled") {
+              return (
+                <div className={`rounded-lg p-2 text-xs ${ride.cancellation_fee > 0 ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                  ❌ {ride.cancellation_fee > 0 ? `Cancelado con cargo: $${ride.cancellation_fee.toFixed(2)}` : "Cancelado sin costo"}
+                </div>
+              );
+            }
+            if (ride.status === "completed") {
+              return (
+                <div className="bg-emerald-50 rounded-lg p-2 text-xs text-emerald-700">
+                  ✅ Costo final: ${(ride.final_price ?? ride.estimated_price ?? 0).toFixed(2)}
+                </div>
+              );
+            }
+            // Active rides show estimated price
+            return (
+              <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-700">
+                💰 Precio estimado: ${(ride.estimated_price ?? 0).toFixed(2)}
               </div>
             );
           })()}
