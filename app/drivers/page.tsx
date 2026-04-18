@@ -35,7 +35,9 @@ export default function DriversPage() {
     queryKey: ["drivers"],
     queryFn: async () => {
       try {
-        return await supabaseApi.drivers.list();
+        const res = await fetch('/api/drivers');
+        const json = await res.json();
+        return json.data || [];
       } catch (error) {
         toast.error("Error al cargar conductores");
         return [];
@@ -56,7 +58,9 @@ export default function DriversPage() {
     queryKey: ["cities"],
     queryFn: async () => {
       try {
-        return await supabaseApi.cities.list();
+        const res = await fetch('/api/cities');
+        const json = await res.json();
+        return json.data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000,
@@ -67,7 +71,9 @@ export default function DriversPage() {
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        return await supabaseApi.serviceTypes.list();
+        const res = await fetch('/api/service-types');
+        const json = await res.json();
+        return json.data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000,
@@ -78,7 +84,9 @@ export default function DriversPage() {
     queryKey: ["rides"],
     queryFn: async () => {
       try {
-        return await supabaseApi.rideRequests.list();
+        const res = await fetch('/api/ride-requests');
+        const json = await res.json();
+        return json.data || [];
       } catch { return []; }
     },
     staleTime: 30 * 1000,
@@ -89,8 +97,9 @@ export default function DriversPage() {
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const appSettings = await supabaseApi.appSettings.get();
-        return appSettings?.[0];
+        const res = await fetch('/api/settings');
+        const json = await res.json();
+        return json.data?.[0];
       } catch { return null; }
     },
     staleTime: 60 * 60 * 1000,
@@ -99,7 +108,12 @@ export default function DriversPage() {
 
   const handleApprove = async (driver: any) => {
     try {
-      await supabaseApi.drivers.update(driver.id, { approval_status: "approved" });
+      const res = await fetch(`/api/drivers?id=${driver.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approval_status: "approved" })
+      });
+      if (!res.ok) throw new Error('Failed to approve');
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.success(`${driver.full_name} aprobado`);
     } catch (error) {
@@ -109,7 +123,12 @@ export default function DriversPage() {
 
   const handleReject = async (driver: any) => {
     try {
-      await supabaseApi.drivers.update(driver.id, { approval_status: "rejected" });
+      const res = await fetch(`/api/drivers?id=${driver.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approval_status: "rejected" })
+      });
+      if (!res.ok) throw new Error('Failed to reject');
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.error(`${driver.full_name} rechazado`);
     } catch (error) {
@@ -120,7 +139,11 @@ export default function DriversPage() {
   const handleDelete = async (driver: any) => {
     if (!window.confirm(`¿Eliminar a ${driver.full_name}? Esta acción es irreversible.`)) return;
     try {
-      await supabaseApi.drivers.delete(driver.id);
+      const res = await fetch(`/api/drivers?id=${driver.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Failed to delete');
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.success(`${driver.full_name} eliminado`);
     } catch (error) {
@@ -340,10 +363,15 @@ export default function DriversPage() {
                     className="h-6 text-xs text-orange-700 hover:bg-orange-100 px-2"
                     onClick={async () => {
                       try {
-                        await supabaseApi.drivers.update(driver.id, {
-                          suspended_until: null,
-                          status: "available",
+                        const res = await fetch(`/api/drivers?id=${driver.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            suspended_until: null,
+                            status: "available",
+                          })
                         });
+                        if (!res.ok) throw new Error('Failed to unsuspend');
                         queryClient.invalidateQueries({ queryKey: ["drivers"] });
                         toast.success("Suspensión eliminada");
                       } catch (error) {

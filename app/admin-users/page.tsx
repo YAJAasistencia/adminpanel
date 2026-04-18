@@ -53,8 +53,10 @@ export default function AdminUsersPage() {
     queryKey: ["adminUsers"],
     queryFn: async () => {
       try {
-        const data = await supabaseApi.adminUsers.list();
-        return data || [];
+        const res = await fetch('/api/admin-users');
+        if (!res.ok) throw new Error('Failed to fetch admin users');
+        const json = await res.json();
+        return json.data || [];
       } catch (error) {
         console.error("Error fetching admin users:", error);
         return [];
@@ -123,9 +125,19 @@ export default function AdminUsersPage() {
       }
 
       if (editing.id) {
-        await supabaseApi.adminUsers.update(editing.id, payload);
+        const res = await fetch(`/api/admin-users?id=${editing.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Failed to update admin user');
       } else {
-        await supabaseApi.adminUsers.create(payload);
+        const res = await fetch('/api/admin-users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Failed to create admin user');
       }
 
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
@@ -141,7 +153,8 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (u: any) => {
     try {
-      await supabaseApi.adminUsers.delete(u.id);
+      const res = await fetch(`/api/admin-users?id=${u.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete admin user');
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       toast.success("Usuario eliminado correctamente");
     } catch (error: any) {
