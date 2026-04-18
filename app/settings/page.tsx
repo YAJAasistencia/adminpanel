@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -263,7 +264,7 @@ export default function SettingsPage() {
       let updated;
       if (settings?.id) {
         console.log(`[Settings] UPDATE AppSettings id=${settings.id}`);
-        const res = await fetch(`/api/settings?id=${settings.id}`, {
+        const res = await fetchWithAuth(`/api/settings?id=${settings.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(form),
@@ -274,7 +275,7 @@ export default function SettingsPage() {
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
         console.log("[Settings] CREATE AppSettings");
-        const res = await fetch('/api/settings', {
+        const res = await fetchWithAuth('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(form),
