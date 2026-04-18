@@ -35,11 +35,15 @@ export default function RejectionAnalysis() {
     const fetchData = async () => {
       try {
         // Fetch settings
-        const settingsData = await supabaseApi.appSettings.get();
+        const res = await fetch('/api/settings');
+        const json = await res.json();
+        const settingsData = json.data || [];
         setSettings(settingsData[0]);
 
         // Fetch all drivers with rejection info
-        const drivers = await supabaseApi.drivers.list();
+        const driversRes = await fetch('/api/drivers');
+        const driversJson = await driversRes.json();
+        const drivers = driversJson.data || [];
 
         // Calculate stats
         const total_drivers = drivers.length;

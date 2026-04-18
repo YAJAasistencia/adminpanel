@@ -28,18 +28,18 @@ export async function GET(request: NextRequest) {
     // Crear cliente con clave anónima
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Test 1: Intentar obtener primera fila de AppSettings
-    console.log('[health] 🔍 Test 1: Consultando AppSettings...');
+    // Test 1: Intentar obtener primera fila de app_settings
+    console.log('[health] 🔍 Test 1: Consultando app_settings...');
     const { data: settingsData, error: settingsError } = await supabase
-      .from('AppSettings')
+      .from('app_settings')
       .select('id, company_name, created_at')
       .limit(1);
 
     if (settingsError) {
-      console.error('[health] ❌ AppSettings error:', settingsError.message);
+      console.error('[health] ❌ app_settings error:', settingsError.message);
       return NextResponse.json({
         status: 'error',
-        message: 'Failed to query AppSettings',
+        message: 'Failed to query app_settings',
         error: settingsError.message,
         code: settingsError.code,
       }, { status: 500 });

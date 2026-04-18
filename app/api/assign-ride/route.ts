@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Get app settings for auction configuration
     const { data: settings } = await supabase
-      .from('AppSettings')
+      .from('app_settings')
       .select('auto_assign_nearest_driver,auction_mode_enabled,auction_primary_radius_km,auction_timeout_seconds')
       .single();
 
