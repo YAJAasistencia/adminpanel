@@ -51,7 +51,7 @@ function getDisplayPrice(ride) {
   // For completed rides: show final_price (what was actually charged)
   if (ride.status === "completed") {
     return {
-      amount: ride.final_price || ride.estimated_price || 0,
+      amount: ride.final_price ?? ride.estimated_price ?? 0,
       label: ride.final_price ? "Costo final" : "Estimado",
       color: "text-emerald-600 bg-emerald-50",
     };
@@ -59,10 +59,39 @@ function getDisplayPrice(ride) {
 
   // For active rides: show estimated_price
   return {
-    amount: ride.estimated_price || 0,
+    amount: ride.estimated_price ?? 0,
     label: "Estimado",
     color: "text-blue-600 bg-blue-50",
   };
+}
+
+// Skeleton Loader for ride cards
+function RideSkeleton() {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 animate-pulse">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-40 bg-slate-200 rounded" />
+            <div className="h-5 w-16 bg-slate-200 rounded" />
+          </div>
+          <div className="space-y-1">
+            <div className="h-3 w-full bg-slate-200 rounded" />
+            <div className="h-3 w-3/4 bg-slate-200 rounded" />
+          </div>
+          <div className="flex gap-2 flex-wrap pt-2">
+            <div className="h-6 w-24 bg-slate-200 rounded-full" />
+            <div className="h-6 w-20 bg-slate-200 rounded-full" />
+            <div className="h-6 w-16 bg-slate-200 rounded-full" />
+          </div>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <div className="h-8 w-16 bg-slate-200 rounded-lg" />
+          <div className="h-8 w-16 bg-slate-200 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, onDelete, canEdit = true, canDelete = true, drivers = [], settings }) {
@@ -125,7 +154,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                    <p className={`font-semibold ${textOpacity} text-sm`}>{ride.passenger_name}</p>
+                    <p className={`font-semibold ${textOpacity} text-sm`}>{ride.passenger_name || "Pasajero desconocido"}</p>
                     <StatusBadge status={ride.status} />
                     {ride.service_type_name && (
                       <span className="text-[11px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">{ride.service_type_name}</span>
@@ -152,7 +181,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                   <div className="space-y-0.5">
                     <div className="flex items-start gap-1.5 text-xs text-slate-500">
                       <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-emerald-500" />
-                      <span className="truncate">{ride.pickup_address}</span>
+                      <span className="truncate">{ride.pickup_address || "Ubicación no especificada"}</span>
                     </div>
                     {ride.dropoff_address && (
                       <div className="flex items-start gap-1.5 text-xs text-slate-400">
@@ -163,12 +192,23 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                   </div>
 
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    {ride.driver_name ? (
-                      <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                        {ride.driver_name}
-                      </span>
-                    ) : (
+                    {ride.driver_name ? (() => {
+                      // P5: Driver occupancy indicator
+                      const activeRides = displayRides.filter(r => 
+                        r.driver_id === ride.driver_id && 
+                        !["completed", "cancelled"].includes(r.status)
+                      ).length;
+                      const occupancyColor = activeRides > 2 ? "bg-red-100 text-red-700" : 
+                                            activeRides > 1 ? "bg-amber-100 text-amber-700" : 
+                                            "bg-slate-50 text-slate-600";
+                      return (
+                        <span className={`flex items-center gap-1 text-xs ${occupancyColor} px-2 py-0.5 rounded-full border border-current border-opacity-20`}>
+                          <span className="w-1.5 h-1.5 bg-current rounded-full" />
+                          {ride.driver_name}
+                          {activeRides > 0 && <span className="ml-1 font-semibold">({activeRides})</span>}
+                        </span>
+                      );
+                    })() : (
                       <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Sin conductor</span>
                     )}
 

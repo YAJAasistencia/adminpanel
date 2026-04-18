@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(todayCDMX());
+  const [timeRange, setTimeRange] = useState("today"); // P4: Time range selector
   const [assignRide, setAssignRide] = useState(null);
   const [cancelRide, setCancelRide] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -342,8 +343,37 @@ export default function Dashboard() {
     }
   };
 
-  const dayStart = startOfDayCDMX(dateFilter);
-  const dayEnd = endOfDayCDMX(dateFilter);
+  // P4: Calculate date range based on timeRange selector
+  const getDateRangeFromSelector = () => {
+    const now = new Date();
+    let start, end;
+    
+    switch (timeRange) {
+      case "last24h":
+        start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        end = now;
+        break;
+      case "last7d":
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        end = now;
+        break;
+      case "last30d":
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        end = now;
+        break;
+      case "custom":
+        start = startOfDayCDMX(dateFilter);
+        end = endOfDayCDMX(dateFilter);
+        break;
+      default: // today
+        start = startOfDayCDMX(todayCDMX());
+        end = endOfDayCDMX(todayCDMX());
+    }
+    
+    return { start, end };
+  };
+
+  const { start: dayStart, end: dayEnd } = getDateRangeFromSelector();
   const ACTIVE_STATUSES = ["pending", "scheduled", "auction", "no_drivers", "assigned", "admin_approved", "en_route", "arrived", "in_progress"];
 
   const filtered = rides.filter((r: any) => {
@@ -553,15 +583,30 @@ export default function Dashboard() {
               <SelectItem value="cancelled">Cancelados</SelectItem>
             </SelectContent>
           </Select>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="pl-9 rounded-xl bg-white w-full sm:w-44"
-            />
-          </div>
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-full sm:w-48 rounded-xl bg-white">
+              <Calendar className="w-4 h-4 mr-2 text-slate-400" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoy</SelectItem>
+              <SelectItem value="last24h">Últimas 24h</SelectItem>
+              <SelectItem value="last7d">Últimos 7 días</SelectItem>
+              <SelectItem value="last30d">Últimos 30 días</SelectItem>
+              <SelectItem value="custom">Fecha personalizada</SelectItem>
+            </SelectContent>
+          </Select>
+          {timeRange === "custom" && (
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="pl-9 rounded-xl bg-white w-full sm:w-44"
+              />
+            </div>
+          )}
         </div>
 
         <RideTable
