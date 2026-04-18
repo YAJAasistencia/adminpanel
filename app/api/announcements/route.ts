@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+import { announcementService } from '@/lib/supabase-service';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    let result;
+    if (id) {
+      result = await announcementService.getById(id);
+    } else {
+      result = await announcementService.getAll({});
+    }
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 });
+    return NextResponse.json({ data: result.data, success: true, count: Array.isArray(result.data) ? result.data.length : 1 });
+  } catch (error) {
+    console.error('GET /api/announcements error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const result = await announcementService.create(body);
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 });
+    return NextResponse.json({ data: result.data, success: true });
+  } catch (error) {
+    console.error('POST /api/announcements error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    const body = await request.json();
+    const result = await announcementService.update(id, body);
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 });
+    return NextResponse.json({ data: result.data, success: true });
+  } catch (error) {
+    console.error('PATCH /api/announcements error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    const result = await announcementService.delete(id);
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 });
+    return NextResponse.json({ data: { success: true }, success: true });
+  } catch (error) {
+    console.error('DELETE /api/announcements error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

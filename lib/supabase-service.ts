@@ -282,5 +282,6 @@ export const chatMessageService = new SupabaseService('chat_messages');
 export const cancellationPolicyService = new SupabaseService('cancellation_policies');
 export const appSettingsService = new SupabaseService('app_settings');
 export const adminUserService = new SupabaseService('admin_users');
+export const announcementService = new SupabaseService('announcements');
 
 export default supabaseServer;

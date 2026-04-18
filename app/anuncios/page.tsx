@@ -35,21 +35,33 @@ function AnunciosContent() {
 
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
-    queryFn: () => supabaseApi.announcements.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/announcements');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: () => supabaseApi.cities.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/cities');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: () => supabaseApi.serviceTypes.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/service-types');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -87,10 +99,20 @@ function AnunciosContent() {
         is_active: form.is_active,
       };
       if (editId) {
-        await supabaseApi.announcements.update(editId, data);
+        const res = await fetch(`/api/announcements?id=${editId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to update announcement');
         toast.success("Anuncio actualizado");
       } else {
-        await supabaseApi.announcements.create(data);
+        const res = await fetch('/api/announcements', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to create announcement');
         toast.success("Anuncio creado");
       }
       qc.invalidateQueries({ queryKey: ["announcements"] });
@@ -105,7 +127,11 @@ function AnunciosContent() {
   const handleDelete = async (a: any) => {
     if (!window.confirm(`¿Eliminar el anuncio "${a.title}"?`)) return;
     try {
-      await supabaseApi.announcements.delete(a.id);
+      const res = await fetch(`/api/announcements?id=${a.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Failed to delete announcement');
       qc.invalidateQueries({ queryKey: ["announcements"] });
       toast.success("Anuncio eliminado");
     } catch (error: any) {
@@ -115,7 +141,12 @@ function AnunciosContent() {
 
   const handleToggle = async (a: any) => {
     try {
-      await supabaseApi.announcements.update(a.id, { is_active: !a.is_active });
+      const res = await fetch(`/api/announcements?id=${a.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !a.is_active })
+      });
+      if (!res.ok) throw new Error('Failed to toggle announcement');
       qc.invalidateQueries({ queryKey: ["announcements"] });
     } catch (error: any) {
       toast.error(error.message || "Error al actualizar");

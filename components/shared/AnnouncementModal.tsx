@@ -17,7 +17,9 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
   useEffect(() => {
     const load = async () => {
       const now = new Date();
-      const all = await supabaseApi.announcements.list();
+      const res = await fetch('/api/announcements');
+      const json = await res.json();
+      const all = json.data || [];
       const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
       const eligible = all.filter(a => {
