@@ -5,7 +5,7 @@ import * as bcryptjs from 'bcryptjs';
 // Tabla → nombre real en Supabase
 // PascalCase (datos de Base44): Driver, RideRequest, City,
 //   Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
-//   SupportTicket, SurveyResponse, DriverNotification, AdminUser, AppSettings
+//   SurveyResponse, DriverNotification, AdminUser, AppSettings
 // snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
 //   cash_cutoffs, chat_messages, liquidations, notifications, surveys
 

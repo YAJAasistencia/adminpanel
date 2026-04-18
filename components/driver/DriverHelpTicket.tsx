@@ -44,7 +44,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     queryKey: ["myTickets", driver.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("SupportTicket").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false });
+        const { data, error } = await supabase.from("support_tickets").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
       } catch (err) {
@@ -79,7 +79,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     setSaving(true);
     const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}`;
     try {
-      await supabase.from("SupportTicket").insert([{
+      await supabase.from("support_tickets").insert([{
         ticket_number: ticketNumber,
         driver_id: driver.id,
         driver_name: driver.full_name,
