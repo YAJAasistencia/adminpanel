@@ -27,13 +27,15 @@ export default function useAppSettings() {
     initialData: [],
   });
 
-  const defaultSettings = {
+  const defaultSettings: AppSettings = {
     company_name: "YAJA",
     primary_color: "#0F172A",
     accent_color: "#3B82F6",
     secondary_color: "#10B981",
     currency: "MXN",
     timezone: "America/Mexico_City",
+    logo_url: undefined,
+    nav_config: [],
   };
 
   // If database is down or returns old "RideFlow" name, use YAJA

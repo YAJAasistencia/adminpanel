@@ -48,9 +48,9 @@ export async function POST(request: NextRequest) {
 
     console.log('[API LOGIN] Authenticating:', email);
 
-    // Query admin_users with service key (bypasses RLS)
+    // Query AdminUser with service key (bypasses RLS)
     const { data: adminUser, error: fetchError } = await supabase
-      .from('admin_users')
+      .from('AdminUser')
       .select('*')
       .eq('email', email.trim().toLowerCase())
       .single();
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         try {
           const hash = await bcryptjs.hash(password, 10);
           await supabase
-            .from('admin_users')
+            .from('AdminUser')
             .update({ password_hash: hash })
             .eq('id', adminUser.id);
           console.log('[API LOGIN] ✅ Password auto-hashed');
