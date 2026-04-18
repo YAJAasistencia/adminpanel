@@ -349,8 +349,12 @@ export default function Dashboard() {
   const filtered = rides.filter((r: any) => {
     const matchSearch = !search ||
       r.passenger_name?.toLowerCase().includes(search.toLowerCase()) ||
+      r.passenger_phone?.toLowerCase().includes(search.toLowerCase()) ||
       r.driver_name?.toLowerCase().includes(search.toLowerCase()) ||
-      r.pickup_address?.toLowerCase().includes(search.toLowerCase());
+      r.driver_phone?.toLowerCase().includes(search.toLowerCase()) ||
+      r.pickup_address?.toLowerCase().includes(search.toLowerCase()) ||
+      r.dropoff_address?.toLowerCase().includes(search.toLowerCase()) ||
+      r.id?.toLowerCase().includes(search.toLowerCase());
 
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
 
@@ -367,8 +371,8 @@ export default function Dashboard() {
   });
 
     const sortedFiltered = [
-    ...filtered.filter((r: any) => ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    ...filtered.filter((r: any) => !ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_date || b.created_at).getTime() - new Date(a.updated_date || a.created_at).getTime()),
+    ...filtered.filter((r: any) => ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()),
+    ...filtered.filter((r: any) => !ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()),
   ];
 
 
@@ -378,7 +382,10 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Panel de control</h1>
-            <p className="text-sm text-slate-400 mt-0.5">{rides.filter((r: any) => !["completed", "cancelled"].includes(r.status)).length} viajes activos · {rides.length} totales</p>
+            <p className="text-sm text-slate-400 mt-0.5">
+              {rides.filter((r: any) => !["completed", "cancelled"].includes(r.status)).length} viajes activos · {sortedFiltered.length} mostrados · {rides.length} totales
+              {sortedFiltered.length !== rides.length && <span className="ml-2 text-blue-600 font-medium">({Math.round(sortedFiltered.length/rides.length*100)}% filtrados)</span>}
+            </p>
           </div>
           <div className="flex gap-2">
             <Link href="/live-drivers">
@@ -398,8 +405,8 @@ export default function Dashboard() {
           const todayEnd = endOfDayCDMX(today);
           const completedToday = rides.filter((r: any) =>
             r.status === "completed" &&
-            new Date(r.updated_date || r.created_at) >= todayStart &&
-            new Date(r.updated_date || r.created_at) < todayEnd
+            new Date(r.updated_at || r.created_at) >= todayStart &&
+            new Date(r.updated_at || r.created_at) < todayEnd
           ).length;
           const pendingScheduled = rides.filter((r: any) =>
             r.scheduled_time &&
@@ -534,11 +541,15 @@ export default function Dashboard() {
             <SelectContent>
               <SelectItem value="all">Todos los estados</SelectItem>
               <SelectItem value="pending">Pendientes</SelectItem>
+              <SelectItem value="auction">En subasta</SelectItem>
+              <SelectItem value="no_drivers">Sin conductores</SelectItem>
               <SelectItem value="assigned">Asignados</SelectItem>
+              <SelectItem value="admin_approved">Esperando inicio</SelectItem>
               <SelectItem value="en_route">En camino</SelectItem>
+              <SelectItem value="arrived">Llegó conductor</SelectItem>
               <SelectItem value="in_progress">En curso</SelectItem>
-              <SelectItem value="completed">Completados</SelectItem>
               <SelectItem value="scheduled">Programados</SelectItem>
+              <SelectItem value="completed">Completados</SelectItem>
               <SelectItem value="cancelled">Cancelados</SelectItem>
             </SelectContent>
           </Select>

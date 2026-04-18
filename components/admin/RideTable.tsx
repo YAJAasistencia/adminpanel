@@ -32,8 +32,8 @@ const rowBgColors = {
   en_route:      "bg-green-50 border-l-violet-400",
   arrived:       "bg-green-50 border-l-cyan-400",
   in_progress:   "bg-green-50 border-l-emerald-500",
-  completed:     "bg-white border-l-slate-300",
-  cancelled:     "bg-white border-l-red-200",
+  completed:     "bg-slate-50 border-l-slate-200 opacity-75",
+  cancelled:     "bg-slate-50 border-l-slate-200 opacity-70",
   scheduled:     "bg-blue-50 border-l-blue-400",
 };
 
@@ -52,7 +52,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
 
   const exportCSV = () => {
     const csv = ["Pasajero,Conductor,Recogida,Destino,Servicio,Estado,Precio estimado,Precio final,KM,Pago,Fecha",
-      ...rides.map(r => [
+      ...displayRides.map(r => [
         r.passenger_name||"",r.driver_name||"",r.pickup_address||"",r.dropoff_address||"",
         r.service_type_name||"",r.status||"",r.estimated_price||"",r.final_price||"",
         r.distance_km||"",r.payment_method||"",
@@ -84,6 +84,8 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
         {displayRides.map(ride => {
           const action = statusActions[ride.status];
           const rowBg = rowBgColors[ride.status] || "bg-white border-l-slate-200";
+          const isHistorical = ["completed", "cancelled"].includes(ride.status);
+          const textOpacity = isHistorical ? "text-slate-400" : "text-slate-900";
 
           return (
             <div
@@ -95,7 +97,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                    <p className="font-semibold text-slate-900 text-sm">{ride.passenger_name}</p>
+                    <p className={`font-semibold ${textOpacity} text-sm`}>{ride.passenger_name}</p>
                     <StatusBadge status={ride.status} />
                     {ride.service_type_name && (
                       <span className="text-[11px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">{ride.service_type_name}</span>
