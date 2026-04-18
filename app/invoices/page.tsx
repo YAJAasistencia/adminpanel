@@ -47,7 +47,7 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
     return rides.filter(r => {
       if (r.company_id !== companyId) return false;
       if (r.status !== "completed") return false;
-      const d = moment(r.requested_at || r.created_date);
+      const d = moment(r.requested_at);
       return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
     });
   }, [companyId, dateFrom, dateTo, rides]);
@@ -103,7 +103,7 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
         const ans = (r.questionnaire_answers || []).find(a => a.question === f.label || a.question === f.key);
         return ans?.answer || "";
       });
-      return [r.service_id||"", formatCDMX(r.requested_at||r.created_date,"shortdatetime"), r.passenger_name||"", r.driver_name||"", r.pickup_address||"", r.dropoff_address||"", r.service_type_name||"", r.payment_method||"", (r.company_price||r.final_price||r.estimated_price||0).toFixed(2), ...folioAnswers];
+      return [r.service_id||"", formatCDMX(r.requested_at,"shortdatetime"), r.passenger_name||"", r.driver_name||"", r.pickup_address||"", r.dropoff_address||"", r.service_type_name||"", r.payment_method||"", (r.company_price||r.final_price||r.estimated_price||0).toFixed(2), ...folioAnswers];
     });
     const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8;"});
@@ -198,7 +198,7 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
                         return (
                           <tr key={r.id} className={`border-b border-slate-100 cursor-pointer ${checked ? "bg-blue-50" : "hover:bg-slate-50"}`} onClick={() => toggleRide(r.id)}>
                             <td className="px-3 py-2"><Checkbox checked={checked} onCheckedChange={() => toggleRide(r.id)} /></td>
-                            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatCDMX(r.requested_at||r.created_date,"short")}</td>
+                            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatCDMX(r.requested_at,"short")}</td>
                             <td className="px-3 py-2 font-mono text-slate-400">{r.service_id||"—"}</td>
                             <td className="px-3 py-2 text-slate-700">{r.passenger_name}</td>
                             <td className="px-3 py-2 text-slate-600">{r.driver_name||"—"}</td>
@@ -253,7 +253,7 @@ function InvoiceDetailDialog({ invoice, companies, rides, onClose, onStatusChang
         const ans = (r.questionnaire_answers||[]).find(a => a.question===f.label||a.question===f.key);
         return ans?.answer||"";
       });
-      return [r.service_id||"", formatCDMX(r.requested_at||r.created_date,"shortdatetime"), r.passenger_name||"", r.driver_name||"", r.pickup_address||"", r.dropoff_address||"", r.service_type_name||"", (r.company_price||r.final_price||r.estimated_price||0).toFixed(2), ...folioAnswers];
+      return [r.service_id||"", formatCDMX(r.requested_at,"shortdatetime"), r.passenger_name||"", r.driver_name||"", r.pickup_address||"", r.dropoff_address||"", r.service_type_name||"", (r.company_price||r.final_price||r.estimated_price||0).toFixed(2), ...folioAnswers];
     });
     const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8;"});
@@ -297,7 +297,7 @@ function InvoiceDetailDialog({ invoice, companies, rides, onClose, onStatusChang
                 <tbody>
                   {invoiceRides.map(r => (
                     <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="px-3 py-2 text-slate-500">{formatCDMX(r.requested_at||r.created_date,"short")}</td>
+                      <td className="px-3 py-2 text-slate-500">{formatCDMX(r.requested_at,"short")}</td>
                       <td className="px-3 py-2 font-mono text-slate-400">{r.service_id||"—"}</td>
                       <td className="px-3 py-2 text-slate-700">{r.passenger_name}</td>
                       <td className="px-3 py-2 text-slate-600">{r.driver_name||"—"}</td>

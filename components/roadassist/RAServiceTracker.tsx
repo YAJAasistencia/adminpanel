@@ -290,7 +290,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const calcCancellationFee = () => {
     const policy = policies[0];
     if (!policy || !currentRide) return 0;
-    const mins = moment().diff(moment(currentRide.created_at), "minutes");
+    const mins = moment().diff(moment(currentRide.requested_at), "minutes");
     if (mins <= (policy.free_cancellation_minutes || 5)) return 0;
     return policy.fee_type === "percentage"
       ? ((currentRide.estimated_price || 0) * (policy.fee_amount || 0)) / 100

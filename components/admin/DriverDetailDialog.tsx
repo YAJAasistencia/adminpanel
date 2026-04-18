@@ -1005,7 +1005,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
           <TabsContent value="history" className="mt-4 space-y-1">
             {(() => {
-              const driverRides = rides.filter(r => r.driver_id === driver?.id).sort((a, b) => new Date(b.created_date || b.created_at) - new Date(a.created_date || a.created_at)).slice(0, 20);
+              const driverRides = rides.filter(r => r.driver_id === driver?.id).sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at)).slice(0, 20);
               return (
                 <>
                   <div className="bg-blue-50 rounded-lg px-2.5 py-1 text-xs text-blue-700 mb-2">
@@ -1042,12 +1042,12 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                             <p>📍 <span className="text-slate-500">{r.dropoff_address.substring(0, 50)}</span></p>
                           )}
                           <div className="flex gap-2 flex-wrap text-slate-500">
-                            {r.ride_distance && <span>📏 {(r.ride_distance / 1000).toFixed(1)} km</span>}
+                            {r.distance_km && <span>📏 {r.distance_km.toFixed(1)} km</span>}
                             {r.service_type_name && <span>🚗 {r.service_type_name}</span>}
-                            {r.total_amount && <span>💰 ${r.total_amount}</span>}
+                            {r.final_price && <span>💰 ${r.final_price}</span>}
                           </div>
                           <div className="text-xs text-slate-400 flex gap-2">
-                            {r.created_date && <span>📅 {new Date(r.created_date).toLocaleDateString("es-MX")}</span>}
+                            {r.requested_at && <span>📅 {new Date(r.requested_at).toLocaleDateString("es-MX")}</span>}
                             {r.passenger_rating_for_driver > 0 && (
                               <span className="text-violet-600 flex items-center gap-0.5">
                                 ⭐ {r.passenger_rating_for_driver}/5 {r.passenger_rating_comment && `"${r.passenger_rating_comment.substring(0, 30)}..."`}

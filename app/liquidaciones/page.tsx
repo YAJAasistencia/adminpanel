@@ -70,11 +70,11 @@ export default function Liquidaciones() {
 
   const weekRides = allRides.filter(r => {
     if (r.driver_id !== selectedDriverId) return false;
-    const d = moment(r.requested_at || r.created_date);
+    const d = moment(r.requested_at);
     return d.isSameOrAfter(weekStart) && d.isSameOrBefore(weekEnd);
   });
 
-  const allPaid = weekRides.length > 0 && weekRides.every(r => r.driver_payout_status === "pagado");
+  const allPaid = weekRides.length > 0 && weekRides.every(r => r.payment_status === "paid");
   const summary = calcWeekSummary(weekRides, commissionPct);
   const driver = drivers.find(d => d.id === selectedDriverId);
 
@@ -93,14 +93,13 @@ export default function Liquidaciones() {
   const markAsPaid = async () => {
     if (!selectedDriverId || weekRides.length === 0) return;
     setMarking(true);
-    const pending = weekRides.filter(r => r.driver_payout_status !== "pagado");
+    const pending = weekRides.filter(r => r.payment_status !== "paid");
     for (const r of pending) {
       const amount = r.final_price || r.estimated_price || 0;
       const commAmt = r.platform_commission != null ? r.platform_commission : +(amount * commissionPct / 100);
       const driverAmt = r.driver_earnings != null ? r.driver_earnings : +(amount - commAmt);
       await supabaseApi.rideRequests.update(r.id, {
-        driver_payout_status: "pagado",
-        financial_status: "liquidado",
+        payment_status: "paid",
         driver_earnings: +driverAmt.toFixed(2),
         platform_commission: +commAmt.toFixed(2),
       });
@@ -123,7 +122,7 @@ export default function Liquidaciones() {
         r.final_price || r.estimated_price || 0,
         r.platform_commission || 0,
         r.driver_earnings || 0,
-        r.driver_payout_status === "pagado" ? "Sí" : "No",
+        r.payment_status === "paid" ? "Sí" : "No",
       ]),
     ];
     const csv = rows.map(r => r.join(",")).join("\n");
@@ -289,7 +288,7 @@ export default function Liquidaciones() {
                             <td className="py-2 pr-4 text-right text-orange-600">${(r.platform_commission || 0).toFixed(2)}</td>
                             <td className="py-2 text-right font-semibold text-blue-600">${(r.driver_earnings || 0).toFixed(2)}</td>
                             <td className="py-2 text-center">
-                              {r.driver_payout_status === "pagado"
+                              {r.payment_status === "paid"
                                 ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Pagado</span>
                                 : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pendiente</span>}
                             </td>

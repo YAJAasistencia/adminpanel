@@ -268,7 +268,7 @@ function ResponsesPanel({ responses, companies }: any) {
       const answerMap: any = {};
       (sr.answers || []).forEach((a: any) => { answerMap[a.question] = a.answer; });
       return [
-        formatCDMX(sr.completed_at || sr.created_date, "shortdatetime"),
+        formatCDMX(sr.completed_at, "shortdatetime"),
         sr.service_id || "",
         sr.passenger_name || "",
         sr.driver_name || "",
@@ -351,7 +351,7 @@ function ResponsesPanel({ responses, companies }: any) {
                     {r.service_id && <span className="font-mono text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{r.service_id}</span>}
                     {r.company_name && <Badge className="bg-blue-100 text-blue-700 text-xs border-0">{r.company_name}</Badge>}
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">{r.survey_title} · {r.driver_name} · {formatCDMX(r.completed_at || r.created_date, "shortdatetime")}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{r.survey_title} · {r.driver_name} · {formatCDMX(r.completed_at, "shortdatetime")}</p>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 mt-1 transition-transform ${isOpen ? "rotate-180" : ""}`} />
               </button>

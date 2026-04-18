@@ -60,11 +60,11 @@ interface Driver {
 }
 
 function getRideCreatedTs(ride: Ride) {
-  return new Date(ride.created_date || ride.created_at || 0).getTime();
+  return new Date(ride.requested_at || 0).getTime();
 }
 
 function getRideUpdatedIso(ride: Ride) {
-  return ride.updated_date || ride.updated_at || ride.created_date || ride.created_at || new Date().toISOString();
+  return ride.requested_at || new Date().toISOString();
 }
 
 function uniqueIds(values: Array<string | null | undefined>) {
@@ -238,7 +238,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     queryClient.setQueryData(["lastAssignedDriver"], best);
     queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
       old.map((r) => r.id === ride.id
-        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned", updated_date: assignedNow, updated_at: assignedNow }
+        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned" }
         : r)
     );
 
@@ -498,7 +498,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           ride.status === "assigned" &&
           ride.driver_id &&
           !ride.en_route_at &&
-          !ride.driver_accepted_at &&
           ride.assignment_mode !== "manual"
         ) {
           if (assignedRideTimersRef.current[ride.id]) continue;
@@ -510,7 +509,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           const timer = setTimeout(async () => {
             delete assignedRideTimersRef.current[ride.id];
             const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
-            if (!current || current.status !== "assigned" || current.en_route_at || current.driver_accepted_at) return;
+            if (!current || current.status !== "assigned" || current.en_route_at) return;
 
             const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
             const excludedIds = uniqueIds([...prevExcluded, current.driver_id]);
@@ -528,7 +527,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               status: "pending",
               driver_id: null,
               driver_name: null,
-              _excluded_driver_ids: excludedIds,
             });
 
             const useAuction = !!settingsRef.current?.auction_mode_enabled || current.assignment_mode === "auction";
@@ -541,7 +539,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
           assignedRideTimersRef.current[ride.id] = timer;
         } else if (
-          ride.driver_accepted_at ||
+          ride.en_route_at ||
           ["completed", "cancelled", "en_route", "arrived", "in_progress", "admin_approved"].includes(ride.status || "")
         ) {
           if (assignedRideTimersRef.current[ride.id]) {

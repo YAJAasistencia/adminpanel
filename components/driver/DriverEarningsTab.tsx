@@ -15,7 +15,7 @@ export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
   const todayStartUTC = startOfDayCDMX(todayStr);
   const todayEndUTC = endOfDayCDMX(todayStr);
   const todayCompleted = completedOnly.filter(r => {
-    const d = new Date(r.completed_at || r.updated_date || r.created_at);
+    const d = new Date(r.completed_at || r.requested_at);
     return d >= todayStartUTC && d <= todayEndUTC;
   });
   const todayEarnings = todayCompleted.reduce((s, r) => s + (r.driver_earnings || r.final_price || 0), 0);
@@ -23,7 +23,7 @@ export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
   // Today's rides list (completed + cancelled)
   const todayRides = rides.filter(r => {
     if (!["completed", "cancelled"].includes(r.status)) return false;
-    const d = new Date(r.completed_at || r.updated_date || r.created_at);
+    const d = new Date(r.completed_at || r.requested_at);
     return d >= todayStartUTC && d <= todayEndUTC;
   });
 

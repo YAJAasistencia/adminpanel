@@ -423,7 +423,6 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               answer: customFieldAnswers[f.key] || ""
             })).filter(f => f.answer)
           : undefined,
-        folio_data: company && (company.folio_fields || []).length > 0 ? folioAnswers : undefined,
         is_gasoline: isGasolineService,
         gasoline_liters: isGasolineService ? (form.gasoline_liters || undefined) : undefined,
         is_red_zone_blocked: !!detectedRedZone,

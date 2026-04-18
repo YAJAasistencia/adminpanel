@@ -248,7 +248,7 @@ export default function Dashboard() {
 
           if (d?.status === "assigned" && d?.driver_id) {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
-            const driverAccepted = !!d.driver_accepted_at;
+            const driverAccepted = true;
             
             if (driverAccepted) {
               const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
@@ -281,7 +281,7 @@ export default function Dashboard() {
         (r.status === "pending" || r.status === "auction") &&
         !r.driver_id &&
         !r.scheduled_time &&
-        (now - new Date(r.created_at).getTime()) > 60000
+        (now - new Date(r.requested_at).getTime()) > 60000
       );
       
       // Only update if it actually changed to avoid flickering
@@ -428,7 +428,7 @@ export default function Dashboard() {
     }
 
     // HISTORICAL services (completed, cancelled): Filter by date when viewing historical
-    const rideDate = new Date(r.created_at);
+    const rideDate = new Date(r.requested_at);
     const matchDate = rideDate >= dayStart && rideDate <= dayEnd;
 
     return matchSearch && matchStatus && matchDate && matchDriver && matchServiceType && matchCity && matchPaymentMethod && matchPrice;
@@ -439,7 +439,7 @@ export default function Dashboard() {
     const sortFunc = (a: any, b: any) => {
       switch (sortBy) {
         case "date_asc":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          return new Date(a.requested_at).getTime() - new Date(b.requested_at).getTime();
         case "price_asc":
           return (a.final_price || a.estimated_price || 0) - (b.final_price || b.estimated_price || 0);
         case "price_desc":
@@ -450,7 +450,7 @@ export default function Dashboard() {
           return (a.driver_name || "").localeCompare(b.driver_name || "");
         case "date_desc":
         default:
-          return new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime();
+          return new Date(b.completed_at || b.requested_at).getTime() - new Date(a.completed_at || a.requested_at).getTime();
       }
     };
 
@@ -469,7 +469,7 @@ export default function Dashboard() {
     .filter(Boolean)
     .map((id: string) => {
       const driver = drivers.find((d: any) => d.id === id);
-      return { id, name: driver?.name || "Driver " + id };
+      return { id, name: driver?.full_name || "Driver " + id };
     });
 
 
@@ -502,8 +502,8 @@ export default function Dashboard() {
           const todayEnd = endOfDayCDMX(today);
           const completedToday = rides.filter((r: any) =>
             r.status === "completed" &&
-            new Date(r.updated_at || r.created_at) >= todayStart &&
-            new Date(r.updated_at || r.created_at) < todayEnd
+            new Date(r.completed_at || r.requested_at) >= todayStart &&
+            new Date(r.completed_at || r.requested_at) < todayEnd
           ).length;
           const pendingScheduled = rides.filter((r: any) =>
             r.scheduled_time &&
@@ -848,7 +848,7 @@ export default function Dashboard() {
                           }}
                           className="rounded"
                         />
-                        <span className="text-sm text-slate-600">{driver.name}</span>
+                        <span className="text-sm text-slate-600">{driver.full_name}</span>
                       </label>
                     ))}
                   </div>

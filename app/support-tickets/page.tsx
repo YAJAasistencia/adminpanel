@@ -59,8 +59,7 @@ function SupportTicketsContent() {
       t.passenger_phone?.includes(q) ||
       t.ticket_number?.toLowerCase().includes(q) ||
       t.service_id?.toLowerCase().includes(q);
-    const d = moment(t.created_date);
-    const matchDate = d.isSameOrAfter(moment(dateFrom).startOf("day")) && d.isSameOrBefore(moment(dateTo).endOf("day"));
+    const matchDate = true; // support_tickets has no timestamp column
     return matchStatus && matchSearch && matchDate;
   });
 
@@ -162,7 +161,7 @@ function SupportTicketsContent() {
                   <p className="text-xs text-slate-500 truncate mt-0.5">{ticket.description}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <p className="text-xs text-slate-400">
-                      {ticket.submitted_by === "passenger" ? "👤" : "🚗"} {ticket.driver_name || ticket.passenger_name || "—"} · {moment(ticket.created_date).fromNow()}
+                      {ticket.submitted_by === "passenger" ? "👤" : "🚗"} {ticket.driver_name || ticket.passenger_name || "—"}
                     </p>
                     {ticket.service_id && (
                       <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{ticket.service_id}</span>
@@ -222,7 +221,7 @@ function SupportTicketsContent() {
               </div>
               <div>
                 <p className="text-xs text-slate-400 mb-1">Categoría: {CATEGORY_LABELS[selected.category]}</p>
-                <p className="text-xs text-slate-400">{moment(selected.created_date).format("DD/MM/YYYY HH:mm")}</p>
+                <p className="text-xs text-slate-400">Ticket #{selected.ticket_number}</p>
               </div>
               <div>
                 <Label>Respuesta del administrador</Label>

@@ -1017,7 +1017,7 @@ export default function DriverApp() {
     rides
       .filter((r) => r.status === "assigned" && r.driver_id === driver.id)
       .forEach((r) => {
-        shownRideAssignmentsRef.current[r.id] = r.updated_date || r.created_at || "";
+        shownRideAssignmentsRef.current[r.id] = r.requested_at || "";
         acceptedRideIdsRef.current.add(r.id);
       });
   }, [rides.length > 0 || initializedRef.current, driver?.id]);
@@ -1069,9 +1069,9 @@ export default function DriverApp() {
             data.auction_driver_ids.includes(driverId)
           ) {
             const prevShown = shownRideAssignmentsRef.current[data.id];
-            const isNew = !prevShown || prevShown !== (data.updated_date || data.auction_expires_at);
+            const isNew = !prevShown || prevShown !== (data.auction_expires_at || data.requested_at);
             if (isNew) {
-              shownRideAssignmentsRef.current[data.id] = data.updated_date || data.auction_expires_at || "";
+              shownRideAssignmentsRef.current[data.id] = data.auction_expires_at || data.requested_at || "";
               stopNewRideAlarm(data.id);
               startNewRideAlarm(data.id);
               showDriverNotification({
@@ -1092,7 +1092,7 @@ export default function DriverApp() {
           if (payload.type === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
             if (!initializedRef.current) return;
             const prevShownAt = shownRideAssignmentsRef.current[data.id];
-            const thisAssignmentAt = data.updated_date || data.created_at;
+            const thisAssignmentAt = data.requested_at;
             const isNewAssignment = !prevShownAt || prevShownAt !== thisAssignmentAt;
             const alreadyAccepted = acceptedRideIdsRef.current.has(data.id);
             if (isNewAssignment && !alreadyAccepted) {
@@ -1249,30 +1249,6 @@ export default function DriverApp() {
           Date.now() + (settings?.rating_window_minutes ?? 1440) * 60000
         ).toISOString();
 
-        const walletUsed = ride.wallet_amount_used || 0;
-        if (walletUsed > 0 && ride.passenger_user_id) {
-          const walletAdjustment = walletUsed - price;
-          if (Math.abs(walletAdjustment) > 0.01) {
-            try {
-              const { data: users, error: err } = await supabase
-                .from("road_assist_users")
-                .select("*")
-                .eq("id", ride.passenger_user_id)
-                .single();
-
-              if (!err && users && walletAdjustment > 0) {
-                await supabase
-                  .from("road_assist_users")
-                  .update({ wallet_balance: (users.wallet_balance || 0) + walletAdjustment })
-                  .eq("id", users.id);
-                updates.wallet_refund_amount = walletAdjustment;
-              } else if (walletAdjustment < 0 && walletUsed < price) {
-                updates.wallet_excess_amount = Math.abs(walletAdjustment);
-              }
-            } catch (_) {}
-          }
-        }
-
         await supabase
           .from("Driver")
           .update({
@@ -1393,15 +1369,6 @@ export default function DriverApp() {
 
     acceptedRideIdsRef.current.add(ride.id);
 
-    const acceptedAt = new Date().toISOString();
-    
-    // Track acceptance for acceptance_rate calculation
-    const currentAcceptedCount = (driver?.accepted_offers_count || 0) + 1;
-    const rejectionCount = driver?.rejection_count || 0;
-    const acceptanceRate = currentAcceptedCount + rejectionCount > 0 
-      ? Math.round((currentAcceptedCount / (currentAcceptedCount + rejectionCount)) * 100)
-      : 100;
-
     if (ride.status === "auction") {
       const { data: current, error } = await supabase
         .from("ride_requests")
@@ -1419,45 +1386,22 @@ export default function DriverApp() {
             driver_id: driver?.id,
             driver_name: driver?.full_name,
             assignment_mode: "auction",
-            driver_accepted_at: acceptedAt,
-            driver_accepted: true,
           })
           .eq("id", ride.id),
         supabase
           .from("Driver")
-          .update({ 
-            status: "busy",
-            accepted_offers_count: currentAcceptedCount,
-            acceptance_rate: acceptanceRate,
-          })
+          .update({ status: "busy" })
           .eq("id", driver?.id || "")
       ]);
     } else if (ride.status === "assigned" && ride.driver_id === driver?.id) {
-      await Promise.all([
-        supabase
-          .from("ride_requests")
-          .update({
-            driver_accepted_at: acceptedAt,
-            driver_accepted: true,
-          })
-          .eq("id", ride.id),
-        supabase
-          .from("Driver")
-          .update({ 
-            status: "busy",
-            accepted_offers_count: currentAcceptedCount,
-            acceptance_rate: acceptanceRate,
-          })
-          .eq("id", driver?.id || "")
-      ]);
+      await supabase
+        .from("Driver")
+        .update({ status: "busy" })
+        .eq("id", driver?.id || "");
     }
 
-    // Update local driver state with new metrics
-    setDriver((prev) => (prev ? { 
-      ...prev, 
-      accepted_offers_count: currentAcceptedCount,
-      acceptance_rate: acceptanceRate,
-    } : prev));
+    // Update local driver state
+    setDriver((prev) => (prev ? { ...prev, status: "busy" } : prev));
 
     playAcceptedSound();
     queryClient.invalidateQueries({ queryKey: ["driverRides", driver?.id] });
@@ -1540,25 +1484,14 @@ export default function DriverApp() {
       return;
     }
 
-    const prevExcluded = Array.isArray(ride?._excluded_driver_ids) ? ride._excluded_driver_ids : [];
-    
-    // Track rejection reason for analytics
-    const rejectionTracking: any = {
-      status: "pending",
-      driver_id: null,
-      driver_name: null,
-      _excluded_driver_ids: [...new Set([...prevExcluded, driver?.id || ""])],
-    };
-    
-    // Record the rejection reason if it's not a timeout
-    if (reason && reason !== "timeout" && reason !== "assigned") {
-      rejectionTracking.last_rejection_reason = reason;
-      rejectionTracking.last_rejection_at = new Date().toISOString();
-    }
-
+    // Reset ride to pending so it can be reassigned
     await supabase
       .from("ride_requests")
-      .update(rejectionTracking)
+      .update({
+        status: "pending",
+        driver_id: null,
+        driver_name: null,
+      })
       .eq("id", ride?.id || "")
 
     if (isCancelByDriver) {
@@ -1572,51 +1505,17 @@ export default function DriverApp() {
       setSuspendedUntil(suspendUntil);
       localStorage.setItem("driver_suspended_until", String(suspendUntil));
     } else if (reason === "timeout" || reason === "driver_declined") {
-      // Track rejection for analytics (increment counter)
-      const driverRejectionCount = (driver?.rejection_count || 0) + 1;
-      const acceptedCount = driver?.accepted_offers_count || 0;
-      const totalOffers = acceptedCount + driverRejectionCount;
-      const acceptanceRate = totalOffers > 0 ? Math.round((acceptedCount / totalOffers) * 100) : 100;
-      
       await supabase
         .from("Driver")
-        .update({ 
-          status: "available",
-          rejection_count: driverRejectionCount,
-          acceptance_rate: acceptanceRate,
-          last_rejection_reason: reason,
-          last_rejection_at: new Date().toISOString(),
-        })
+        .update({ status: "available" })
         .eq("id", driver?.id || "")
-      setDriver((prev) => (prev ? { 
-        ...prev, 
-        status: "available", 
-        rejection_count: driverRejectionCount,
-        acceptance_rate: acceptanceRate,
-      } : prev));
+      setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
     } else if (reason && !["timeout", "assigned"].includes(reason)) {
-      // Track rejection reason specifically (e.g., "too_far", "low_pay", etc)
-      const driverRejectionCount = (driver?.rejection_count || 0) + 1;
-      const acceptedCount = driver?.accepted_offers_count || 0;
-      const totalOffers = acceptedCount + driverRejectionCount;
-      const acceptanceRate = totalOffers > 0 ? Math.round((acceptedCount / totalOffers) * 100) : 100;
-      
       await supabase
         .from("Driver")
-        .update({ 
-          status: "available",
-          rejection_count: driverRejectionCount,
-          acceptance_rate: acceptanceRate,
-          last_rejection_reason: reason,
-          last_rejection_at: new Date().toISOString(),
-        })
+        .update({ status: "available" })
         .eq("id", driver?.id || "")
-      setDriver((prev) => (prev ? { 
-        ...prev, 
-        status: "available", 
-        rejection_count: driverRejectionCount,
-        acceptance_rate: acceptanceRate,
-      } : prev));
+      setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
     } else {
       await supabase
         .from("Driver")
@@ -2191,7 +2090,7 @@ export default function DriverApp() {
                   .filter(
                     (r) =>
                       r.status === "completed" &&
-                      new Date(r.completed_at || r.updated_date || r.created_at || "").toDateString() ===
+                      new Date(r.completed_at || r.requested_at || "").toDateString() ===
                         today
                   )
                   .reduce((sum, r) => {

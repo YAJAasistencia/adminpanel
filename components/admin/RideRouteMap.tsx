@@ -58,7 +58,7 @@ function buildEventLog(ride) {
   add(ride.completed_at, "Viaje completado", "completed", "emerald");
 
   if (ride.status === "cancelled") {
-    const cTs = ride.updated_date || ride.created_date;
+    const cTs = ride.requested_at;
     add(cTs, `Cancelado por ${ride.cancelled_by || "—"}${ride.cancellation_reason ? `: ${ride.cancellation_reason}` : ""}`, "cancelled", "red");
   }
 

@@ -88,7 +88,7 @@ export default function SosAlertsPage() {
             </div>
             <div>
               <p className="font-bold text-slate-900">{alert.driver_name}</p>
-              <p className="text-xs text-slate-400">{formatCDMX(alert.created_date, "datetime")}</p>
+              <p className="text-xs text-slate-400">—</p>
             </div>
           </div>
           <Badge className={cfg.className}>{cfg.label}</Badge>

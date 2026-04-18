@@ -108,8 +108,8 @@ function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
 
   useEffect(() => {
     if (!settings?.id) return;
-    // Create a stable key combining id + updated_date so we only re-init when data actually changed in the DB
-    const initKey = `${settings.id}_${settings.updated_date}`;
+    // Create a stable key combining id + updated_at so we only re-init when data actually changed in the DB
+    const initKey = `${settings.id}_${settings.updated_at}`;
     if (lastInitKey.current === initKey) return;
     lastInitKey.current = initKey;
 
@@ -118,7 +118,7 @@ function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
     setPaymentTimeoutHours(settings.payment_timeout_hours ?? 24);
     setWalletMinBalance(settings.wallet_min_balance ?? 0);
     setPendingPaymentMethods(settings.pending_payment_methods || []);
-  }, [settings?.id, settings?.updated_date]);
+  }, [settings?.id, settings?.updated_at]);
 
   const toggleActive = (idx) => setMethods(prev => prev.map((m, i) => i === idx ? { ...m, is_active: !m.is_active } : m));
   const updateLabel  = (idx, label) => setMethods(prev => prev.map((m, i) => i === idx ? { ...m, label } : m));
@@ -506,14 +506,14 @@ function TransactionsTab({ rides, settings }) {
         created_at: r.requested_at || r.created_at,
         driver_earnings: r.driver_earnings,
         commission: r.platform_commission,
-        driver_payout_status: r.driver_payout_status || "pendiente",
-        financial_status: r.financial_status || deriveFinancialStatus(r),
+        driver_payout_status: r.payment_status === "paid" ? "pagado" : "pendiente",
+        financial_status: deriveFinancialStatus(r),
       };
     });
 
   function deriveFinancialStatus(r) {
     if (r.status === "completed" || r.status === "liquidado") {
-      if (r.driver_payout_status === "pagado") return "liquidado";
+      if (r.payment_status === "paid") return "liquidado";
       return "completado";
     }
     if (r.payment_status === "pending") return "pendiente_pago";
@@ -533,7 +533,6 @@ function TransactionsTab({ rides, settings }) {
     setProcessingId(rideId);
     await supabaseApi.rideRequests.update(rideId, {
       payment_status: "refunded",
-      financial_status: "pendiente_pago",
     });
     queryClient.invalidateQueries({ queryKey: ["rides"] });
     toast.success("Reembolso registrado");
@@ -656,7 +655,7 @@ function WalletsTab({ users, rides, settings }) {
       wallet_locked: u.wallet_locked || 0,
       total_rides: userRides.length,
       total_spent: totalSpent,
-      created_at: u.created_date,
+      created_at: u.created_at,
       status: (u.wallet_balance || 0) > (settings?.wallet_min_balance || 0) ? "active" : "low",
     };
   });
@@ -793,8 +792,8 @@ function DriverPayoutsTab({ rides, drivers, settings }) {
     const driverEarning = r.driver_earnings != null ? r.driver_earnings : +(amount - commission);
     return {
       id: r.id, service_id: r.service_id || r.id?.slice(0, 8), driver_id: r.driver_id, driver_name: r.driver_name || driverObj.full_name || "—", driver_phone: driverObj.phone,
-      amount, driver_earning, commission, payout_status: r.driver_payout_status || "pendiente", payout_method: r.driver_payout_method || "transfer",
-      ride_status: r.status, completed_at: r.completed_date || r.finished_date, passenger: r.passenger_name || "—", notes: r.payout_notes || "",
+      amount, driver_earning, commission, payout_status: r.payment_status === "paid" ? "pagado" : "pendiente", payout_method: r.payment_method || "transfer",
+      ride_status: r.status, completed_at: r.completed_at, passenger: r.passenger_name || "—", notes: "",
     };
   });
 
@@ -812,7 +811,7 @@ function DriverPayoutsTab({ rides, drivers, settings }) {
 
   const markAsPaid = async (rideId) => {
     setProcessingId(rideId);
-    await supabaseApi.rideRequests.update(rideId, { driver_payout_status: "pagado", payout_notes: payoutNotes });
+    await supabaseApi.rideRequests.update(rideId, { payment_status: "paid" });
     queryClient.invalidateQueries({ queryKey: ["rides"] });
     toast.success("Pago a conductor registrado");
     setPayoutModal(null);
@@ -921,7 +920,7 @@ function ReportsTab({ rides, settings }) {
 
   const completedRides = rides.filter(r => r.status === "completed");
   const pendingPayments = rides.filter(r => r.payment_status === "pending" && r.status !== "cancelled");
-  const pendingPayouts = rides.filter(r => (r.financial_status === "completado") && r.driver_payout_status !== "pagado");
+  const pendingPayouts = rides.filter(r => r.status === "completed" && r.payment_status !== "paid");
 
   const totalRevenue = completedRides.reduce((s, r) => s + (r.final_price || r.estimated_price || 0), 0);
   const totalCommission = completedRides.reduce((s, r) => {
@@ -952,7 +951,7 @@ function ReportsTab({ rides, settings }) {
   // Breakdown by financial status
   const byFinStatus = {};
   rides.forEach(r => {
-    const k = r.financial_status || (r.status === "completed" ? "completado" : "pendiente_pago");
+    const k = r.status === "completed" ? (r.payment_status === "paid" ? "liquidado" : "completado") : (r.payment_status === "pending" ? "pendiente_pago" : "en_proceso");
     if (!byFinStatus[k]) byFinStatus[k] = 0;
     byFinStatus[k]++;
   });

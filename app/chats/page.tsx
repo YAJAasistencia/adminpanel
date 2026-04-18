@@ -138,7 +138,7 @@ export default function ChatsPage() {
       (m.sender_role === "driver" || m.sender_role === "passenger")
     ).length;
 
-  const selectedMessages = allMessages.filter((m: any) => m.ride_id === selectedRideId).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const selectedMessages = allMessages.filter((m: any) => m.ride_id === selectedRideId).sort((a: any, b: any) => (a.id || "").localeCompare(b.id || ""));
   const selectedRide = rides.find((r: any) => r.id === selectedRideId);
 
   const sendMessage = async () => {
@@ -157,7 +157,6 @@ export default function ChatsPage() {
         message: messageText.trim(),
         read_by_driver: false,
         read_by_admin: true,
-        created_at: new Date().toISOString(),
       });
       setMessageText("");
       queryClient.invalidateQueries({ queryKey: ["allMessages"] });
@@ -205,7 +204,7 @@ export default function ChatsPage() {
         </div>
         <div className="flex-1 overflow-y-auto">
           {filteredRides.map((ride: any) => {
-            const msgs = allMessages.filter((m: any) => m.ride_id === ride.id).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            const msgs = allMessages.filter((m: any) => m.ride_id === ride.id).sort((a: any, b: any) => (b.id || "").localeCompare(a.id || ""));
             const lastMsg = msgs[0];
             const unread = getUnreadCount(ride.id);
             const isSelected = selectedRideId === ride.id;
@@ -227,7 +226,7 @@ export default function ChatsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <StatusBadge status={ride.status} />
-                    {lastMsg && <span className="text-xs text-slate-300">{formatCDMX(lastMsg.created_at, "time")}</span>}
+                    {lastMsg && <span className="text-xs text-slate-300">—</span>}
                   </div>
                 </div>
               </button>
@@ -309,7 +308,7 @@ export default function ChatsPage() {
                     </p>}
                     <p>{msg.message}</p>
                     <div className="flex items-center justify-between gap-2 mt-1">
-                      <span className={`text-xs ${isAdmin ? "text-slate-400" : "text-slate-400"}`}>{formatCDMX(msg.created_date, "time")}</span>
+                      <span className={`text-xs ${isAdmin ? "text-slate-400" : "text-slate-400"}`}>—</span>
                       {isAdmin && (
                         <span className={`text-xs font-semibold ${isRead ? "text-blue-400" : "text-slate-400"}`}>
                           {isRead ? "✓✓" : "✓"}

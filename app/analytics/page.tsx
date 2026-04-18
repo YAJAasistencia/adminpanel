@@ -268,7 +268,7 @@ function AnalyticsContent() {
   const filteredRides = useMemo(() => {
     if (!globalRange) return rides;
     return rides.filter(r => {
-      const d = new Date(r.requested_at || r.created_date);
+      const d = new Date(r.requested_at);
       return d >= globalRange.from && d <= globalRange.to;
     });
   }, [rides, globalRange]);
@@ -379,7 +379,7 @@ function AnalyticsContent() {
         };
       }
       driverStats[ride.driver_id].rides += 1;
-      driverStats[ride.driver_id].earnings += ride.driver_earning || (ride.final_price || 0) * 0.8;
+      driverStats[ride.driver_id].earnings += ride.driver_earnings || (ride.final_price || 0) * 0.8;
     });
     return Object.values(driverStats)
       .sort((a, b) => b.rides - a.rides)

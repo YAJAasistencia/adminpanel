@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 function RatingsHistoryPanel({ rides = [], role, onClose, darkMode = false }) {
   const isDriver = role === "driver";
   const rated = rides.filter(r => isDriver ? r.passenger_rating_for_driver > 0 : r.driver_rating_for_passenger > 0)
-    .sort((a, b) => new Date(b.completed_at || b.updated_date) - new Date(a.completed_at || a.updated_date));
+    .sort((a, b) => new Date(b.completed_at || b.requested_at) - new Date(a.completed_at || a.requested_at));
   const avg = rated.length > 0
     ? (rated.reduce((s, r) => s + (isDriver ? r.passenger_rating_for_driver : r.driver_rating_for_passenger), 0) / rated.length).toFixed(1)
     : null;
@@ -50,7 +50,7 @@ function RatingsHistoryPanel({ rides = [], role, onClose, darkMode = false }) {
             const rating = isDriver ? ride.passenger_rating_for_driver : ride.driver_rating_for_passenger;
             const comment = isDriver ? ride.passenger_rating_comment : ride.driver_rating_comment;
             const raterName = isDriver ? ride.passenger_name : ride.driver_name;
-            const date = new Date(ride.completed_at || ride.updated_date).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+            const date = new Date(ride.completed_at || ride.requested_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
             return (
               <div key={ride.id} className={`${card} rounded-2xl p-4 space-y-2`}>
                 <div className="flex items-start justify-between gap-2">

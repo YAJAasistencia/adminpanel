@@ -135,7 +135,7 @@ const defaults = {
   pending_payment_methods: [],
   
   // Metadata
-  updated_date: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 };
 
 export default function SettingsPage() {

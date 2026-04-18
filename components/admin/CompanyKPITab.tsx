@@ -52,12 +52,12 @@ export default function CompanyKPITab({ company, rides }) {
   });
 
   const filtered = useMemo(() => rides.filter(r => {
-    const d = moment(r.requested_at || r.created_date);
+    const d = moment(r.requested_at);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
   }), [rides, dateFrom, dateTo]);
 
   const filteredSurveys = useMemo(() => surveyResponses.filter(sr => {
-    const d = moment(sr.completed_at || sr.created_date);
+    const d = moment(sr.completed_at);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
   }), [surveyResponses, dateFrom, dateTo]);
 
@@ -71,7 +71,7 @@ export default function CompanyKPITab({ company, rides }) {
   const tableRows = useMemo(() => filtered.map(r => {
     const requestedAtCorrected = r.requested_at
       ? new Date(new Date(r.requested_at).getTime() + 6 * 3600 * 1000).toISOString()
-      : r.created_date;
+      : r.requested_at;
     return {
       ...r,
       tAsignacion: diffMin(requestedAtCorrected, r.en_route_at),
@@ -120,7 +120,7 @@ export default function CompanyKPITab({ company, rides }) {
       "Distancia km","Estado"
     ];
     const rows = tableRows.map(r => [
-      formatStoredLocal(r.requested_at || r.created_date, "date"),
+      formatStoredLocal(r.requested_at, "date"),
       r.service_id || "",
       r.passenger_name || "",
       r.passenger_phone || "",
@@ -154,7 +154,7 @@ export default function CompanyKPITab({ company, rides }) {
       const answerMap = {};
       (sr.answers || []).forEach(a => { answerMap[a.question] = a.answer; });
       return [
-        formatCDMX(sr.completed_at || sr.created_date, "shortdatetime"),
+        formatCDMX(sr.completed_at, "shortdatetime"),
         sr.service_id || "",
         sr.passenger_name || "",
         sr.driver_name || "",
@@ -278,7 +278,7 @@ export default function CompanyKPITab({ company, rides }) {
         }
         pdf.setTextColor(30, 41, 59);
         const row = [
-          formatStoredLocal(r.requested_at || r.created_date, "short") || "",
+          formatStoredLocal(r.requested_at, "short") || "",
           r.service_id || "",
           (r.passenger_name || "").slice(0, 18),
           (r.driver_name || "").slice(0, 18),
@@ -416,7 +416,7 @@ export default function CompanyKPITab({ company, rides }) {
                 }`}>
                   <td className="px-2 py-2 text-slate-600 whitespace-nowrap text-[11px]">
                     {hasAlert && <AlertTriangle className="w-2.5 h-2.5 text-red-500 inline mr-0.5 mb-0.5" />}
-                    {formatStoredLocal(r.requested_at || r.created_date, "short")}
+                    {formatStoredLocal(r.requested_at, "short")}
                   </td>
                   <td className="px-2 py-2 font-mono text-slate-500 whitespace-nowrap text-[10px]">{r.service_id || "—"}</td>
                   <td className="px-2 py-2 text-slate-800 truncate text-[11px]">{r.passenger_name || "—"}</td>
@@ -505,7 +505,7 @@ export default function CompanyKPITab({ company, rides }) {
           {(() => {
             const dailyMap = {};
             filtered.forEach(r => {
-              const day = moment(r.requested_at || r.created_date).format("DD/MM");
+              const day = moment(r.requested_at).format("DD/MM");
               if (!dailyMap[day]) dailyMap[day] = { day, total: 0, completados: 0 };
               dailyMap[day].total++;
               if (r.status === "completed") dailyMap[day].completados++;
@@ -677,7 +677,7 @@ export default function CompanyKPITab({ company, rides }) {
           {(() => {
             const dailyMap = {};
             filtered.forEach(r => {
-              const day = moment(r.requested_at || r.created_date).format("DD/MM");
+              const day = moment(r.requested_at).format("DD/MM");
               if (!dailyMap[day]) dailyMap[day] = { day, total: 0, cancelados: 0 };
               dailyMap[day].total++;
               if (r.status === "cancelled") dailyMap[day].cancelados++;

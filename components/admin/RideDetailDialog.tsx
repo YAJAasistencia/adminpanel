@@ -226,7 +226,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             <StatusBadge status={ride.status} />
             <div className="text-right">
               <span className="text-xs text-slate-400 block">
-                {formatCDMX(ride.requested_at || ride.created_date, "datetime")}
+                {formatCDMX(ride.requested_at, "datetime")}
               </span>
               {ride.service_id && (
                 <span className="text-[10px] text-slate-300 font-mono">{ride.service_id}</span>
@@ -358,11 +358,11 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             // Los demás timestamps (en_route_at, in_progress_at, completed_at) son UTC reales → formatCDMX correcto
             const steps = [
               { label: "Solicitud", ts: solicitudTs, icon: "📨" },
-              { label: "Asignación / Aceptación", ts: ride.en_route_at ? null : (ride.driver_id && ride.assigned_at ? ride.assigned_at : null), icon: "📋", hide: true },
+              { label: "Asignación / Aceptación", ts: ride.en_route_at ? null : (ride.driver_id ? ride.en_route_at : null), icon: "📋", hide: true },
               { label: "Conductor en camino", ts: ride.en_route_at, icon: "🚗" },
               { label: "Inicio del servicio", ts: ride.in_progress_at, icon: "▶️" },
               { label: "Finalización", ts: ride.completed_at, icon: "✅" },
-              { label: "Cancelación", ts: ride.status === "cancelled" ? ride.updated_at : null, icon: "❌" },
+              { label: "Cancelación", ts: ride.status === "cancelled" ? ride.completed_at : null, icon: "❌" },
             ].filter(s => s.ts && !s.hide);
             if (steps.length === 0) return null;
             return (

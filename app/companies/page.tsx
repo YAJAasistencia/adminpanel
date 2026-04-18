@@ -85,7 +85,7 @@ function PriceCorrectionTab({ rides, company }) {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-sm font-medium text-slate-800">{ride.passenger_name}</p>
-                    <p className="text-xs text-slate-400">{formatCDMX(ride.created_at || ride.created_date, "shortdatetime")} · Folio: {ride.service_id || "—"}</p>
+                    <p className="text-xs text-slate-400">{formatCDMX(ride.requested_at, "shortdatetime")} · Folio: {ride.service_id || "—"}</p>
                     <p className="text-xs text-slate-400 truncate max-w-[260px]">{ride.pickup_address}</p>
                   </div>
                   <div className="text-right text-xs">
@@ -172,7 +172,7 @@ function InvoiceTable({ rides, company }) {
   const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
 
   const filtered = rides.filter(r => {
-    const d = moment(r.created_at || r.created_date);
+    const d = moment(r.requested_at);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day") && r.status === "completed";
   });
 
@@ -201,7 +201,7 @@ function InvoiceTable({ rides, company }) {
         return ans?.answer || "";
       });
       return [
-        formatCDMX(r.created_at || r.created_date, "shortdatetime"),
+        formatCDMX(r.requested_at, "shortdatetime"),
         r.service_id || r.id?.slice(0,8) || "",
         r.passenger_name || "",
         r.passenger_phone || "",
@@ -263,7 +263,7 @@ function InvoiceTable({ rides, company }) {
               <tbody>
                 {filtered.map(r => (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="px-3 py-2 text-slate-500">{formatCDMX(r.created_at || r.created_date, "shortdatetime")}</td>
+                    <td className="px-3 py-2 text-slate-500">{formatCDMX(r.requested_at, "shortdatetime")}</td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-400">{r.service_id || "—"}</td>
                     <td className="px-3 py-2 font-medium">{r.passenger_name}</td>
                     <td className="px-3 py-2 text-slate-500 max-w-[120px] truncate">{r.pickup_address}</td>
@@ -320,7 +320,7 @@ function CompanyDetailDialog({ company, rides, onClose }) {
                     <div>
                       <p className="font-medium text-slate-900">{r.passenger_name}</p>
                       <p className="text-xs text-slate-400">{r.pickup_address}</p>
-                      <p className="text-xs text-slate-300">{formatCDMX(r.created_at || r.created_date, "shortdatetime")}</p>
+                      <p className="text-xs text-slate-300">{formatCDMX(r.requested_at, "shortdatetime")}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-emerald-600">${(r.final_price || r.estimated_price || 0).toFixed(0)}</p>

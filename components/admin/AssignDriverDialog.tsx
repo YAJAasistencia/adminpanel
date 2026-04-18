@@ -179,7 +179,6 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
         driver_id: selectedDriverId,
         driver_name: driver.full_name,
         status: "assigned",
-        _excluded_driver_ids: [],   // clear exclusions on manual re-assign
         auction_driver_ids: [],
       };
       await supabaseApi.rideRequests.update(ride.id, updatedRide);
@@ -282,8 +281,8 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
                 {/* GeoZone polygons / circles */}
                 {geoZones.map(zone => {
                   const color = zone.color || "#10B981";
-                  if (zone.tipo_zona === "poligono" && Array.isArray(zone.poligono) && zone.poligono.length >= 3) {
-                    const positions = zone.poligono.map(p => [p.lat, p.lng || p.lon]);
+                  if (Array.isArray(zone.coordinates) && zone.coordinates.length >= 3) {
+                    const positions = zone.coordinates.map(p => [p.lat, p.lng || p.lon]);
                     return (
                       <Polygon
                         key={zone.id}

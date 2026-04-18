@@ -66,7 +66,7 @@ export default function DriverEarningsPage() {
   const getDriverStats = (driverId: string) => {
     const driverRides = rides.filter((r: any) => {
       if (r.driver_id !== driverId || r.status !== "completed") return false;
-      const d = moment(r.requested_at || r.created_date);
+      const d = moment(r.requested_at);
       if (!d.isAfter(since)) return false;
       if (until && d.isAfter(until)) return false;
       return true;
@@ -315,7 +315,7 @@ export default function DriverEarningsPage() {
                                 <MapPin className="w-3 h-3 inline mr-0.5" />{ride.pickup_address}
                                 {ride.dropoff_address && <> → {ride.dropoff_address}</>}
                               </p>
-                              <p className="text-xs text-slate-400">{formatCDMX(ride.requested_at || ride.created_date, "shortdatetime")}</p>
+                              <p className="text-xs text-slate-400">{formatCDMX(ride.requested_at, "shortdatetime")}</p>
                             </div>
                             <div className="text-right flex-shrink-0">
                               {ride.final_price > 0 && <p className="text-xs text-slate-400">Total: ${ride.final_price.toFixed(0)}</p>}

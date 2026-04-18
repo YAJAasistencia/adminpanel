@@ -44,7 +44,7 @@ export default function Earnings() {
   const until = filterMode === "range" ? moment(dateTo).endOf("day") : null;
   const filtered = rides.filter(r => {
     if (r.status !== "completed") return false;
-    const d = moment(r.created_date);
+    const d = moment(r.requested_at);
     if (!d.isAfter(since)) return false;
     if (until && d.isAfter(until)) return false;
     return true;
@@ -53,7 +53,7 @@ export default function Earnings() {
   // Daily earnings (admin sees full price)
   const dailyMap = {};
   filtered.forEach(r => {
-    const day = formatCDMX(r.created_date, "daymonth");
+    const day = formatCDMX(r.requested_at, "daymonth");
     dailyMap[day] = (dailyMap[day] || 0) + (r.final_price || r.estimated_price || 0);
   });
   const dailyData = Object.entries(dailyMap)
@@ -104,7 +104,7 @@ export default function Earnings() {
   const avgRide = driverFilteredRides.length ? totalRevenue / driverFilteredRides.length : 0;
   const cancelledCount = rides.filter(r => {
     if (r.status !== "cancelled") return false;
-    const d = moment(r.created_date);
+    const d = moment(r.requested_at);
     if (!d.isAfter(since)) return false;
     if (until && d.isAfter(until)) return false;
     return true;

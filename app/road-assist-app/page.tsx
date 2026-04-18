@@ -269,9 +269,9 @@ export default function RoadAssistApp() {
       return all.filter(r =>
         !['completed', 'cancelled'].includes(r.status) ||
         // Keep recently ended rides that haven't been rated yet
-        (new Date(r.completed_at || r.updated_date || r.created_at).getTime() > twoHoursAgo &&
+        (new Date(r.completed_at || r.requested_at).getTime() > twoHoursAgo &&
           !r.passenger_rating_for_driver && r.status === 'completed') ||
-        (new Date(r.updated_date || r.created_at).getTime() > twoHoursAgo &&
+        (new Date(r.completed_at || r.requested_at).getTime() > twoHoursAgo &&
           r.status === 'cancelled' && (r.cancellation_fee || 0) > 0 && r.payment_status !== 'paid')
       );
     },

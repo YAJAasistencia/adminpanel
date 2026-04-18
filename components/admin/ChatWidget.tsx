@@ -87,7 +87,6 @@ export default function ChatWidget({ ride }: { ride: any }) {
         sender_role: "admin",
         sender_name: "Admin",
         message: messageText.trim(),
-        created_at: new Date().toISOString(),
       });
 
       if (error) throw error;
@@ -167,7 +166,7 @@ export default function ChatWidget({ ride }: { ride: any }) {
                       )}
                       <p className="leading-tight">{msg.message}</p>
                       <p className="text-[9px] opacity-60 mt-0.5">
-                        {formatCDMX(msg.created_at, "time")}
+                        —
                       </p>
                     </div>
                   </div>
