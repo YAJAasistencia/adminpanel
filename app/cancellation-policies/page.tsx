@@ -49,10 +49,20 @@ export default function CancellationPoliciesPage() {
         free_cancellation_minutes: parseInt(editPolicy.free_cancellation_minutes) || 0,
       };
       if (editPolicy.id) {
-        await supabaseApi.cancellationPolicies.update(editPolicy.id, data);
+        const res = await fetch(`/api/cancellation-policies?id=${editPolicy.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to update policy');
         toast.success("Política actualizada");
       } else {
-        await supabaseApi.cancellationPolicies.create(data);
+        const res = await fetch('/api/cancellation-policies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to create policy');
         toast.success("Política creada");
       }
       queryClient.invalidateQueries({ queryKey: ["policies"] });
@@ -68,7 +78,11 @@ export default function CancellationPoliciesPage() {
   const handleDelete = async (p: any) => {
     if (!window.confirm(`¿Eliminar la política "${p.name}"?`)) return;
     try {
-      await supabaseApi.cancellationPolicies.delete(p.id);
+      const res = await fetch(`/api/cancellation-policies?id=${p.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Failed to delete policy');
       queryClient.invalidateQueries({ queryKey: ["policies"] });
       toast.success("Política eliminada");
     } catch (error: any) {
