@@ -8,7 +8,7 @@ import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, AlertTriangle, UserCheck, ChevronRight, Wifi, CalendarClock, Calendar, XCircle } from "lucide-react";
+import { Plus, Search, Filter, AlertTriangle, UserCheck, ChevronRight, Wifi, CalendarClock, Calendar, XCircle, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardStats from "@/components/admin/DashboardStats";
@@ -24,7 +24,17 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(todayCDMX());
-  const [timeRange, setTimeRange] = useState("today"); // P4: Time range selector
+  const [timeRange, setTimeRange] = useState("today");
+  const [sortBy, setSortBy] = useState("date_desc"); // P7: Custom sorting
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false); // P3: Advanced filters panel
+  const [advancedFilters, setAdvancedFilters] = useState({ // P3: Advanced filter states
+    drivers: [],
+    serviceTypes: [],
+    cities: [],
+    paymentMethods: [],
+    priceMin: "",
+    priceMax: "",
+  });
   const [assignRide, setAssignRide] = useState(null);
   const [cancelRide, setCancelRide] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -388,22 +398,66 @@ export default function Dashboard() {
 
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
 
+    // P3: Advanced filters
+    const matchDriver = advancedFilters.drivers.length === 0 || advancedFilters.drivers.includes(r.driver_id);
+    const matchServiceType = advancedFilters.serviceTypes.length === 0 || advancedFilters.serviceTypes.includes(r.service_type_name);
+    const matchCity = advancedFilters.cities.length === 0 || advancedFilters.cities.includes(r.city_name);
+    const matchPaymentMethod = advancedFilters.paymentMethods.length === 0 || advancedFilters.paymentMethods.includes(r.payment_method);
+    
+    const price = parseFloat(r.final_price || r.estimated_price || 0);
+    const minPrice = advancedFilters.priceMin ? parseFloat(advancedFilters.priceMin) : 0;
+    const maxPrice = advancedFilters.priceMax ? parseFloat(advancedFilters.priceMax) : Infinity;
+    const matchPrice = price >= minPrice && price <= maxPrice;
+
     // ACTIVE services: Always show, never filter by date (they are happening NOW)
     if (ACTIVE_STATUSES.includes(r.status)) {
-      return matchSearch && matchStatus;
+      return matchSearch && matchStatus && matchDriver && matchServiceType && matchCity && matchPaymentMethod && matchPrice;
     }
 
     // HISTORICAL services (completed, cancelled): Filter by date when viewing historical
     const rideDate = new Date(r.created_at);
     const matchDate = rideDate >= dayStart && rideDate <= dayEnd;
 
-    return matchSearch && matchStatus && matchDate;
+    return matchSearch && matchStatus && matchDate && matchDriver && matchServiceType && matchCity && matchPaymentMethod && matchPrice;
   });
 
-    const sortedFiltered = [
-    ...filtered.filter((r: any) => ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()),
-    ...filtered.filter((r: any) => !ACTIVE_STATUSES.includes(r.status)).sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()),
-  ];
+  // P7: Smart sorting based on sortBy
+  const getSortedRides = (rides: any[]) => {
+    const sortFunc = (a: any, b: any) => {
+      switch (sortBy) {
+        case "date_asc":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "price_asc":
+          return (a.final_price || a.estimated_price || 0) - (b.final_price || b.estimated_price || 0);
+        case "price_desc":
+          return (b.final_price || b.estimated_price || 0) - (a.final_price || a.estimated_price || 0);
+        case "passenger_name":
+          return (a.passenger_name || "").localeCompare(b.passenger_name || "");
+        case "driver_name":
+          return (a.driver_name || "").localeCompare(b.driver_name || "");
+        case "date_desc":
+        default:
+          return new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime();
+      }
+    };
+
+    return [
+      ...rides.filter((r: any) => ACTIVE_STATUSES.includes(r.status)).sort(sortFunc),
+      ...rides.filter((r: any) => !ACTIVE_STATUSES.includes(r.status)).sort(sortFunc),
+    ];
+  };
+
+  const sortedFiltered = getSortedRides(filtered);
+
+  // P3: Calculate unique values for advanced filters
+  const uniqueCities = [...new Set(rides.map((r: any) => r.city_name).filter(Boolean))].sort();
+  const uniqueServiceTypes = [...new Set(rides.map((r: any) => r.service_type_name).filter(Boolean))].sort();
+  const uniqueDrivers = [...new Set(rides.map((r: any) => r.driver_id))]
+    .filter(Boolean)
+    .map((id: string) => {
+      const driver = drivers.find((d: any) => d.id === id);
+      return { id, name: driver?.name || "Driver " + id };
+    });
 
 
   return (
@@ -607,7 +661,215 @@ export default function Dashboard() {
               />
             </div>
           )}
+
+          {/* P7: Sort selector */}
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-52 rounded-xl bg-white">
+              <ArrowUpDown className="w-4 h-4 mr-2 text-slate-400" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date_desc">Más recientes primero</SelectItem>
+              <SelectItem value="date_asc">Más antiguos primero</SelectItem>
+              <SelectItem value="price_desc">Mayor precio primero</SelectItem>
+              <SelectItem value="price_asc">Menor precio primero</SelectItem>
+              <SelectItem value="passenger_name">Nombre pasajero (A-Z)</SelectItem>
+              <SelectItem value="driver_name">Nombre conductor (A-Z)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* P3: Advanced filters toggle */}
+          <Button
+            variant={showAdvancedFilters ? "default" : "outline"}
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="rounded-xl whitespace-nowrap"
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filtros avanzados
+          </Button>
         </div>
+
+        {/* P3: Advanced filters panel */}
+        {showAdvancedFilters && (
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Price range */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-2">Rango de precio</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={advancedFilters.priceMin}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, priceMin: e.target.value })}
+                    className="flex-1 rounded-lg"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={advancedFilters.priceMax}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, priceMax: e.target.value })}
+                    className="flex-1 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Payment methods */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-2">Métodos de pago</label>
+                <div className="flex flex-wrap gap-2">
+                  {["cash", "card", "wallet"].map((method) => (
+                    <label key={method} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={advancedFilters.paymentMethods.includes(method)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setAdvancedFilters({
+                              ...advancedFilters,
+                              paymentMethods: [...advancedFilters.paymentMethods, method],
+                            });
+                          } else {
+                            setAdvancedFilters({
+                              ...advancedFilters,
+                              paymentMethods: advancedFilters.paymentMethods.filter((p) => p !== method),
+                            });
+                          }
+                        }}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-slate-600 capitalize">
+                        {method === "cash" ? "Efectivo" : method === "card" ? "Tarjeta" : "Billetera"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cities multi-select */}
+              {uniqueCities.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-2">Ciudades</label>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueCities.slice(0, 5).map((city) => (
+                      <label key={city} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={advancedFilters.cities.includes(city)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAdvancedFilters({
+                                ...advancedFilters,
+                                cities: [...advancedFilters.cities, city],
+                              });
+                            } else {
+                              setAdvancedFilters({
+                                ...advancedFilters,
+                                cities: advancedFilters.cities.filter((c) => c !== city),
+                              });
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-slate-600">{city}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Service types multi-select */}
+              {uniqueServiceTypes.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-2">Tipos de servicio</label>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueServiceTypes.slice(0, 5).map((type) => (
+                      <label key={type} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={advancedFilters.serviceTypes.includes(type)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAdvancedFilters({
+                                ...advancedFilters,
+                                serviceTypes: [...advancedFilters.serviceTypes, type],
+                              });
+                            } else {
+                              setAdvancedFilters({
+                                ...advancedFilters,
+                                serviceTypes: advancedFilters.serviceTypes.filter((s) => s !== type),
+                              });
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-slate-600">{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Drivers multi-select */}
+              {uniqueDrivers.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-2">Conductores (Top 5)</label>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueDrivers.slice(0, 5).map((driver) => (
+                      <label key={driver.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={advancedFilters.drivers.includes(driver.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAdvancedFilters({
+                                ...advancedFilters,
+                                drivers: [...advancedFilters.drivers, driver.id],
+                              });
+                            } else {
+                              setAdvancedFilters({
+                                ...advancedFilters,
+                                drivers: advancedFilters.drivers.filter((d) => d !== driver.id),
+                              });
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-slate-600">{driver.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Clear filters button */}
+            {(advancedFilters.drivers.length > 0 ||
+              advancedFilters.serviceTypes.length > 0 ||
+              advancedFilters.cities.length > 0 ||
+              advancedFilters.paymentMethods.length > 0 ||
+              advancedFilters.priceMin ||
+              advancedFilters.priceMax) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setAdvancedFilters({
+                    drivers: [],
+                    serviceTypes: [],
+                    cities: [],
+                    paymentMethods: [],
+                    priceMin: "",
+                    priceMax: "",
+                  })
+                }
+                className="text-slate-600"
+              >
+                Limpiar filtros avanzados
+              </Button>
+            )}
+          </div>
+        )}
 
         <RideTable
           rides={sortedFiltered}
