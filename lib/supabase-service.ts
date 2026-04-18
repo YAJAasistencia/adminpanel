@@ -280,7 +280,7 @@ export const surveyResponseService = new SupabaseService('SurveyResponse');
 export const driverNotificationService = new SupabaseService('DriverNotification');
 export const chatMessageService = new SupabaseService('chat_messages');
 export const cancellationPolicyService = new SupabaseService('cancellation_policies');
-export const appSettingsService = new SupabaseService('AppSettings');
-export const adminUserService = new SupabaseService('AdminUser');
+export const appSettingsService = new SupabaseService('app_settings');
+export const adminUserService = new SupabaseService('admin_users');
 
 export default supabaseServer;
