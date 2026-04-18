@@ -55,16 +55,23 @@ export async function POST(request: Request) {
     const result = await appSettingsService.create(body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      const errMsg = (result.error as any)?.message || 'Unknown Supabase error';
+      const errCode = (result.error as any)?.code || '';
+      console.error('[API] POST /api/settings Supabase error:', errCode, errMsg);
+      // RLS policy violation = missing SUPABASE_SERVICE_ROLE_KEY in env
+      if (errCode === '42501') {
+        return NextResponse.json({ error: 'RLS policy violation — SUPABASE_SERVICE_ROLE_KEY env var is likely missing on the server.' }, { status: 500 });
+      }
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     return NextResponse.json({
       data: result.data,
       success: true,
     });
-  } catch (error) {
-    console.error('[API] POST /api/settings error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[API] POST /api/settings error:', error?.message || error);
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -92,16 +99,22 @@ export async function PATCH(request: Request) {
     const result = await appSettingsService.update(id, body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      const errMsg = (result.error as any)?.message || 'Unknown Supabase error';
+      const errCode = (result.error as any)?.code || '';
+      console.error('[API] PATCH /api/settings Supabase error:', errCode, errMsg);
+      if (errCode === '42501') {
+        return NextResponse.json({ error: 'RLS policy violation — SUPABASE_SERVICE_ROLE_KEY env var is likely missing on the server.' }, { status: 500 });
+      }
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     return NextResponse.json({
       data: result.data,
       success: true,
     });
-  } catch (error) {
-    console.error('[API] PATCH /api/settings error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[API] PATCH /api/settings error:', error?.message || error);
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }
 

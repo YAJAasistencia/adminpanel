@@ -20,13 +20,11 @@ function getSupabaseClient(useServiceRole: boolean = true) {
     throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
   }
 
+  if (useServiceRole && !supabaseServiceKey) {
+    console.error('[SUPABASE_SERVICE] ⚠️ SUPABASE_SERVICE_ROLE_KEY is NOT set — falling back to anon key. Write operations WILL fail due to RLS. Add this env var in Vercel Dashboard → Settings → Environment Variables.');
+  }
+
   const key = useServiceRole && supabaseServiceKey ? supabaseServiceKey : supabaseAnonKey;
-  
-  console.log('[SUPABASE_SERVICE] Client initialized', {
-    url: supabaseUrl.substring(0, 30) + '...',
-    isServiceRole: useServiceRole && !!supabaseServiceKey,
-    keyPrefix: key.substring(0, 20) + '...',
-  });
 
   return createClient<Database>(supabaseUrl, key);
 }
