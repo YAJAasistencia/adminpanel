@@ -5,7 +5,7 @@ import * as bcryptjs from 'bcryptjs';
 // Tabla → nombre real en Supabase
 // PascalCase (datos de Base44): Driver, RideRequest, City,
 //   Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
-//   SosAlert, SupportTicket, SurveyResponse, DriverNotification, AdminUser, AppSettings
+//   SupportTicket, SurveyResponse, DriverNotification, AdminUser, AppSettings
 // snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
 //   cash_cutoffs, chat_messages, liquidations, notifications, surveys
 
@@ -248,7 +248,7 @@ export const supabaseApi = {
   // ─── SOS Alerts ───────────────────────────────────────────────────────────
   sosAlerts: {
     list: async (filters?: any) => {
-      let query = supabase.from('SosAlert').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('sos_alerts').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -259,18 +259,18 @@ export const supabaseApi = {
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('SosAlert').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('sos_alerts').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (alert: any) => {
-      return createWithFallback('SosAlert', alert);
+      return createWithFallback('sos_alerts', alert);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('SosAlert', id, updates);
+      return updateWithFallback('sos_alerts', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('SosAlert').delete().eq('id', id);
+      const { error } = await supabase.from('sos_alerts').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },

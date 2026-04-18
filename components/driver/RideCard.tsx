@@ -182,7 +182,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     }
 
     try {
-      await supabase.from("SosAlert").insert([{
+      await supabase.from("sos_alerts").insert([{
         driver_id: driver?.id,
         driver_name: driver?.full_name,
         ride_id: ride.id,

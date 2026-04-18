@@ -1968,7 +1968,7 @@ export default function DriverApp() {
       lon = pos.coords.longitude;
     } catch {}
     await supabase
-      .from("SosAlert")
+      .from("sos_alerts")
       .insert([
         {
           driver_id: driver?.id,
