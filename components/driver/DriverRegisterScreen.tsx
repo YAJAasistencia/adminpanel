@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Upload, ArrowLeft, Clock, XCircle, CheckCircle2, FileText, MapPin, ChevronRight, User, Bike } from "lucide-react";
+import { Car, Upload, ArrowLeft, Clock, XCircle, CheckCircle2, FileText, MapPin, ChevronRight, User, Bike, AlertCircle, Image } from "lucide-react";
 import { SESSION_KEY, SESSION_TOKEN_KEY } from "@/components/driver/driverUtils";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -78,7 +78,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingPersonalDoc, setUploadingPersonalDoc] = useState({});
   const [uploadingVehicleDoc, setUploadingVehicleDoc] = useState({});
-  const [curpStatus, setCurpStatus] = useState(null);
+  const [personalDocPreviews, setPersonalDocPreviews] = useState({});
+  const [vehicleDocPreviews, setVehicleDocPreviews] = useState({});
 
 
   const { data: settingsList = [] } = useQuery({
@@ -219,7 +220,70 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setUploadingPhoto(false);
   };
 
+  // Validar documento: formato y tamaño
+  const validateDocument = (file) => {
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    const MIN_SIZE = 100 * 1024; // 100KB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
+    
+    // Validar tamaño
+    if (file.size > MAX_SIZE) {
+      return { valid: false, error: `Archivo muy pesado (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: 5MB` };
+    }
+    if (file.size < MIN_SIZE) {
+      return { valid: false, error: `Archivo muy pequeño (${(file.size / 1024).toFixed(0)}KB). Mínimo: 100KB` };
+    }
+
+    // Validar formato por tipo MIME
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      // Fallback: validar por extensión
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+        return { valid: false, error: `Formato inválido. Acepta: JPG, PNG, PDF` };
+      }
+    }
+
+    // Validar que sea realmente una imagen (si se permite)
+    if (file.type.startsWith('image/')) {
+      return { valid: true };
+    }
+    if (file.type === 'application/pdf') {
+      return { valid: true };
+    }
+
+    return { valid: false, error: `Formato no soportado: ${file.type || file.name.split('.').pop()}` };
+  };
+
+  // Generar preview del documento
+  const generateDocPreview = (file) => {
+    return new Promise((resolve) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve({ type: 'image', data: e.target.result, name: file.name });
+        reader.readAsDataURL(file);
+      } else if (file.type === 'application/pdf') {
+        resolve({ type: 'pdf', name: file.name });
+      } else {
+        resolve({ type: 'file', name: file.name });
+      }
+    });
+  };
+
   const handlePersonalDocUpload = async (docKey, file) => {
+    // Validar documento
+    const validation = validateDocument(file);
+    if (!validation.valid) {
+      setError(`Error en documento: ${validation.error}`);
+      return;
+    }
+
+    // Generar preview
+    const preview = await generateDocPreview(file);
+    setPersonalDocPreviews(p => ({ ...p, [docKey]: preview }));
+    setError("");
+
+    // Subir archivo
     setUploadingPersonalDoc(p => ({ ...p, [docKey]: true }));
     try {
       const timestamp = Date.now();
@@ -228,13 +292,29 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/personal/${fileName}`);
       setPersonalDocUploads(p => ({ ...p, [docKey]: publicUrlData.publicUrl }));
+      setError("");
     } catch (err) {
       console.error("Error uploading personal doc:", err);
-      setError(`Error al subir documento`);    }
+      setError(`Error al subir documento: ${err.message || "Intenta de nuevo"}`);
+      setPersonalDocPreviews(p => ({ ...p, [docKey]: null }));
+    }
     setUploadingPersonalDoc(p => ({ ...p, [docKey]: false }));
   };
 
   const handleVehicleDocUpload = async (docKey, file) => {
+    // Validar documento
+    const validation = validateDocument(file);
+    if (!validation.valid) {
+      setError(`Error en documento: ${validation.error}`);
+      return;
+    }
+
+    // Generar preview
+    const preview = await generateDocPreview(file);
+    setVehicleDocPreviews(p => ({ ...p, [docKey]: preview }));
+    setError("");
+
+    // Subir archivo
     setUploadingVehicleDoc(p => ({ ...p, [docKey]: true }));
     try {
       const timestamp = Date.now();
@@ -243,9 +323,11 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/vehicle/${fileName}`);
       setVehicleDocUploads(p => ({ ...p, [docKey]: publicUrlData.publicUrl }));
+      setError("");
     } catch (err) {
       console.error("Error uploading vehicle doc:", err);
-      setError(`Error al subir documento del vehículo`);
+      setError(`Error al subir documento: ${err.message || "Intenta de nuevo"}`);
+      setVehicleDocPreviews(p => ({ ...p, [docKey]: null }));
     }
     setUploadingVehicleDoc(p => ({ ...p, [docKey]: false }));
   };
@@ -599,7 +681,23 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
                         <span className="text-sm font-medium text-slate-700">{doc.label}{doc.required && <span className="text-red-500 ml-0.5">*</span>}</span>
                       </div>
                       {personalDocUploads[doc.key] && (
-                        <a href={personalDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver</a>
+                        <div className="flex items-center gap-2">
+                          {personalDocPreviews[doc.key] && (
+                            <div className="relative group">
+                              {personalDocPreviews[doc.key].type === 'image' ? (
+                                <img src={personalDocPreviews[doc.key].data} alt="preview" className="w-8 h-8 rounded object-cover border border-slate-200" />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center border border-slate-200">
+                                  <FileText className="w-4 h-4 text-slate-400" />
+                                </div>
+                              )}
+                              <div className="absolute hidden group-hover:block bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                {personalDocPreviews[doc.key].name}
+                              </div>
+                            </div>
+                          )}
+                          <a href={personalDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver archivo</a>
+                        </div>
                       )}
                     </div>
                     <label className="cursor-pointer select-none">
@@ -695,8 +793,24 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
                       <span className="text-sm font-medium text-slate-700">{doc.label}{doc.required && <span className="text-red-500 ml-0.5">*</span>}</span>
                     </div>
                     {vehicleDocUploads[doc.key] && (
-                      <a href={vehicleDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver</a>
-                    )}
+                        <div className="flex items-center gap-2">
+                          {vehicleDocPreviews[doc.key] && (
+                            <div className="relative group">
+                              {vehicleDocPreviews[doc.key].type === 'image' ? (
+                                <img src={vehicleDocPreviews[doc.key].data} alt="preview" className="w-8 h-8 rounded object-cover border border-slate-200" />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center border border-slate-200">
+                                  <FileText className="w-4 h-4 text-slate-400" />
+                                </div>
+                              )}
+                              <div className="absolute hidden group-hover:block bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                {vehicleDocPreviews[doc.key].name}
+                              </div>
+                            </div>
+                          )}
+                          <a href={vehicleDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver archivo</a>
+                        </div>
+                      )}
                   </div>
                   <label className="cursor-pointer select-none">
                     <input type="file" accept="image/*,application/pdf" className="hidden" onChange={async e => {
