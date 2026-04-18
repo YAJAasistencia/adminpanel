@@ -158,7 +158,12 @@ export default function SettingsPage() {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: () => supabaseApi.settings.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
+      const json = await res.json();
+      return json.data ? [json.data] : [];
+    },
   });
 
   const settings = settingsList[0];
@@ -258,11 +263,25 @@ export default function SettingsPage() {
       let updated;
       if (settings?.id) {
         console.log(`[Settings] UPDATE AppSettings id=${settings.id}`);
-        updated = await supabaseApi.settings.update(settings.id, form);
+        const res = await fetch(`/api/settings?id=${settings.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error('Failed to update settings');
+        const json = await res.json();
+        updated = json.data;
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
         console.log("[Settings] CREATE AppSettings");
-        updated = await supabaseApi.settings.create(form);
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error('Failed to create settings');
+        const json = await res.json();
+        updated = json.data;
         console.log("[Settings] CREATE exitoso:", updated);
       }
       
