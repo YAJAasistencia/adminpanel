@@ -92,7 +92,16 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
   const [phase, setPhase] = useState("calculating"); // "calculating" | "ready"
   const [routeInfo, setRouteInfo] = useState(null);
   const [countdown, setCountdown] = useState(timeoutSeconds);
+  const [showRejectReason, setShowRejectReason] = useState(false);
   const totalSecs = timeoutSeconds > 0 ? timeoutSeconds : 30;
+
+  const rejectReasons = [
+    { value: "too_far", label: "🚗 Muy lejos", emoji: "🚗" },
+    { value: "wrong_direction", label: "🗺️ Dirección opuesta", emoji: "🗺️" },
+    { value: "low_pay", label: "💰 Baja tarifa", emoji: "💰" },
+    { value: "personal", label: "⏰ Asuntos personales", emoji: "⏰" },
+    { value: "other", label: "❓ Otro motivo", emoji: "❓" },
+  ];
 
   useEffect(() => { injectLeafletCSS(); }, []);
 
@@ -397,26 +406,124 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
                 )}
 
                 {/* Countdown + buttons */}
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex-shrink-0">
-                    <CountdownRing value={countdown} total={totalSecs} />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <button
-                      onClick={() => onAccept(ride)}
-                      className="py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-colors active:scale-95 w-full"
+                <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
+                  {/* Countdown timer - more prominent */}
+                  <div className="flex items-center justify-center">
+                    <motion.div
+                      animate={{ 
+                        scale: countdown <= 10 ? [1, 1.05, 1] : 1,
+                      }}
+                      transition={{ repeat: countdown <= 10 ? Infinity : 0, duration: 0.8 }}
+                      className="relative"
                     >
-                      <CheckCircle2 className="w-5 h-5" /> Aceptar viaje
-                    </button>
-                    <button
-                      onClick={() => onReject(ride, "driver_declined")}
-                      className="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-sm flex items-center justify-center gap-2 transition-colors active:scale-95 w-full"
-                    >
-                      <XCircle className="w-4 h-4" /> Rechazar
-                    </button>
+                      <CountdownRing value={countdown} total={totalSecs} />
+                      <div className={`absolute inset-0 rounded-full animate-pulse ${countdown <= 10 ? "bg-red-500/10" : "bg-emerald-500/5"}`} />
+                    </motion.div>
                   </div>
+
+                  <p className={`text-center text-xs font-bold tracking-widest ${countdown <= 10 ? "text-red-500" : "text-slate-400"}`}>
+                    {countdown <= 10 ? "¡RÁPIDO!" : "Tiempo para decidir"}
+                  </p>
+
+                  {/* Accept button - Primary CTA */}
+                  <motion.button
+                    onClick={() => onAccept(ride)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full group relative overflow-hidden rounded-2xl py-4 font-bold text-lg text-white shadow-lg shadow-emerald-500/40 transition-all active:shadow-emerald-500/20"
+                  >
+                    {/* Gradient background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 group-hover:from-emerald-500 group-hover:via-emerald-600 group-hover:to-emerald-700 transition-all" />
+                    
+                    {/* Shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
+                    
+                    {/* Content */}
+                    <div className="relative flex items-center justify-center gap-2">
+                      <span className="text-2xl">✅</span>
+                      <div className="flex flex-col items-start">
+                        <span>Aceptar viaje</span>
+                        <span className="text-xs font-semibold opacity-90">Gana ${(ride.final_price || ride.estimated_price || 0).toFixed(0)}</span>
+                      </div>
+                    </div>
+                  </motion.button>
+
+                  {/* Reject button - Secondary CTA */}
+                  <motion.button
+                    onClick={() => setShowRejectReason(true)}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="w-full group relative overflow-hidden rounded-2xl py-3.5 font-semibold text-sm text-slate-600 transition-all border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100"
+                  >
+                    <div className="relative flex items-center justify-center gap-2">
+                      <span className="text-lg">❌</span>
+                      <span>No aceptar</span>
+                    </div>
+                  </motion.button>
+
+                  <p className="text-center text-[10px] text-slate-400 mt-2">
+                    Si no respondes, se rechazará automáticamente
+                  </p>
                 </div>
               </div>
+
+              {/* Reject reason modal - overlays bottom */}
+              <AnimatePresence>
+                {showRejectReason && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-t-3xl flex items-end z-50"
+                    onClick={() => setShowRejectReason(false)}
+                  >
+                    <motion.div
+                      initial={{ y: "100%" }}
+                      animate={{ y: 0 }}
+                      exit={{ y: "100%" }}
+                      transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                      onClick={e => e.stopPropagation()}
+                      className="w-full bg-white rounded-t-3xl shadow-2xl p-5 space-y-3"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-bold text-slate-800">¿Por qué no aceptas?</h3>
+                        <button
+                          onClick={() => setShowRejectReason(false)}
+                          className="text-2xl text-slate-400 hover:text-slate-600 leading-none"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      <p className="text-xs text-slate-500 mb-3">Nos ayuda a mejorar. Sin penalizaciones.</p>
+
+                      <div className="grid grid-cols-1 gap-2">
+                        {rejectReasons.map(reason => (
+                          <motion.button
+                            key={reason.value}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              onReject(ride, reason.value);
+                              setShowRejectReason(false);
+                            }}
+                            className="relative overflow-hidden group rounded-2xl px-4 py-3.5 text-left font-semibold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 transition-all text-base flex items-center gap-3"
+                          >
+                            <span className="text-xl group-hover:scale-125 transition-transform">{reason.emoji}</span>
+                            <span>{reason.label}</span>
+                          </motion.button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setShowRejectReason(false)}
+                        className="w-full mt-3 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-100 transition-colors"
+                      >
+                        Volver
+                      </button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </motion.div>
