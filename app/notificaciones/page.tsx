@@ -57,7 +57,11 @@ function NotificacionesContent() {
   });
   const { data: sentNotifications = [] } = useQuery({
     queryKey: ["driver-notifications"],
-    queryFn: () => supabaseApi.driverNotifications.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/driver-notifications');
+      if (!res.ok) throw new Error('Failed to fetch driver notifications');
+      return res.json();
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -85,16 +89,21 @@ function NotificacionesContent() {
     const tag = `admin-notif-${Date.now()}`;
 
     // Persist record
-    await supabaseApi.driverNotifications.create({
-      title: title.trim(),
-      body: body.trim(),
-      driver_ids: filteredDrivers.map((d) => d.id),
-      driver_names: filteredDrivers.map((d) => d.full_name),
-      filter_city: filterCity !== "all" ? filterCity : null,
-      filter_service_type: filterService !== "all" ? filterService : null,
-      recipient_count: filteredDrivers.length,
-      tag,
+    const res = await fetch('/api/driver-notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title.trim(),
+        body: body.trim(),
+        driver_ids: filteredDrivers.map((d) => d.id),
+        driver_names: filteredDrivers.map((d) => d.full_name),
+        filter_city: filterCity !== "all" ? filterCity : null,
+        filter_service_type: filterService !== "all" ? filterService : null,
+        recipient_count: filteredDrivers.length,
+        tag,
+      })
     });
+    if (!res.ok) throw new Error('Failed to create notification');
 
     qc.invalidateQueries({ queryKey: ["driver-notifications"] });
 
@@ -303,7 +312,10 @@ function NotificacionesContent() {
                           <button
                             onClick={async () => {
                               if (!window.confirm("¿Eliminar esta notificación?")) return;
-                              await supabaseApi.driverNotifications.delete(n.id);
+                              const res = await fetch(`/api/driver-notifications?id=${n.id}`, {
+                                method: 'DELETE'
+                              });
+                              if (!res.ok) throw new Error('Failed to delete notification');
                               qc.invalidateQueries({ queryKey: ["driver-notifications"] });
                             }}
                             className="text-slate-300 hover:text-red-500 transition-colors"

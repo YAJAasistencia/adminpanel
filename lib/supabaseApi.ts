@@ -741,20 +741,20 @@ export const supabaseApi = {
   // ─── Driver Notifications ─────────────────────────────────────────────────
   driverNotifications: {
     list: async () => {
-      const { data, error } = await supabase.from('DriverNotification').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('driver_notifications').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     create: async (notification: any) => {
-      const { data, error } = await supabase.from('DriverNotification').insert(notification).select().single();
+      const { data, error } = await supabase.from('driver_notifications').insert(notification).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('DriverNotification', id, updates);
+      return updateWithFallback('driver_notifications', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('DriverNotification').delete().eq('id', id);
+      const { error } = await supabase.from('driver_notifications').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
