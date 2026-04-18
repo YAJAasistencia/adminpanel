@@ -91,6 +91,8 @@ export default function AdminLoginPage() {
         success: result.success,
         error: result.error,
         userEmail: result.user?.email,
+        tokenLength: result.token?.length || 0,
+        tokenExists: !!result.token,
       });
 
       if (!response.ok || !result.success) {
@@ -102,25 +104,60 @@ export default function AdminLoginPage() {
 
       const { user, token } = result;
 
-      console.log('[LOGIN] ✅ Authentication successful, storing session...');
+      console.log('[LOGIN] ✅ Authentication successful, token received:', {
+        tokenExists: !!token,
+        tokenLength: token?.length || 0,
+        tokenPreview: token ? token.substring(0, 20) + '...' : 'NO TOKEN',
+      });
+
+      // Validate token is not empty before storing
+      if (!token || token === '' || typeof token !== 'string') {
+        console.error('[LOGIN] ❌ CRITICAL: Token is invalid/empty', {
+          tokenExists: !!token,
+          tokenType: typeof token,
+          tokenLength: token?.length || 0,
+        });
+        setError('Servidor retornó token inválido. Intenta de nuevo.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[LOGIN] ✅ Token validation passed - ready to store');
 
       // Login exitoso: limpiar contador de intentos
       resetAttempts();
 
       // Guardar sesión de admin CON JWT token
+      const sessionData = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        allowed_pages: [],
+        token: token, // Store valid JWT for authenticated requests - always non-empty
+      };
+
+      console.log('[LOGIN] Session data to store:', {
+        ...sessionData,
+        token: sessionData.token ? sessionData.token.substring(0, 20) + '...' : 'EMPTY',
+      });
+
       localStorage.setItem(
         ADMIN_SESSION_KEY,
-        JSON.stringify({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          allowed_pages: [],
-          token: token || '', // Store JWT for authenticated requests
-        })
+        JSON.stringify(sessionData)
       );
 
-      console.log('[LOGIN] ✅ Session stored, redirecting to dashboard...');
+      // Verify it was stored
+      const readBack = localStorage.getItem(ADMIN_SESSION_KEY);
+      const parsedBack = readBack ? JSON.parse(readBack) : null;
+      
+      console.log('[LOGIN] ✅ Session stored and verified, token in storage:', {
+        stored: !!readBack,
+        tokenExists: !!parsedBack?.token,
+        tokenLength: parsedBack?.token?.length || 0,
+      });
+
+      console.log('[LOGIN] Redirecting to dashboard...');
       
       // Redirigir al dashboard
       router.push("/dashboard");

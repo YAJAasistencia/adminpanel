@@ -17,9 +17,15 @@ export async function fetchWithAuth(
   // Agregar Authorization header si tenemos token
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
-    console.log('[fetchWithAuth] ✅ Token added to Authorization header');
+    console.log('[fetchWithAuth] ✅ Token found, length:', token.length);
   } else {
-    console.warn('[fetchWithAuth] ⚠️ No token found in session');
+    const session = localStorage.getItem('admin_session_id');
+    const parsed = session ? JSON.parse(session) : null;
+    console.warn('[fetchWithAuth] ⚠️ No token found', {
+      sessionExists: !!session,
+      tokenInSession: !!parsed?.token,
+      sessionKeys: parsed ? Object.keys(parsed) : [],
+    });
   }
   
   // Mergear headers del usuario

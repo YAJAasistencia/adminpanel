@@ -157,10 +157,30 @@ export async function POST(request: NextRequest) {
     let token = '';
     try {
       token = await generateToken(adminUser);
+      console.log('[API LOGIN] ✅ Token generated successfully, length:', token.length);
+      
+      if (!token || token === '') {
+        throw new Error('Token generation returned empty string');
+      }
     } catch (tokenError) {
-      console.warn('[API LOGIN] ⚠️ Token generation failed:', tokenError);
-      // Continue without token (non-critical)
+      console.error('[API LOGIN] ❌ Token generation failed:', tokenError);
+      // Return error - token is critical for auth
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Token generation failed - please try again',
+          user: null,
+          token: null,
+        },
+        { status: 500 }
+      );
     }
+
+    console.log('[API LOGIN] ✅ Returning response with token:', {
+      tokenExists: !!token,
+      tokenLength: token.length,
+      userEmail: adminUser.email,
+    });
 
     // Return user data and token
     return NextResponse.json({
@@ -171,7 +191,7 @@ export async function POST(request: NextRequest) {
         name: adminUser.name || adminUser.email,
         role: adminUser.role || 'operator',
       },
-      token: token, // JWT token for authenticated requests
+      token: token && token !== '' ? token : null, // Only return non-empty token
     });
   } catch (error: any) {
     console.error('[API LOGIN] Exception:', error);

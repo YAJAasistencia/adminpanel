@@ -128,5 +128,12 @@ export function useAdminSession() {
 // Helper function to get JWT token from session
 export function getStoredToken(): string | null {
   const session = getStoredSession();
-  return session?.token || null;
+  const token = session?.token;
+  
+  // Explicitly handle empty strings and undefined
+  if (!token || token === '' || typeof token !== 'string') {
+    return null;
+  }
+  
+  return token;
 }
