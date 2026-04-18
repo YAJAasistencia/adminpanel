@@ -58,6 +58,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   const [showChat, setShowChat] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [waitTime, setWaitTime] = useState(0); // Timer for pickup wait time in seconds
   const queryClient = useQueryClient();
 
   const { data: policies = [] } = useQuery({
@@ -113,6 +114,22 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     );
     return () => { if (watchId != null) navigator.geolocation?.clearWatch(watchId); };
   }, [ride.status]);
+
+  // Timer for arrival: track how long driver has been waiting at pickup
+  useEffect(() => {
+    if (ride.status !== "arrived") {
+      setWaitTime(0);
+      return;
+    }
+
+    const arrivalTime = ride.arrived_at ? new Date(ride.arrived_at).getTime() : Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - arrivalTime) / 1000);
+      setWaitTime(elapsed);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [ride.status, ride.arrived_at]);
 
   const pickupLat = ride.pickup_lat;
   const pickupLon = ride.pickup_lon;
@@ -182,6 +199,20 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
       console.error("Error sending SOS:", err);
       alert("❌ Error al enviar alerta. Intenta de nuevo.");
     }
+  };
+
+  // Format wait time: convert seconds to MM:SS format
+  const formatWaitTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // Get wait time status: green < 3min, yellow 3-5min, red > 5min
+  const getWaitTimeStatus = () => {
+    if (waitTime < 180) return { status: 'ok', color: 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300' };
+    if (waitTime < 300) return { status: 'warning', color: 'bg-amber-500/20 border-amber-400/30 text-amber-300' };
+    return { status: 'alert', color: 'bg-red-500/20 border-red-400/30 text-red-300' };
   };
 
   // ─── Full-screen layout for active rides ──────────────────────────────────
@@ -283,6 +314,21 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                   <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-2.5 flex items-center gap-2">
                     <Camera className="w-4 h-4 text-red-400 flex-shrink-0" />
                     <p className="text-xs text-red-300 font-medium">Debes subir la foto de prueba antes de finalizar</p>
+                  </div>
+                )}
+
+                {/* Wait time timer at pickup */}
+                {ride.status === "arrived" && (
+                  <div className={`border rounded-xl p-3 flex items-center justify-between ${getWaitTimeStatus().color}`}>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                      <p className="text-xs font-medium">
+                        {getWaitTimeStatus().status === 'ok' && `Llegaste al punto de recogida`}
+                        {getWaitTimeStatus().status === 'warning' && `Esperando pasajero`}
+                        {getWaitTimeStatus().status === 'alert' && `⏱️ Tiempo de espera excesivo`}
+                      </p>
+                    </div>
+                    <p className="font-mono font-bold text-base">{formatWaitTime(waitTime)}</p>
                   </div>
                 )}
 
