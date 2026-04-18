@@ -131,7 +131,7 @@ const defaults = {
   show_passenger_phone_to_driver: true,
   
   // Pagos
-  payment_gateway: "",
+  payment_gateway: null,
   pending_payment_methods: [],
   
   // Metadata
