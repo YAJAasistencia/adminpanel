@@ -1340,7 +1340,7 @@ export default function DriverApp() {
         );
         if (!survey) {
           const { data: comps, error } = await supabase
-            .from("Company")
+            .from("companies")
             .select("*")
             .eq("id", ride.company_id)
             .single();

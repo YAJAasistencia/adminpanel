@@ -70,7 +70,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     queryKey: ["companies"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("Company").select("*").eq("is_active", true);
+        const { data, error } = await supabase.from("companies").select("*").eq("is_active", true);
         if (error) throw error;
         return data || [];
       } catch (err) {

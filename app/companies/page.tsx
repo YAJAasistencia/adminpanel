@@ -364,7 +364,11 @@ export default function Companies() {
 
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
-    queryFn: () => supabaseApi.companies.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/companies');
+      if (!res.ok) throw new Error('Failed to fetch companies');
+      return res.json();
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });

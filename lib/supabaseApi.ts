@@ -390,25 +390,25 @@ export const supabaseApi = {
   // ─── Companies ────────────────────────────────────────────────────────────
   companies: {
     list: async () => {
-      const { data, error } = await supabase.from('Company').select('*').order('name');
+      const { data, error } = await supabase.from('companies').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('Company').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('companies').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (company: any) => {
-      const { data, error } = await supabase.from('Company').insert(company).select().single();
+      const { data, error } = await supabase.from('companies').insert(company).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('Company', id, updates);
+      return updateWithFallback('companies', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('Company').delete().eq('id', id);
+      const { error } = await supabase.from('companies').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
