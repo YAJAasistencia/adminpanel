@@ -56,35 +56,55 @@ export default function BonosPage() {
 
   const { data: logs = [] } = useQuery({
     queryKey: ["bonusLogs"],
-    queryFn: () => supabaseApi.bonusLogs.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/bonus-logs');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers_bonus"],
-    queryFn: () => supabaseApi.drivers.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/drivers');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["rides_bonus"],
-    queryFn: () => supabaseApi.rideRequests.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/ride-requests');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: () => supabaseApi.cities.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/cities');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: () => supabaseApi.serviceTypes.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/service-types');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
@@ -117,13 +137,31 @@ export default function BonosPage() {
   });
 
   const logMutation = useMutation({
-    mutationFn: (data) => supabaseApi.bonusLogs.create(data),
+    mutationFn: async (data) => {
+      const res = await fetch('/api/bonus-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create log');
+      const json = await res.json();
+      return json.data;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusLogs"] }),
     onError: (error: any) => toast.error(error.message || "Error al crear log"),
   });
 
   const updateLogMutation = useMutation({
-    mutationFn: ({ id, data }: any) => supabaseApi.bonusLogs.update(id, data),
+    mutationFn: async ({ id, data }: any) => {
+      const res = await fetch(`/api/bonus-logs/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to update log');
+      const json = await res.json();
+      return json.data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bonusLogs"] });
       toast.success("Estado actualizado");

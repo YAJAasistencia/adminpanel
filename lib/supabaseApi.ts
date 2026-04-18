@@ -472,7 +472,7 @@ export const supabaseApi = {
   // ─── Bonus Logs ───────────────────────────────────────────────────────────
   bonusLogs: {
     list: async (filters?: any) => {
-      let query = supabase.from('BonusLog').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('bonus_logs').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -483,12 +483,12 @@ export const supabaseApi = {
       return data || [];
     },
     create: async (log: any) => {
-      const { data, error } = await supabase.from('BonusLog').insert(log).select().single();
+      const { data, error } = await supabase.from('bonus_logs').insert(log).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('BonusLog', id, updates);
+      return updateWithFallback('bonus_logs', id, updates);
     },
   },
 
