@@ -439,6 +439,36 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       const result = await supabaseApi.rideRequests.create(data);
       console.log("[CreateRideDialog] Viaje creado exitosamente:", result);
       
+      // Assign driver after creating ride
+      if (result?.id) {
+        console.log("[CreateRideDialog] Iniciando asignación de conductor para viaje:", result.id);
+        try {
+          const assignResponse = await fetch("/api/assign-ride", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ride_id: result.id,
+              assignment_mode: form.assignment_mode
+            })
+          });
+
+          const assignData = await assignResponse.json();
+          if (assignData.success) {
+            console.log("[CreateRideDialog] ✅ Conductor asignado:", assignData.driver_id);
+            toast.success(`✅ Viaje asignado a conductor: ${assignData.driver_name || assignData.driver_id}`);
+          } else if (assignData.requiresManualAssignment) {
+            console.warn("[CreateRideDialog] ⚠️ No hay conductores disponibles - requiere asignación manual");
+            toast.warning("⚠️ No hay conductores disponibles - asignación manual requerida");
+          } else {
+            console.warn("[CreateRideDialog] Asignación incompleta:", assignData.message);
+          }
+        } catch (assignError) {
+          console.error("[CreateRideDialog] Error al asignar conductor:", assignError);
+          // Don't fail the entire operation - ride was created successfully
+          toast.warning("Viaje creado pero la asignación automática falló");
+        }
+      }
+      
       toast.success("✅ Viaje creado exitosamente");
       queryClient.invalidateQueries({ queryKey: ["rides"] });
       onOpenChange(false);

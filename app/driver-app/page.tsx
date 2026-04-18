@@ -1160,6 +1160,60 @@ export default function DriverApp() {
     };
   }, [driver?.id, queryClient]);
 
+  // ─── REAL-TIME incoming ride notifications channel ─────────────────────
+  useEffect(() => {
+    if (!driver?.id) return;
+    const driverId = driver.id;
+
+    const notificationChannel = supabase
+      .channel(`driver:${driverId}:incoming-rides`)
+      .on('broadcast', { event: 'new_ride_notification' }, (message: any) => {
+        const payload = message.payload;
+        console.log('[DRIVER-APP] Received incoming ride notification:', payload);
+
+        if (!payload?.ride_id) return;
+
+        // Refetch rides to ensure we have the latest data
+        queryClient.invalidateQueries({ queryKey: ['driverRides', driverId] });
+
+        // Show notification to driver
+        if (payload.notification_type === 'ride_assigned') {
+          showDriverNotification({
+            title: '🚗 ¡Servicio asignado!',
+            body: `Recoge a ${payload.ride_data?.passenger_name || 'Pasajero'} · ${payload.ride_data?.pickup_address || ''}`,
+            rideId: payload.ride_id,
+          });
+          startNewRideAlarm(payload.ride_id);
+          const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+          startSWRideTimer(
+            payload.ride_id,
+            assignTimeoutMs,
+            payload.ride_data?.passenger_name || 'Pasajero',
+            payload.ride_data?.pickup_address || ''
+          );
+        } else if (payload.notification_type === 'ride_offer') {
+          showDriverNotification({
+            title: '🚗 ¡Nuevo servicio disponible!',
+            body: `${payload.ride_data?.passenger_name || 'Pasajero'} · ${payload.ride_data?.pickup_address || ''}`,
+            rideId: payload.ride_id,
+          });
+          startNewRideAlarm(payload.ride_id);
+          const auctionTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+          startSWRideTimer(
+            payload.ride_id,
+            auctionTimeoutMs,
+            payload.ride_data?.passenger_name || 'Pasajero',
+            payload.ride_data?.pickup_address || ''
+          );
+        }
+      })
+      .subscribe();
+
+    return () => {
+      notificationChannel.unsubscribe();
+    };
+  }, [driver?.id, queryClient]);
+
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
     queryFn: async () => {
