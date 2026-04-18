@@ -67,8 +67,21 @@ export default function RedZones() {
     if (polygon.length < 3) { toast.error("Dibuja al menos 3 puntos"); return; }
     setSaving(true);
     const data = { ...editing, coordinates: polygon };
-    if (editing.id) await supabaseApi.redZones.update(editing.id, data);
-    else await supabaseApi.redZones.create(data);
+    if (editing.id) {
+      const res = await fetch(`/api/red-zones?id=${editing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to update zone');
+    } else {
+      const res = await fetch('/api/red-zones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create zone');
+    }
     queryClient.invalidateQueries({ queryKey: ["redZones"] });
     setSaving(false);
     setShowDialog(false);
@@ -77,13 +90,22 @@ export default function RedZones() {
 
   const handleDelete = async (z) => {
     if (!window.confirm(`¿Eliminar zona "${z.name}"?`)) return;
-    await supabaseApi.redZones.delete(z.id);
+    const res = await fetch(`/api/red-zones?id=${z.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to delete zone');
     queryClient.invalidateQueries({ queryKey: ["redZones"] });
     toast.success("Zona eliminada");
   };
 
   const toggleActive = async (z) => {
-    await supabaseApi.redZones.update(z.id, { is_active: !z.is_active });
+    const res = await fetch(`/api/red-zones?id=${z.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !z.is_active })
+    });
+    if (!res.ok) throw new Error('Failed to toggle zone');
     queryClient.invalidateQueries({ queryKey: ["redZones"] });
   };
 
