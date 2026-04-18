@@ -150,6 +150,40 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     setUploadingProof(false);
   };
 
+  const handleSOS = async () => {
+    if (!window.confirm("¿Enviar alerta SOS? El administrador será notificado inmediatamente.")) return;
+    
+    let lat = null, lon = null;
+    try {
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000, enableHighAccuracy: true })
+      );
+      lat = pos.coords.latitude;
+      lon = pos.coords.longitude;
+    } catch (err) {
+      console.log("Geolocation error (proceeding with alert):", err);
+    }
+
+    try {
+      await supabase.from("SosAlert").insert([{
+        driver_id: driver?.id,
+        driver_name: driver?.full_name,
+        ride_id: ride.id,
+        passenger_name: ride.passenger_name,
+        message: `🆘 SOS durante viaje ${ride.service_id || ""}`,
+        status: "active",
+        latitude: lat,
+        longitude: lon,
+        ride_status: ride.status,
+        created_at: new Date().toISOString(),
+      }]);
+      alert("✅ Alerta SOS enviada. El administrador ha sido notificado.");
+    } catch (err) {
+      console.error("Error sending SOS:", err);
+      alert("❌ Error al enviar alerta. Intenta de nuevo.");
+    }
+  };
+
   // ─── Full-screen layout for active rides ──────────────────────────────────
   if (isActive) {
     return (
@@ -285,7 +319,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                   </a>
                 )}
 
-                {/* Bottom row: cancel + chat + expand */}
+                {/* Bottom row: cancel + SOS + chat + expand */}
                 <div className="flex gap-2">
                   {allowCancel && ride.status === "assigned" && (
                     <button onClick={() => setSheetExpanded(true)}
@@ -293,6 +327,11 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                       Cancelar
                     </button>
                   )}
+                  <button onClick={handleSOS}
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white border border-red-700 transition-all min-h-[44px] select-none shadow-lg">
+                    <AlertTriangle className="w-4 h-4" />
+                    SOS
+                  </button>
                   <button onClick={() => setShowChat(v => !v)}
                     className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-xl border transition-colors min-h-[44px] select-none relative ${showChat ? "bg-blue-600 text-white border-blue-600" : "bg-blue-500/15 text-blue-300 border-blue-500/30"}`}>
                     <MessageCircle className="w-3.5 h-3.5" />
@@ -357,12 +396,20 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                 )}
 
                 {/* Help */}
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent("openDriverHelp", { detail: { ride_id: ride.id, passenger_name: ride.passenger_name, service_id: ride.service_id } }))}
-                  className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white/70 text-xs font-medium py-3 rounded-2xl border border-white/10 min-h-[44px] select-none">
-                  <HelpCircle className="w-4 h-4" />
-                  Reportar problema con este viaje
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSOS}
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-3 rounded-2xl border border-red-700 min-h-[44px] select-none shadow-lg">
+                    <AlertTriangle className="w-4 h-4" />
+                    🆘 SOS de Emergencia
+                  </button>
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("openDriverHelp", { detail: { ride_id: ride.id, passenger_name: ride.passenger_name, service_id: ride.service_id } }))}
+                    className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white/70 text-xs font-medium py-3 rounded-2xl border border-white/10 min-h-[44px] select-none">
+                    <HelpCircle className="w-4 h-4" />
+                    Reportar problema
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>
