@@ -48,7 +48,12 @@ function PriceCorrectionTab({ rides, company }) {
     const newPrice = parseFloat(corrections[ride.id]);
     if (isNaN(newPrice)) return;
     setSaving(p => ({ ...p, [ride.id]: true }));
-    await supabaseApi.rideRequests.update(ride.id, { company_price: newPrice });
+    const res = await fetch(`/api/ride-requests?id=${ride.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_price: newPrice })
+    });
+    if (!res.ok) throw new Error('Failed to update ride');
     setSaving(p => ({ ...p, [ride.id]: false }));
     setSaved(p => ({ ...p, [ride.id]: true }));
     setTimeout(() => setSaved(p => ({ ...p, [ride.id]: false })), 2500);
@@ -427,8 +432,21 @@ export default function Companies() {
       sub_accounts: editing.sub_accounts || [],
     };
     try {
-      if (editing.id) await supabaseApi.companies.update(editing.id, data);
-      else await supabaseApi.companies.create(data);
+      if (editing.id) {
+        const res = await fetch(`/api/companies?id=${editing.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to update company');
+      } else {
+        const res = await fetch('/api/companies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to create company');
+      }
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       setSaving(false);
       setShowForm(false);
@@ -442,7 +460,11 @@ export default function Companies() {
   const handleDelete = async (c) => {
     if (!window.confirm(`¿Eliminar empresa "${c.razon_social}"?`)) return;
     try {
-      await supabaseApi.companies.delete(c.id);
+      const res = await fetch(`/api/companies?id=${c.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Failed to delete company');
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       toast.success("Empresa eliminada");
     } catch (error: any) {

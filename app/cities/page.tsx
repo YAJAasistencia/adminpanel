@@ -110,10 +110,20 @@ export default function CitiesPage() {
       console.log("[Cities] Guardando ciudad:", data);
       
       if (editCity.id) {
-        await supabaseApi.cities.update(editCity.id, data);
+        const res = await fetch(`/api/cities?id=${editCity.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to update city');
         toast.success("✅ Ciudad actualizada");
       } else {
-        await supabaseApi.cities.create(data);
+        const res = await fetch('/api/cities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to create city');
         toast.success("✅ Ciudad creada");
       }
       queryClient.invalidateQueries({ queryKey: ["cities"] });
@@ -148,7 +158,11 @@ export default function CitiesPage() {
     if (!window.confirm(`¿Eliminar ciudad "${city.name}"?`)) return;
 
     try {
-      await supabaseApi.cities.delete(city.id);
+      const res = await fetch(`/api/cities?id=${city.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Failed to delete city');
       queryClient.invalidateQueries({ queryKey: ["cities"] });
       toast.success("Ciudad eliminada");
     } catch (error: any) {
@@ -159,7 +173,12 @@ export default function CitiesPage() {
 
   const handleToggle = async (city: any) => {
     try {
-      await supabaseApi.cities.update(city.id, { is_active: !city.is_active });
+      const res = await fetch(`/api/cities?id=${city.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !city.is_active })
+      });
+      if (!res.ok) throw new Error('Failed to toggle city');
       queryClient.invalidateQueries({ queryKey: ["cities"] });
     } catch (error) {
       toast.error("Error al actualizar ciudad");

@@ -139,8 +139,21 @@ function GeoZonesContent() {
       tarifa_fija: editing.tarifa_fija ? parseFloat(editing.tarifa_fija) : undefined,
       prioridad: parseInt(editing.prioridad) || 1,
     };
-    if (editing.id) await supabaseApi.geoZones.update(editing.id, data);
-    else await supabaseApi.geoZones.create(data);
+    if (editing.id) {
+      const res = await fetch(`/api/geo-zones?id=${editing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to update zone');
+    } else {
+      const res = await fetch('/api/geo-zones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create zone');
+    }
     queryClient.invalidateQueries({ queryKey: ["geoZones"] });
     setSaving(false);
     setShowDialog(false);
@@ -149,13 +162,22 @@ function GeoZonesContent() {
 
   const handleDelete = async (z) => {
     if (!window.confirm(`¿Eliminar zona "${z.name}"?`)) return;
-    await supabaseApi.geoZones.delete(z.id);
+    const res = await fetch(`/api/geo-zones?id=${z.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to delete zone');
     queryClient.invalidateQueries({ queryKey: ["geoZones"] });
     toast.success("Zona eliminada");
   };
 
   const toggleActive = async (z) => {
-    await supabaseApi.geoZones.update(z.id, { is_active: !z.is_active });
+    const res = await fetch(`/api/geo-zones?id=${z.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !z.is_active })
+    });
+    if (!res.ok) throw new Error('Failed to toggle zone');
     queryClient.invalidateQueries({ queryKey: ["geoZones"] });
   };
 
