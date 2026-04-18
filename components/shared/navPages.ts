@@ -24,6 +24,7 @@ import {
   Megaphone,
   Lock,
   Phone,
+  AlertTriangle,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -46,6 +47,7 @@ export const ALL_PAGES: NavPage[] = [
   { name: "Tickets de soporte", page: "SupportTickets", icon: MessageSquare },
   { name: "Notificaciones", page: "Notificaciones", icon: BellRing },
   { name: "Anuncios", page: "Anuncios", icon: Megaphone },
+  { page: "RejectionAnalysis", name: "Análisis de rechazos", icon: AlertTriangle },
   { page: "DriverEarnings", name: "Ganancias conductores", icon: TrendingUp },
   { page: "Earnings", name: "Ganancias plataforma", icon: TrendingUp },
   { page: "CashCutoff", name: "Corte de caja", icon: Scissors },
@@ -70,7 +72,7 @@ export const ALL_PAGES: NavPage[] = [
 export const DEFAULT_NAV_CONFIG = [
   {
     label: "Operaciones",
-    pages: ["Dashboard", "Analytics", "LiveDrivers", "Drivers", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "Notificaciones", "Anuncios"],
+    pages: ["Dashboard", "Analytics", "LiveDrivers", "Drivers", "RejectionAnalysis", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "Notificaciones", "Anuncios"],
   },
   {
     label: "Finanzas",

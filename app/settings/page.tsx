@@ -101,6 +101,13 @@ const defaults = {
   search_phase_seconds: 5,
   cutoff_interval_days: 7,
   
+  // Control de rechazos
+  rejection_rate_warning_threshold: 60,
+  rejection_count_threshold: 5,
+  soft_block_low_acceptance_rate_enabled: true,
+  low_acceptance_rate_threshold: 60,
+  low_acceptance_rate_offer_reduction_pct: 90,
+  
   // Soporte
   support_whatsapp_number: "",
   support_whatsapp_message: "",
@@ -275,6 +282,7 @@ export default function SettingsPage() {
             <TabsTrigger value="payment">💳 Pagos</TabsTrigger>
             <TabsTrigger value="security">🔒 Seguridad</TabsTrigger>
             <TabsTrigger value="alerts">🔔 Alertas</TabsTrigger>
+            <TabsTrigger value="rejection">⛔ Rechazos</TabsTrigger>
             <TabsTrigger value="promos">Promociones</TabsTrigger>
             <TabsTrigger value="maps">Mapas</TabsTrigger>
             <TabsTrigger value="driverdocs">Docs Conductores</TabsTrigger>
@@ -870,6 +878,50 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-400 mt-0.5">El conductor verá el teléfono del pasajero</p>
                   </div>
                   <Switch checked={!!form.show_passenger_phone_to_driver} onCheckedChange={v => update("show_passenger_phone_to_driver", v)} />
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rejection" className="space-y-5 mt-5">
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-red-50 text-red-600"><AlertTriangle className="w-5 h-5" /></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Control de Rechazos de Conductores</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Umbrales y penalizaciones por baja aceptación de viajes</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <Label>Umbral de tasa de rechazo (%)</Label>
+                  <Input type="number" min={0} max={100} value={form.rejection_rate_warning_threshold ?? 60} onChange={e => update("rejection_rate_warning_threshold", parseInt(e.target.value) || 60)} />
+                  <p className="text-xs text-slate-500 mt-1">Porcentaje de rechazo para generar alerta</p>
+                </div>
+                <div>
+                  <Label>Umbral de rechazos acumulados</Label>
+                  <Input type="number" min={1} value={form.rejection_count_threshold ?? 5} onChange={e => update("rejection_count_threshold", parseInt(e.target.value) || 5)} />
+                  <p className="text-xs text-slate-500 mt-1">Número de rechazos antes de penalizar</p>
+                </div>
+                <div>
+                  <Label>Umbral de tasa de aceptación baja (%)</Label>
+                  <Input type="number" min={0} max={100} value={form.low_acceptance_rate_threshold ?? 60} onChange={e => update("low_acceptance_rate_threshold", parseInt(e.target.value) || 60)} />
+                  <p className="text-xs text-slate-500 mt-1">Si tasa de aceptación es menor, se aplica penalización suave</p>
+                </div>
+                <div>
+                  <Label>Reducción de oferta (%)</Label>
+                  <Input type="number" min={0} max={100} value={form.low_acceptance_rate_offer_reduction_pct ?? 90} onChange={e => update("low_acceptance_rate_offer_reduction_pct", parseInt(e.target.value) || 90)} />
+                  <p className="text-xs text-slate-500 mt-1">Probabilidad de recibir oferta → 90% = 10% menos probable</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-5 mt-5">
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100">
+                  <div>
+                    <p className="font-medium text-slate-800">Activar penalizaciones suaves</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Reduce oferta a conductores con baja aceptación</p>
+                  </div>
+                  <Switch checked={!!form.soft_block_low_acceptance_rate_enabled} onCheckedChange={v => update("soft_block_low_acceptance_rate_enabled", v)} />
                 </div>
               </div>
             </Card>
