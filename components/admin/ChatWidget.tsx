@@ -16,7 +16,6 @@ interface ChatMessage {
   sender_role: "admin" | "driver" | "passenger";
   sender_name?: string;
   message: string;
-  created_at: string;
 }
 
 export default function ChatWidget({ ride }: { ride: any }) {

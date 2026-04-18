@@ -253,7 +253,7 @@ export default function BonosPage() {
 
       const completedRides = rides.filter(r => r.status === "completed");
       const periodRides = completedRides.filter(r => {
-        const d = r.completed_at || r.created_at;
+        const d = r.completed_at || r.requested_at;
         if (!d) return false;
         const dt = new Date(d);
         return dt >= periodStart && dt <= periodEnd;
@@ -289,7 +289,7 @@ export default function BonosPage() {
           if (achieved >= rule.condition_value) {
             created.push(logMutation.mutateAsync({
               driver_id: driver.id,
-              driver_name: driver.full_name || driver.name,
+              driver_name: driver.full_name || "Desconocido",
               rule_id: rule.id,
               rule_name: rule.name,
               period_label: periodLabel,

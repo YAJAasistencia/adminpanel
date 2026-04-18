@@ -37,7 +37,7 @@ function PassengerProfileModal({ passenger, onClose }) {
 
   const now = new Date();
   const filteredRides = rides.filter(r => {
-    const rDate = new Date(r.requested_at || r.created_at);
+    const rDate = new Date(r.requested_at);
     if (dateFilter === "7d" && (now - rDate) > 7 * 86400000) return false;
     if (dateFilter === "30d" && (now - rDate) > 30 * 86400000) return false;
     if (dateFilter === "90d" && (now - rDate) > 90 * 86400000) return false;

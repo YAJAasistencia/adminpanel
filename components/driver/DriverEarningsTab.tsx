@@ -7,7 +7,7 @@ import DriverWeeklyEarnings from "@/components/driver/DriverWeeklyEarnings";
 
 export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
   const completedOnly = rides.filter(r => r.status === "completed");
-  const thisMonth = completedOnly.filter(r => moment(r.created_at).isSame(moment(), "month"));
+  const thisMonth = completedOnly.filter(r => moment(r.requested_at).isSame(moment(), "month"));
   const monthEarnings = thisMonth.reduce((s, r) => s + (r.driver_earnings || r.final_price || 0), 0);
 
   // Today's earnings — timezone-aware
@@ -90,7 +90,7 @@ export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
                   {isCancelled && ride.cancellation_reason && (
                     <p className="text-xs text-red-400 mt-0.5 truncate">Motivo: {ride.cancellation_reason}</p>
                   )}
-                  <p className="text-xs text-slate-300 mt-0.5">{formatCDMX(ride.requested_at || ride.created_at, "shortdatetime")}</p>
+                  <p className="text-xs text-slate-300 mt-0.5">{formatCDMX(ride.requested_at, "shortdatetime")}</p>
                 </div>
                 <div className="text-right flex-shrink-0 ml-3">
                   {netEarnings > 0 ? (

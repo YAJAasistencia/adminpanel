@@ -29,19 +29,12 @@ interface Ride {
   service_type_id?: string;
   city_id?: string;
   assignment_mode?: string;
-  created_at?: string;
-  created_date?: string;
-  updated_at?: string;
-  updated_date?: string;
   scheduled_time?: string;
   awaiting_payment_confirmation?: boolean;
   payment_status?: string;
   auction_driver_ids?: string[];
   auction_expires_at?: string;
-  _excluded_driver_ids?: string[];
-  manual_assignment_requested_at?: string;
   en_route_at?: string;
-  driver_accepted_at?: string;
   cancellation_reason?: string;
   [key: string]: any;
 }

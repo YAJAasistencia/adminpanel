@@ -44,13 +44,11 @@ export async function POST(request: NextRequest) {
     const { data: notification, error: notificationError } = await supabase
       .from('driver_notificaciones')
       .insert({
-        driver_id,
-        ride_id,
-        type: notification_type,
-        message,
-        data: ride_data || {},
-        read: false,
-        created_at: new Date().toISOString()
+        title: `Viaje ${notification_type === 'ride_offer' ? 'disponible' : notification_type === 'ride_assigned' ? 'asignado' : 'actualizado'}`,
+        body: message || `Tienes una notificación sobre el viaje ${ride_id}`,
+        driver_ids: [driver_id],
+        tag: notification_type,
+        sent_by: 'system',
       })
       .select()
       .single();

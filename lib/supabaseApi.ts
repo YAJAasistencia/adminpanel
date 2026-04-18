@@ -391,7 +391,7 @@ export const supabaseApi = {
   // ─── Companies ────────────────────────────────────────────────────────────
   companies: {
     list: async () => {
-      const { data, error } = await supabase.from('companies').select('*').order('name');
+      const { data, error } = await supabase.from('companies').select('*').order('razon_social');
       if (error) throw error;
       return data || [];
     },

@@ -39,7 +39,7 @@ async function _downloadRideTicket(ride, driver) {
   doc.setFontSize(18); doc.setFont(undefined, "bold"); line("TICKET DE VIAJE");
   doc.setFontSize(10); doc.setFont(undefined, "normal"); y += 2;
   line(`Folio: ${ride.service_id || ride.id}`);
-  line(`Fecha: ${new Date(ride.requested_at || ride.created_at).toLocaleString("es-MX")}`);
+  line(`Fecha: ${new Date(ride.requested_at).toLocaleString("es-MX")}`);
   y += 4; doc.setFont(undefined, "bold"); line("CONDUCTOR"); doc.setFont(undefined, "normal");
   line(`Nombre: ${driver?.full_name || "-"}`);
   line(`Vehículo: ${driver?.vehicle_brand || ""} ${driver?.vehicle_model || ""} ${driver?.license_plate || ""}`);
@@ -141,7 +141,7 @@ function RideDetailModal({ ride: initialRide, driver, onClose }) {
             <div className="flex justify-between text-sm"><span className="text-slate-500">Servicio</span><span className="font-semibold text-slate-900">{ride.service_type_name || "—"}</span></div>
             <div className="flex justify-between text-sm"><span className="text-slate-500">Pago</span><span className="font-semibold text-slate-900 capitalize">{ride.payment_method || "efectivo"}</span></div>
             {ride.distance_km && <div className="flex justify-between text-sm"><span className="text-slate-500">Distancia</span><span className="font-semibold text-slate-900">{ride.distance_km} km</span></div>}
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Fecha</span><span className="font-semibold text-slate-900">{formatCDMX(ride.requested_at || ride.created_at, "shortdatetime")}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Fecha</span><span className="font-semibold text-slate-900">{formatCDMX(ride.requested_at, "shortdatetime")}</span></div>
           </div>
           <div className="space-y-2">
             <div className="flex items-start gap-3 p-3 bg-emerald-50 rounded-xl">
@@ -250,7 +250,7 @@ export default function RideHistoryModal({ rides, driver, onClose }) {
                       </div>
                       <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1 truncate"><MapPin className="w-3 h-3 flex-shrink-0" />{ride.pickup_address}</p>
                       {ride.dropoff_address && <p className="text-xs text-slate-400 truncate pl-4">→ {ride.dropoff_address}</p>}
-                      <p className="text-xs text-slate-300 mt-1 flex items-center gap-1"><Clock className="w-3 h-3" />{formatCDMX(ride.requested_at || ride.created_at, "shortdatetime")}</p>
+                      <p className="text-xs text-slate-300 mt-1 flex items-center gap-1"><Clock className="w-3 h-3" />{formatCDMX(ride.requested_at, "shortdatetime")}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       {earnings > 0 ? <span className={`font-bold text-base ${isCancelled ? "text-slate-400" : "text-emerald-600"}`}>${earnings.toFixed(0)}</span> : <span className="text-xs text-slate-300">$0</span>}

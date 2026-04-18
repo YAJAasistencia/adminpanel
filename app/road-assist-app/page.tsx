@@ -101,7 +101,7 @@ function RACompletedRideCard({ ride, onReportProblem, onViewDetail }) {
     doc.setFontSize(18); doc.setFont(undefined, "bold"); line("TICKET DE SERVICIO");
     doc.setFontSize(10); doc.setFont(undefined, "normal"); y += 2;
     line(`Folio: #${ride.service_id || ride.id?.slice(-6)}`);
-    line(`Fecha: ${new Date(ride.requested_at || ride.created_at).toLocaleString("es-MX")}`);
+    line(`Fecha: ${new Date(ride.requested_at).toLocaleString("es-MX")}`);
     line(`Estado: ${label}`);
     y += 4; doc.setFont(undefined, "bold"); line("SERVICIO"); doc.setFont(undefined, "normal");
     line(`Tipo: ${ride.service_type_name || "—"}`);
@@ -127,7 +127,7 @@ function RACompletedRideCard({ ride, onReportProblem, onViewDetail }) {
             </div>
             <p className="text-white/40 text-xs truncate">{ride.pickup_address}</p>
             {ride.dropoff_address && <p className="text-white/30 text-xs truncate">→ {ride.dropoff_address}</p>}
-            <p className="text-white/30 text-xs mt-1">{formatCDMX(ride.requested_at || ride.created_at, "shortdatetime")}</p>
+            <p className="text-white/30 text-xs mt-1">{formatCDMX(ride.requested_at, "shortdatetime")}</p>
             {isCancelled && ride.cancellation_reason && (
               <p className="text-red-400/70 text-xs mt-1">Motivo: {ride.cancellation_reason}</p>
             )}
@@ -179,7 +179,7 @@ function RideDetailModal({ ride, onClose }) {
     doc.setFontSize(18); doc.setFont(undefined, "bold"); line("TICKET DE SERVICIO");
     doc.setFontSize(10); doc.setFont(undefined, "normal"); y += 2;
     line(`Folio: #${ride.service_id || ride.id?.slice(-6)}`);
-    line(`Fecha: ${new Date(ride.requested_at || ride.created_at).toLocaleString("es-MX")}`);
+    line(`Fecha: ${new Date(ride.requested_at).toLocaleString("es-MX")}`);
     line(`Estado: ${label}`);
     y += 4; doc.setFont(undefined, "bold"); line("SERVICIO"); doc.setFont(undefined, "normal");
     line(`Tipo: ${ride.service_type_name || "—"}`);
@@ -440,7 +440,7 @@ export default function RoadAssistApp() {
                       <p className="text-sm">Sin servicios solicitados aún</p>
                     </div>
                   ) : (
-                    [...allRides].sort((a, b) => new Date(b.requested_at || b.created_at) - new Date(a.requested_at || a.created_at)).map(r => (
+                    [...allRides].sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at)).map(r => (
                       <RACompletedRideCard key={r.id} ride={r}
                         onReportProblem={(ride) => setShowTickets({ rideContext: { ride_id: ride.id, service_id: ride.service_id } })}
                         onViewDetail={(ride) => setDetailRide(ride)}

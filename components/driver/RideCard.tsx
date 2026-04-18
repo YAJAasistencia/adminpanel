@@ -186,13 +186,10 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
         driver_id: driver?.id,
         driver_name: driver?.full_name,
         ride_id: ride.id,
-        passenger_name: ride.passenger_name,
         message: `🆘 SOS durante viaje ${ride.service_id || ""}`,
         status: "active",
         latitude: lat,
         longitude: lon,
-        ride_status: ride.status,
-        created_at: new Date().toISOString(),
       }]);
       alert("✅ Alerta SOS enviada. El administrador ha sido notificado.");
     } catch (err) {

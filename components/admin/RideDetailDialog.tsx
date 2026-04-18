@@ -64,7 +64,7 @@ async function generateTicketPDF(ride, type, companyOverridePrice) {
   doc.text(title, 105, y, { align: "center" }); nl(7);
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
   doc.text(`Folio: ${ride.service_id || ride.id?.slice(-8).toUpperCase()}`, 105, y, { align: "center" }); nl(6);
-  const fechaStr = formatCDMX(ride.requested_at || ride.created_at, "datetime");
+  const fechaStr = formatCDMX(ride.requested_at, "datetime");
   doc.text(`Fecha: ${fechaStr}`, 105, y, { align: "center" }); nl(4);
   line();
 
@@ -354,7 +354,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           {/* Proceso del servicio */}
           {(() => {
             // Hora de solicitud: requested_at es guardado como hora local (no UTC real), usar formatCDMX directo
-            const solicitudTs = ride.requested_at || ride.created_at;
+            const solicitudTs = ride.requested_at;
             // Los demás timestamps (en_route_at, in_progress_at, completed_at) son UTC reales → formatCDMX correcto
             const steps = [
               { label: "Solicitud", ts: solicitudTs, icon: "📨" },

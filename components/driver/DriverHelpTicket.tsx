@@ -242,7 +242,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
                           <p className="text-xs text-emerald-800">{ticket.admin_response}</p>
                         </div>
                       )}
-                      <p className="text-xs text-slate-400">{moment(ticket.created_at).fromNow()}</p>
+                      <p className="text-xs text-slate-400">#{ticket.ticket_number || ticket.id?.slice(-6)}</p>
                     </div>
                   );
                 })}
