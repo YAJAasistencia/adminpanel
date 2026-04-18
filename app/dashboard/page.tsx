@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,7 @@ export default function Dashboard() {
     queryKey: ["geoZones"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/geo-zones');
+        const res = await fetchWithAuth('/api/geo-zones');
         if (!res.ok) throw new Error('Failed to fetch geo zones');
         return await res.json();
       } catch { return []; }
@@ -324,7 +325,7 @@ export default function Dashboard() {
       updates.rating_window_expires_at = new Date(Date.now() + ratingWindowMinutes * 60 * 1000).toISOString();
     }
     try {
-      const res = await fetch(`/api/ride-requests?id=${ride.id}`, {
+      const res = await fetchWithAuth(`/api/ride-requests?id=${ride.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -347,7 +348,7 @@ export default function Dashboard() {
             driverUpdates.total_rides = (driver?.total_rides || 0) + 1;
             driverUpdates.total_earnings = (driver?.total_earnings || 0) + (updates.driver_earnings || 0);
           }
-          const res = await fetch(`/api/drivers?id=${ride.driver_id}`, {
+          const res = await fetchWithAuth(`/api/drivers?id=${ride.driver_id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(driverUpdates)
@@ -891,7 +892,7 @@ export default function Dashboard() {
           onDelete={async (ride: any) => {
             if (!window.confirm(`¿Eliminar el viaje de ${ride.passenger_name}? Esta acción no se puede deshacer.`)) return;
             try {
-              const res = await fetch(`/api/ride-requests?id=${ride.id}`, {
+              const res = await fetchWithAuth(`/api/ride-requests?id=${ride.id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' }
               });

@@ -11,6 +11,7 @@ export interface AdminSession {
   role?: string;
   allowed_pages?: string[];
   is_active?: boolean;
+  token?: string; // JWT token for authenticated requests
   [key: string]: any;
 }
 
@@ -74,6 +75,7 @@ export function useAdminSession() {
           role: user.role,
           allowed_pages: user.allowed_pages || [],
           is_active: user.is_active,
+          token: stored.token, // Preserve JWT token from localStorage
         };
 
         if (typeof window !== "undefined") {
@@ -121,4 +123,10 @@ export function useAdminSession() {
       }
     },
   };
+}
+
+// Helper function to get JWT token from session
+export function getStoredToken(): string | null {
+  const session = getStoredSession();
+  return session?.token || null;
 }

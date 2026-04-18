@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +49,7 @@ function PriceCorrectionTab({ rides, company }) {
     const newPrice = parseFloat(corrections[ride.id]);
     if (isNaN(newPrice)) return;
     setSaving(p => ({ ...p, [ride.id]: true }));
-    const res = await fetch(`/api/ride-requests?id=${ride.id}`, {
+    const res = await fetchWithAuth(`/api/ride-requests?id=${ride.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_price: newPrice })
@@ -351,7 +352,7 @@ export default function Companies() {
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
     queryFn: async () => {
-      const res = await fetch('/api/geo-zones');
+      const res = await fetchWithAuth('/api/geo-zones');
       if (!res.ok) throw new Error('Failed to fetch geo zones');
       return res.json();
     },
@@ -369,7 +370,7 @@ export default function Companies() {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const res = await fetch('/api/companies');
+      const res = await fetchWithAuth('/api/companies');
       if (!res.ok) throw new Error('Failed to fetch companies');
       return res.json();
     },
@@ -441,14 +442,14 @@ export default function Companies() {
     };
     try {
       if (editing.id) {
-        const res = await fetch(`/api/companies?id=${editing.id}`, {
+        const res = await fetchWithAuth(`/api/companies?id=${editing.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
         if (!res.ok) throw new Error('Failed to update company');
       } else {
-        const res = await fetch('/api/companies', {
+        const res = await fetchWithAuth('/api/companies', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -468,7 +469,7 @@ export default function Companies() {
   const handleDelete = async (c) => {
     if (!window.confirm(`¿Eliminar empresa "${c.razon_social}"?`)) return;
     try {
-      const res = await fetch(`/api/companies?id=${c.id}`, {
+      const res = await fetchWithAuth(`/api/companies?id=${c.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });

@@ -100,14 +100,14 @@ export default function AdminLoginPage() {
         return;
       }
 
-      const { user } = result;
+      const { user, token } = result;
 
       console.log('[LOGIN] ✅ Authentication successful, storing session...');
 
       // Login exitoso: limpiar contador de intentos
       resetAttempts();
 
-      // Guardar sesión de admin
+      // Guardar sesión de admin CON JWT token
       localStorage.setItem(
         ADMIN_SESSION_KEY,
         JSON.stringify({
@@ -116,6 +116,7 @@ export default function AdminLoginPage() {
           name: user.name,
           role: user.role,
           allowed_pages: [],
+          token: token || '', // Store JWT for authenticated requests
         })
       );
 

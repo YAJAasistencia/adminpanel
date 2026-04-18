@@ -1,13 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcryptjs from 'bcryptjs';
+import { SignJWT } from 'jose';
 
 /**
  * POST /api/login
  * 
  * Admin login endpoint - Backend handles Supabase auth to bypass RLS
  * This endpoint uses SERVICE_ROLE_KEY which has full access regardless of RLS
+ * Returns a JWT token for authenticated requests
  */
+
+// Helper: Generate JWT token
+async function generateToken(adminUser: any): Promise<string> {
+  try {
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    if (!secret) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
+
+    const now = Math.floor(Date.now() / 1000);
+    const exp = now + 86400; // 24 hours
+
+    const token = await new SignJWT({
+      iss: 'supabase',
+      ref: 'dsruuvvbeudbkdpevgwd', // Supabase project ref
+      role: 'service_role', // Admin role
+      aud: 'authenticated',
+      user_id: adminUser.id,
+      email: adminUser.email,
+      iat: now,
+      exp: exp,
+    })
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .sign(new TextEncoder().encode(secret));
+
+    console.log('[API LOGIN] ✅ JWT token generated, expires at:', new Date(exp * 1000).toISOString());
+    return token;
+  } catch (error) {
+    console.error('[API LOGIN] ❌ Token generation failed:', error);
+    throw error;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -121,7 +153,16 @@ export async function POST(request: NextRequest) {
 
     console.log('[API LOGIN] ✅ Authentication successful');
 
-    // Return user data (client will store in localStorage)
+    // Generate JWT token for authenticated requests
+    let token = '';
+    try {
+      token = await generateToken(adminUser);
+    } catch (tokenError) {
+      console.warn('[API LOGIN] ⚠️ Token generation failed:', tokenError);
+      // Continue without token (non-critical)
+    }
+
+    // Return user data and token
     return NextResponse.json({
       success: true,
       user: {
@@ -130,6 +171,7 @@ export async function POST(request: NextRequest) {
         name: adminUser.name || adminUser.email,
         role: adminUser.role || 'operator',
       },
+      token: token, // JWT token for authenticated requests
     });
   } catch (error: any) {
     console.error('[API LOGIN] Exception:', error);

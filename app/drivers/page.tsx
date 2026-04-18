@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -108,7 +109,7 @@ export default function DriversPage() {
 
   const handleApprove = async (driver: any) => {
     try {
-      const res = await fetch(`/api/drivers?id=${driver.id}`, {
+      const res = await fetchWithAuth(`/api/drivers?id=${driver.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approval_status: "approved" })
@@ -123,7 +124,7 @@ export default function DriversPage() {
 
   const handleReject = async (driver: any) => {
     try {
-      const res = await fetch(`/api/drivers?id=${driver.id}`, {
+      const res = await fetchWithAuth(`/api/drivers?id=${driver.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approval_status: "rejected" })
@@ -139,7 +140,7 @@ export default function DriversPage() {
   const handleDelete = async (driver: any) => {
     if (!window.confirm(`¿Eliminar a ${driver.full_name}? Esta acción es irreversible.`)) return;
     try {
-      const res = await fetch(`/api/drivers?id=${driver.id}`, {
+      const res = await fetchWithAuth(`/api/drivers?id=${driver.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
