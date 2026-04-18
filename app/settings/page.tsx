@@ -71,6 +71,8 @@ const defaults = {
   auction_secondary_radius_km: 8,
   auction_timeout_seconds: 35,
   auction_max_drivers: 5,
+  auction_max_retries: 3,
+  max_concurrent_rides: 1,
   
   // ETA Parameters
   eta_speed_kmh: 30,
@@ -479,6 +481,16 @@ export default function SettingsPage() {
                       <Label>Máximo conductores notificados</Label>
                       <Input type="number" min={1} value={form.auction_max_drivers ?? 5} onChange={e => update("auction_max_drivers", parseFloat(e.target.value) || 5)} />
                       <p className="text-xs text-slate-500 mt-1">Cuántos se notificarán simultáneamente</p>
+                    </div>
+                    <div>
+                      <Label>Máximo viajes simultáneos por conductor</Label>
+                      <Input type="number" min={1} max={5} value={form.max_concurrent_rides ?? 1} onChange={e => update("max_concurrent_rides", parseInt(e.target.value) || 1)} />
+                      <p className="text-xs text-slate-500 mt-1">Límite de viajes activos asignados</p>
+                    </div>
+                    <div>
+                      <Label>Máximo reintentos de subasta</Label>
+                      <Input type="number" min={1} max={10} value={form.auction_max_retries ?? 3} onChange={e => update("auction_max_retries", parseInt(e.target.value) || 3)} />
+                      <p className="text-xs text-slate-500 mt-1">Reintentos al rechazar un conductor</p>
                     </div>
                   </div>
                 )}

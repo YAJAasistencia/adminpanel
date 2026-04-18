@@ -137,17 +137,24 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     radiusKm: number | null = null,
   ) => {
     const localCities = citiesRef.current;
+    const maxConcurrentRides = settingsRef.current?.max_concurrent_rides ?? 1;
 
-    const busyRideDriverIds = new Set(
-      allRides
-        .filter((r) => ["en_route", "arrived", "in_progress", "admin_approved"].includes(r.status || "") && r.driver_id)
-        .map((r) => r.driver_id as string)
-    );
+    // Count active rides per driver instead of just checking if they have any
+    const driverActiveRideCount = new Map<string, number>();
+    allRides
+      .filter((r) => ["en_route", "arrived", "in_progress", "admin_approved", "assigned"].includes(r.status || "") && r.driver_id)
+      .forEach((r) => {
+        const count = driverActiveRideCount.get(r.driver_id!) || 0;
+        driverActiveRideCount.set(r.driver_id!, count + 1);
+      });
 
     return allDrivers.filter((driver) => {
       if (driver.status !== "available") return false;
       if (driver.approval_status !== "approved") return false;
-      if (busyRideDriverIds.has(driver.id)) return false;
+      
+      // Check if driver has reached max concurrent rides
+      const activeRideCount = driverActiveRideCount.get(driver.id) || 0;
+      if (activeRideCount >= maxConcurrentRides) return false;
 
       if (ride.service_type_name) {
         if (!driver.service_type_names?.includes(ride.service_type_name)) return false;
