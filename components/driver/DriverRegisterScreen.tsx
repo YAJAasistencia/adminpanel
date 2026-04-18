@@ -126,7 +126,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("ServiceType").select("*");
+        const { data, error } = await supabase.from("service_types").select("*");
         if (error) throw error;
         return data || [];
       } catch (err) {

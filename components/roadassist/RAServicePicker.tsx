@@ -123,7 +123,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: async () => {
-      const { data } = await supabase.from("ServiceType").select("*");
+      const { data } = await supabase.from("service_types").select("*");
       return data || [];
     },
   });

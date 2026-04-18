@@ -4,7 +4,7 @@ import * as bcryptjs from 'bcryptjs';
 // ─── Supabase API Functions ──────────────────────────────────────────────────
 // Tabla → nombre real en Supabase
 // PascalCase (datos de Base44): Driver, RideRequest, City,
-//   ServiceType, Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
+//   Company, Invoice, BonusRule, BonusLog, GeoZone, RedZone,
 //   SosAlert, SupportTicket, SurveyResponse, DriverNotification, AdminUser, AppSettings
 // snake_case (sin equivalente PascalCase): announcements, cancellation_policies,
 //   cash_cutoffs, chat_messages, liquidations, notifications, surveys
@@ -329,23 +329,23 @@ export const supabaseApi = {
   // ─── Service Types ────────────────────────────────────────────────────────
   serviceTypes: {
     list: async () => {
-      const { data, error } = await supabase.from('ServiceType').select('*').order('name');
+      const { data, error } = await supabase.from('service_types').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('ServiceType').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('service_types').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (serviceType: any) => {
-      return createWithFallback('ServiceType', serviceType);
+      return createWithFallback('service_types', serviceType);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('ServiceType', id, updates);
+      return updateWithFallback('service_types', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('ServiceType').delete().eq('id', id);
+      const { error } = await supabase.from('service_types').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
