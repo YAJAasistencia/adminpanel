@@ -123,7 +123,7 @@ export const supabaseApi = {
   // ─── Ride Requests ────────────────────────────────────────────────────────
   rideRequests: {
     list: async (filters?: any) => {
-      let query = supabase.from('RideRequest').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('ride_requests').select('*').order('created_at', { ascending: false });
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null) query = (query as any).eq(key, value);
@@ -136,23 +136,23 @@ export const supabaseApi = {
     // Optimized version for dashboard - only essential fields
     listForDashboard: async () => {
       const fields = 'id,status,created_at,driver_id,passenger_id,start_location,end_location,estimated_fare,final_fare,rating,created_at';
-      const { data, error } = await supabase.from('RideRequest').select(fields).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('ride_requests').select(fields).order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     get: async (id: string) => {
-      const { data, error } = await supabase.from('RideRequest').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('ride_requests').select('*').eq('id', id).single();
       if (error) throw error;
       return data;
     },
     create: async (rideRequest: any) => {
-      return createWithFallback('RideRequest', rideRequest);
+      return createWithFallback('ride_requests', rideRequest);
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('RideRequest', id, updates);
+      return updateWithFallback('ride_requests', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('RideRequest').delete().eq('id', id);
+      const { error } = await supabase.from('ride_requests').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },

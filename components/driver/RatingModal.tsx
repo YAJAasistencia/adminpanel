@@ -35,7 +35,7 @@ export default function RatingModal({ ride, raterRole, targetName, targetPhoto, 
       }
       
       if (isDriver && ride.passenger_user_id) {
-        const { data: allRides, error } = await supabase.from("RideRequest").select("*").eq("passenger_user_id", ride.passenger_user_id);
+        const { data: allRides, error } = await supabase.from("ride_requests").select("*").eq("passenger_user_id", ride.passenger_user_id);
         if (!error && allRides) {
           const rated = allRides.filter(r => r.driver_rating_for_passenger > 0);
           const newRated = [...rated.filter(r => r.id !== ride.id), { driver_rating_for_passenger: stars }];

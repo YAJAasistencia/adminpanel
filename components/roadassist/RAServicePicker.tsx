@@ -461,7 +461,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       // Store transfer reference if generated
       transfer_reference: (paymentMethod === "transfer" || pmConfig?.generates_reference) && transferRefGenerated ? transferRefGenerated.ref : undefined,
     };
-    await supabase.from("RideRequest").insert([{ ...rideData, requested_at: nowCDMX() }]);
+    await supabase.from("ride_requests").insert([{ ...rideData, requested_at: nowCDMX() }]);
     setSubmitting(false);
     onRequestCreated();
   };

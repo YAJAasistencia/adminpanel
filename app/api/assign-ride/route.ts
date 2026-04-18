@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch the ride
     const { data: ride, error: rideError } = await supabase
-      .from('RideRequest')
+      .from('ride_requests')
       .select('*')
       .eq('id', ride_id)
       .single();
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           
           // Update to auction status if not already
           await supabase
-            .from('RideRequest')
+            .from('ride_requests')
             .update({ status: 'auction' })
             .eq('id', ride_id);
 
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 
           // Update ride with driver assignment
           const { error: updateError } = await supabase
-            .from('RideRequest')
+            .from('ride_requests')
             .update({
               driver_id: driver.id,
               status: 'assigned'
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
 
         // Update ride with driver assignment
         const { error: updateError } = await supabase
-          .from('RideRequest')
+          .from('ride_requests')
           .update({
             driver_id: driver.id,
             status: 'assigned'

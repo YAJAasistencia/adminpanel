@@ -171,7 +171,7 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
     // Also poll every 5s as fallback
     pollRef.current = setInterval(async () => {
       try {
-        const { data } = await supabase.from("RideRequest").select("*").eq("id", ride.id);
+        const { data } = await supabase.from("ride_requests").select("*").eq("id", ride.id);
         if (data?.[0]) setRide(data[0]);
       } catch (_) {}
     }, 5000);
@@ -197,12 +197,12 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
   const handleSubmitRating = async () => {
     if (rating === 0) { onDone(); return; }
     setSaving(true);
-    await supabase.from("RideRequest").update({
+    await supabase.from("ride_requests").update({
       passenger_rating_for_driver: rating,
     }).eq("id", ride.id);
     if (ride.driver_id) {
       try {
-        const { data: allRides } = await supabase.from("RideRequest").select("*").eq("driver_id", ride.driver_id);
+        const { data: allRides } = await supabase.from("ride_requests").select("*").eq("driver_id", ride.driver_id);
         const rated = (allRides || []).filter(r => r.passenger_rating_for_driver > 0);
         if (rated.length > 0) {
           const avg = rated.reduce((s, r) => s + r.passenger_rating_for_driver, 0) / rated.length;

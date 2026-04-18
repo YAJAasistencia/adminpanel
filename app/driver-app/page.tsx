@@ -307,7 +307,7 @@ function HomeMap({
     try {
       // Fetch ALL recent rides from the platform
       const { data, error } = await supabase
-        .from("RideRequest")
+        .from("ride_requests")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -881,7 +881,7 @@ export default function DriverApp() {
     queryFn: async () => {
       if (!driver?.id) return [];
       const { data, error } = await supabase
-        .from("RideRequest")
+        .from("ride_requests")
         .select("*")
         .eq("driver_id", driver.id)
         .order("created_at", { ascending: false });
@@ -1294,7 +1294,7 @@ export default function DriverApp() {
       }
 
       const { error } = await supabase
-        .from("RideRequest")
+        .from("ride_requests")
         .update(updates)
         .eq("id", ride.id);
 
@@ -1404,7 +1404,7 @@ export default function DriverApp() {
 
     if (ride.status === "auction") {
       const { data: current, error } = await supabase
-        .from("RideRequest")
+        .from("ride_requests")
         .select("*")
         .eq("id", ride.id)
         .single();
@@ -1413,7 +1413,7 @@ export default function DriverApp() {
 
       await Promise.all([
         supabase
-          .from("RideRequest")
+          .from("ride_requests")
           .update({
             status: "assigned",
             driver_id: driver?.id,
@@ -1435,7 +1435,7 @@ export default function DriverApp() {
     } else if (ride.status === "assigned" && ride.driver_id === driver?.id) {
       await Promise.all([
         supabase
-          .from("RideRequest")
+          .from("ride_requests")
           .update({
             driver_accepted_at: acceptedAt,
             driver_accepted: true,
@@ -1501,7 +1501,7 @@ export default function DriverApp() {
       ["en_route", "arrived", "in_progress", "assigned", "admin_approved"].includes(ride?.status)
     ) {
       await supabase
-        .from("RideRequest")
+        .from("ride_requests")
         .update({
           status: "cancelled",
           cancelled_by: "driver",
@@ -1557,7 +1557,7 @@ export default function DriverApp() {
     }
 
     await supabase
-      .from("RideRequest")
+      .from("ride_requests")
       .update(rejectionTracking)
       .eq("id", ride?.id || "")
 

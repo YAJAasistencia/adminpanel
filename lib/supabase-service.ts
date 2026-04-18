@@ -266,7 +266,7 @@ export class SupabaseService {
 export const cityService = new SupabaseService('cities');
 export const driverService = new SupabaseService('Driver');
 export const companyService = new SupabaseService('companies');
-export const rideRequestService = new SupabaseService('RideRequest');
+export const rideRequestService = new SupabaseService('ride_requests');
 export const serviceTypeService = new SupabaseService('ServiceType');
 export const invoiceService = new SupabaseService('invoices');
 export const bonusRuleService = new SupabaseService('bonus_rules');

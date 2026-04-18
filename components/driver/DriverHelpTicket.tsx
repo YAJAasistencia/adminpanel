@@ -59,7 +59,7 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     queryKey: ["driverRidesForTicket", driver.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("RideRequest").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false });
+        const { data, error } = await supabase.from("ride_requests").select("*").eq("driver_id", driver.id).order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
       } catch (err) {

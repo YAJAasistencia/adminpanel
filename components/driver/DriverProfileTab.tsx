@@ -136,7 +136,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
     queryKey: ["driverAllRides", driver?.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("RideRequest").select("*").eq("driver_id", driver?.id).order("completed_at", { ascending: false });
+        const { data, error } = await supabase.from("ride_requests").select("*").eq("driver_id", driver?.id).order("completed_at", { ascending: false });
         if (error) throw error;
         return data || [];
       } catch (err) {
