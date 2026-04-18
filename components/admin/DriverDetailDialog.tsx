@@ -883,11 +883,28 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             </div>
             <div className="bg-slate-50 rounded-lg p-2">
               <p className="text-xs text-slate-500 font-medium mb-2">RESUMEN DEL CONDUCTOR</p>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-4 gap-1">
                 <div className="text-center"><p className="text-lg font-bold text-slate-900">{driver.total_rides || 0}</p><p className="text-xs text-slate-400">Viajes</p></div>
                 <div className="text-center"><p className="text-lg font-bold text-emerald-600">${totalEarnings.toFixed(0)}</p><p className="text-xs text-slate-400">Ganancias</p></div>
                 <div className="text-center"><p className="text-lg font-bold text-amber-600">{driver.rating || 5} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /></p><p className="text-xs text-slate-400">Calificación</p></div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <p className={`text-lg font-bold ${
+                      (driver.acceptance_rate || 100) >= 80 ? "text-emerald-600" :
+                      (driver.acceptance_rate || 100) >= 60 ? "text-amber-600" :
+                      "text-red-600"
+                    }`}>
+                      {driver.acceptance_rate || 100}%
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-400">Aceptación</p>
+                </div>
               </div>
+              {(driver.rejection_count || 0) > 0 && (
+                <p className="text-[10px] text-slate-500 mt-1.5">
+                  📊 Rechazos: {driver.rejection_count || 0} · Aceptados: {driver.accepted_offers_count || 0}
+                </p>
+              )}
             </div>
           </TabsContent>
 

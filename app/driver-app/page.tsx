@@ -1394,6 +1394,13 @@ export default function DriverApp() {
     acceptedRideIdsRef.current.add(ride.id);
 
     const acceptedAt = new Date().toISOString();
+    
+    // Track acceptance for acceptance_rate calculation
+    const currentAcceptedCount = (driver?.accepted_offers_count || 0) + 1;
+    const rejectionCount = driver?.rejection_count || 0;
+    const acceptanceRate = currentAcceptedCount + rejectionCount > 0 
+      ? Math.round((currentAcceptedCount / (currentAcceptedCount + rejectionCount)) * 100)
+      : 100;
 
     if (ride.status === "auction") {
       const { data: current, error } = await supabase
@@ -1418,7 +1425,11 @@ export default function DriverApp() {
           .eq("id", ride.id),
         supabase
           .from("Driver")
-          .update({ status: "busy" })
+          .update({ 
+            status: "busy",
+            accepted_offers_count: currentAcceptedCount,
+            acceptance_rate: acceptanceRate,
+          })
           .eq("id", driver?.id || "")
       ]);
     } else if (ride.status === "assigned" && ride.driver_id === driver?.id) {
@@ -1432,10 +1443,21 @@ export default function DriverApp() {
           .eq("id", ride.id),
         supabase
           .from("Driver")
-          .update({ status: "busy" })
+          .update({ 
+            status: "busy",
+            accepted_offers_count: currentAcceptedCount,
+            acceptance_rate: acceptanceRate,
+          })
           .eq("id", driver?.id || "")
       ]);
     }
+
+    // Update local driver state with new metrics
+    setDriver((prev) => (prev ? { 
+      ...prev, 
+      accepted_offers_count: currentAcceptedCount,
+      acceptance_rate: acceptanceRate,
+    } : prev));
 
     playAcceptedSound();
     queryClient.invalidateQueries({ queryKey: ["driverRides", driver?.id] });
@@ -1552,29 +1574,49 @@ export default function DriverApp() {
     } else if (reason === "timeout" || reason === "driver_declined") {
       // Track rejection for analytics (increment counter)
       const driverRejectionCount = (driver?.rejection_count || 0) + 1;
+      const acceptedCount = driver?.accepted_offers_count || 0;
+      const totalOffers = acceptedCount + driverRejectionCount;
+      const acceptanceRate = totalOffers > 0 ? Math.round((acceptedCount / totalOffers) * 100) : 100;
+      
       await supabase
         .from("Driver")
         .update({ 
           status: "available",
           rejection_count: driverRejectionCount,
+          acceptance_rate: acceptanceRate,
           last_rejection_reason: reason,
           last_rejection_at: new Date().toISOString(),
         })
         .eq("id", driver?.id || "")
-      setDriver((prev) => (prev ? { ...prev, status: "available", rejection_count: driverRejectionCount } : prev));
-    } else if (reason && ![" timeout", "assigned"].includes(reason)) {
+      setDriver((prev) => (prev ? { 
+        ...prev, 
+        status: "available", 
+        rejection_count: driverRejectionCount,
+        acceptance_rate: acceptanceRate,
+      } : prev));
+    } else if (reason && !["timeout", "assigned"].includes(reason)) {
       // Track rejection reason specifically (e.g., "too_far", "low_pay", etc)
       const driverRejectionCount = (driver?.rejection_count || 0) + 1;
+      const acceptedCount = driver?.accepted_offers_count || 0;
+      const totalOffers = acceptedCount + driverRejectionCount;
+      const acceptanceRate = totalOffers > 0 ? Math.round((acceptedCount / totalOffers) * 100) : 100;
+      
       await supabase
         .from("Driver")
         .update({ 
           status: "available",
           rejection_count: driverRejectionCount,
+          acceptance_rate: acceptanceRate,
           last_rejection_reason: reason,
           last_rejection_at: new Date().toISOString(),
         })
         .eq("id", driver?.id || "")
-      setDriver((prev) => (prev ? { ...prev, status: "available", rejection_count: driverRejectionCount } : prev));
+      setDriver((prev) => (prev ? { 
+        ...prev, 
+        status: "available", 
+        rejection_count: driverRejectionCount,
+        acceptance_rate: acceptanceRate,
+      } : prev));
     } else {
       await supabase
         .from("Driver")
