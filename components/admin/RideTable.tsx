@@ -37,6 +37,34 @@ const rowBgColors = {
   scheduled:     "bg-blue-50 border-l-blue-400",
 };
 
+// Helper: Get display price based on ride status
+function getDisplayPrice(ride) {
+  // For cancelled rides: show cancellation fee (usually 0)
+  if (ride.status === "cancelled") {
+    return {
+      amount: ride.cancellation_fee || 0,
+      label: ride.cancellation_fee ? "Tarifa cancelación" : "Cancelado sin costo",
+      color: "text-red-600 bg-red-50",
+    };
+  }
+
+  // For completed rides: show final_price (what was actually charged)
+  if (ride.status === "completed") {
+    return {
+      amount: ride.final_price || ride.estimated_price || 0,
+      label: ride.final_price ? "Costo final" : "Estimado",
+      color: "text-emerald-600 bg-emerald-50",
+    };
+  }
+
+  // For active rides: show estimated_price
+  return {
+    amount: ride.estimated_price || 0,
+    label: "Estimado",
+    color: "text-blue-600 bg-blue-50",
+  };
+}
+
 export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, onDelete, canEdit = true, canDelete = true, drivers = [], settings }) {
   const [rateRide, setRateRide] = useState(null);
   const [detailRide, setDetailRide] = useState(null);
@@ -148,11 +176,14 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                       <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                         💼 ${ride.company_price}
                       </span>
-                    ) : ride.estimated_price ? (
-                      <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        ${ride.estimated_price}
-                      </span>
-                    ) : null}
+                    ) : (() => {
+                      const price = getDisplayPrice(ride);
+                      return (
+                        <span className={`text-xs font-semibold ${price.color} px-2 py-0.5 rounded-full`}>
+                          ${price.amount.toFixed(2)} <span className="text-[10px] opacity-70">({price.label})</span>
+                        </span>
+                      );
+                    })()}
                     {ride.city_name && (
                       <span className="text-xs text-slate-400">{ride.city_name}</span>
                     )}
