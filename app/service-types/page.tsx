@@ -60,6 +60,7 @@ export default function ServiceTypes() {
 	const [collapsedCategories, setCollapsedCategories] = useState({});
 	const [editingCat, setEditingCat] = useState(null); // { oldName, newName }
 	const [catSaving, setCatSaving] = useState(false);
+	const [searchTerm, setSearchTerm] = useState("");
 	const queryClient = useQueryClient();
 
 	const { data: services = [] } = useQuery({
