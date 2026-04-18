@@ -143,12 +143,19 @@ export default function Dashboard() {
       { event: "*", schema: "public", table: "sos_alerts" },
       (payload: any) => {
         queryClient.setQueryData(["sosAlerts"], (old: any = []) => {
-          if (payload.eventType === "DELETE") return old.filter((s: any) => s.id !== payload.old.id);
-          if (payload.eventType === "UPDATE") {
-            return old.map((s: any) => s.id === payload.new.id ? payload.new : s)
-                     .filter((s: any) => s.status === "active");
+          if (payload.eventType === "DELETE") {
+            return old.filter((s: any) => s.id !== payload.old.id);
           }
-          if (payload.eventType === "INSERT" && payload.new?.status === "active") return [...old, payload.new];
+          if (payload.eventType === "UPDATE") {
+            // Keep only active alerts
+            const updated = old.map((s: any) =>
+              s.id === payload.new.id ? payload.new : s
+            );
+            return updated.filter((s: any) => s.status === "active");
+          }
+          if (payload.eventType === "INSERT" && payload.new?.status === "active") {
+            return [...old, payload.new];
+          }
           return old;
         });
       }
@@ -178,11 +185,25 @@ export default function Dashboard() {
           if (event.assignment_mode === "manual" && event.status === "pending") {
             setAssignRide(event);
           }
+          // Update rides data instead of invalidating
+          queryClient.setQueryData(["rides"], (old: any = []) => [...old, event]);
         }
         if (payload.eventType === "UPDATE") {
           const d = payload.new;
           const prevRide = ridesRef.current.find((r: any) => r.id === d?.id);
           const prevStatus = prevRide?.status;
+
+          // Update rides data first (atomic update)
+          queryClient.setQueryData(["rides"], (old: any = []) =>
+            old.map((r: any) => r.id === d.id ? { ...r, ...d } : r)
+          );
+
+          // Handle ETA modal transitions - simplified logic
+          if (["cancelled", "completed"].includes(d?.status)) {
+            // Terminal states: close modal if this ride
+            setEtaModalData((prev: any) => prev?.ride?.id === d.id ? null : prev);
+            return;
+          }
 
           if (d?.status === "no_drivers") {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
@@ -196,13 +217,13 @@ export default function Dashboard() {
             return;
           }
 
-          if (d?.status === "auction" && !d?.passenger_user_id) {
+          if ((d?.status === "auction" || d?.status === "pending") && !d?.passenger_user_id) {
             setEtaModalData((prev: any) => {
               if (prev?.ride?.id === d.id) {
                 const fullRide = prevRide ? { ...prevRide, ...d } : d;
                 return { ...prev, ride: fullRide, phase: "searching" };
               }
-              if (!prev) {
+              if (!prev && d?.status === "auction") {
                 const fullRide = prevRide ? { ...prevRide, ...d } : d;
                 return { ride: fullRide, driver: null, phase: "searching" };
               }
@@ -211,20 +232,10 @@ export default function Dashboard() {
             return;
           }
 
-          if (d?.status === "pending" && !d?.driver_id && !d?.assignment_mode?.includes("manual")) {
-            setEtaModalData((prev: any) => {
-              if (prev?.ride?.id === d.id) {
-                const fullRide = prevRide ? { ...prevRide, ...d } : d;
-                return { ...prev, ride: fullRide, phase: "searching" };
-              }
-              return prev;
-            });
-            return;
-          }
-
-          if (d?.status === "assigned" && d?.driver_id && prevStatus !== "assigned") {
+          if (d?.status === "assigned" && d?.driver_id) {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
             const driverAccepted = !!d.driver_accepted_at;
+            
             if (driverAccepted) {
               const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
               if (driver) {
@@ -234,26 +245,14 @@ export default function Dashboard() {
                 if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
               }
             } else {
-              setEtaModalData((prev: any) => ({ ride: fullRide, driver: null, phase: "waiting_acceptance" }));
+              setEtaModalData((prev: any) => {
+                if (prev?.ride?.id === d.id) {
+                  return { ...prev, ride: fullRide, phase: "waiting_acceptance" };
+                }
+                return { ride: fullRide, driver: null, phase: "waiting_acceptance" };
+              });
             }
           }
-
-          if (d?.status === "assigned" && d?.driver_id && d?.driver_accepted_at && !prevRide?.driver_accepted_at) {
-            const fullRide = prevRide ? { ...prevRide, ...d } : d;
-            const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
-            if (driver) {
-              setEtaModalData({ ride: fullRide, driver, phase: "assigned" });
-            } else {
-              const fetched = await supabaseApi.drivers.get(d.driver_id);
-              if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
-            }
-          }
-
-          if (["cancelled", "completed"].includes(d?.status)) {
-            setEtaModalData((prev: any) => prev?.ride?.id === d.id ? null : prev);
-          }
-
-          queryClient.invalidateQueries({ queryKey: ["rides"] });
         }
       }
     ).subscribe();
@@ -261,7 +260,8 @@ export default function Dashboard() {
   }, [queryClient]);
 
   useEffect(() => {
-      const check = () => {
+    // Check for unassigned rides every 15 seconds (less aggressive than 10s)
+    const check = () => {
       const now = Date.now();
       const unassigned = rides.find((r: any) =>
         (r.status === "pending" || r.status === "auction") &&
@@ -269,18 +269,19 @@ export default function Dashboard() {
         !r.scheduled_time &&
         (now - new Date(r.created_at).getTime()) > 60000
       );
-      if (unassigned && (!manualAssignPrompt || manualAssignPrompt.id !== unassigned.id)) {
-        setManualAssignPrompt(unassigned);
-      }
-      if (manualAssignPrompt) {
-        const stillPending = rides.find((r: any) => r.id === manualAssignPrompt.id && (r.status === "pending" || r.status === "auction") && !r.driver_id);
-        if (!stillPending) setManualAssignPrompt(null);
+      
+      // Only update if it actually changed to avoid flickering
+      if (unassigned) {
+        setManualAssignPrompt((prev) => prev?.id === unassigned.id ? prev : unassigned);
+      } else {
+        setManualAssignPrompt((prev) => prev ? null : prev);
       }
     };
-    const id = setInterval(check, 10000);
-    check();
+    
+    const id = setInterval(check, 15000);
+    check(); // Initial check
     return () => clearInterval(id);
-  }, [rides, manualAssignPrompt]);
+  }, [rides]);
 
   const handleUpdateStatus = async (ride: any, newStatus: string) => {
     const now = new Date().toISOString();
@@ -311,6 +312,12 @@ export default function Dashboard() {
     }
     try {
       await supabaseApi.rideRequests.update(ride.id, updates);
+      
+      // Update rides cache directly instead of invalidating
+      queryClient.setQueryData(["rides"], (old: any = []) =>
+        old.map((r: any) => r.id === ride.id ? { ...r, ...updates } : r)
+      );
+
       if ((newStatus === "completed" || newStatus === "cancelled") && ride.driver_id) {
         const driver = drivers.find((d: any) => d.id === ride.driver_id);
         const otherActive = rides.filter((r: any) =>
@@ -323,10 +330,13 @@ export default function Dashboard() {
             driverUpdates.total_earnings = (driver?.total_earnings || 0) + (updates.driver_earnings || 0);
           }
           await supabaseApi.drivers.update(ride.driver_id, driverUpdates);
+          
+          // Update drivers cache directly
+          queryClient.setQueryData(["drivers"], (old: any = []) =>
+            old.map((d: any) => d.id === ride.driver_id ? { ...d, ...driverUpdates } : d)
+          );
         }
       }
-      queryClient.invalidateQueries({ queryKey: ["rides"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
     } catch (error) {
       toast.error("Error al actualizar viaje");
     }
@@ -344,9 +354,13 @@ export default function Dashboard() {
 
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
 
-    if (ACTIVE_STATUSES.includes(r.status)) return matchSearch && matchStatus;
+    // ACTIVE services: Always show, never filter by date (they are happening NOW)
+    if (ACTIVE_STATUSES.includes(r.status)) {
+      return matchSearch && matchStatus;
+    }
 
-    const rideDate = new Date(r.requested_at || r.created_at);
+    // HISTORICAL services (completed, cancelled): Filter by date when viewing historical
+    const rideDate = new Date(r.created_at);
     const matchDate = rideDate >= dayStart && rideDate <= dayEnd;
 
     return matchSearch && matchStatus && matchDate;
@@ -548,7 +562,10 @@ export default function Dashboard() {
             if (!window.confirm(`¿Eliminar el viaje de ${ride.passenger_name}? Esta acción no se puede deshacer.`)) return;
             try {
               await supabaseApi.rideRequests.delete(ride.id);
-              queryClient.invalidateQueries({ queryKey: ["rides"] });
+              // Update cache directly
+              queryClient.setQueryData(["rides"], (old: any = []) =>
+                old.filter((r: any) => r.id !== ride.id)
+              );
             } catch (error) {
               toast.error("Error al eliminar viaje");
             }
