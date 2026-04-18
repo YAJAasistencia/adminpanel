@@ -269,23 +269,34 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
     if (candidates.length === 0) {
       if (ride.assignment_mode !== "manual") {
-        const now = new Date().toISOString();
-        await supabaseApi.rideRequests.update(ride.id, {
+        // Count how many times we've retried
+        const prevExcluded = Array.isArray(ride._excluded_driver_ids) ? ride._excluded_driver_ids : [];
+        const retryCount = Math.ceil(prevExcluded.length / (s?.auction_max_drivers ?? 5));
+        const maxRetries = s?.auction_max_retries ?? 3;
+
+        let nextUpdate: any = {
           status: "pending",
           assignment_mode: "manual",
-          manual_assignment_requested_at: now,
+          manual_assignment_requested_at: new Date().toISOString(),
           driver_id: null,
           auction_driver_ids: [],
-        });
+        };
+
+        // If exceeded max retries, mark as no_drivers
+        if (retryCount >= maxRetries) {
+          nextUpdate = {
+            ...nextUpdate,
+            status: "no_drivers",
+            cancellation_reason: "No hay conductores disponibles después de múltiples intentos",
+          };
+        }
+
+        await supabaseApi.rideRequests.update(ride.id, nextUpdate);
 
         queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
           old.map((r) => r.id === ride.id ? {
             ...r,
-            status: "pending",
-            assignment_mode: "manual",
-            manual_assignment_requested_at: now,
-            driver_id: null,
-            auction_driver_ids: [],
+            ...nextUpdate,
           } : r)
         );
       }

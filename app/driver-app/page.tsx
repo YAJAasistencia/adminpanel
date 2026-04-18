@@ -1519,14 +1519,24 @@ export default function DriverApp() {
     }
 
     const prevExcluded = Array.isArray(ride?._excluded_driver_ids) ? ride._excluded_driver_ids : [];
+    
+    // Track rejection reason for analytics
+    const rejectionTracking: any = {
+      status: "pending",
+      driver_id: null,
+      driver_name: null,
+      _excluded_driver_ids: [...new Set([...prevExcluded, driver?.id || ""])],
+    };
+    
+    // Record the rejection reason if it's not a timeout
+    if (reason && reason !== "timeout" && reason !== "assigned") {
+      rejectionTracking.last_rejection_reason = reason;
+      rejectionTracking.last_rejection_at = new Date().toISOString();
+    }
+
     await supabase
       .from("RideRequest")
-      .update({
-        status: "pending",
-        driver_id: null,
-        driver_name: null,
-        _excluded_driver_ids: [...new Set([...prevExcluded, driver?.id || ""])],
-      })
+      .update(rejectionTracking)
       .eq("id", ride?.id || "")
 
     if (isCancelByDriver) {
@@ -1540,11 +1550,31 @@ export default function DriverApp() {
       setSuspendedUntil(suspendUntil);
       localStorage.setItem("driver_suspended_until", String(suspendUntil));
     } else if (reason === "timeout" || reason === "driver_declined") {
+      // Track rejection for analytics (increment counter)
+      const driverRejectionCount = (driver?.rejection_count || 0) + 1;
       await supabase
         .from("Driver")
-        .update({ status: "available" })
+        .update({ 
+          status: "available",
+          rejection_count: driverRejectionCount,
+          last_rejection_reason: reason,
+          last_rejection_at: new Date().toISOString(),
+        })
         .eq("id", driver?.id || "")
-      setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
+      setDriver((prev) => (prev ? { ...prev, status: "available", rejection_count: driverRejectionCount } : prev));
+    } else if (reason && ![" timeout", "assigned"].includes(reason)) {
+      // Track rejection reason specifically (e.g., "too_far", "low_pay", etc)
+      const driverRejectionCount = (driver?.rejection_count || 0) + 1;
+      await supabase
+        .from("Driver")
+        .update({ 
+          status: "available",
+          rejection_count: driverRejectionCount,
+          last_rejection_reason: reason,
+          last_rejection_at: new Date().toISOString(),
+        })
+        .eq("id", driver?.id || "")
+      setDriver((prev) => (prev ? { ...prev, status: "available", rejection_count: driverRejectionCount } : prev));
     } else {
       await supabase
         .from("Driver")
