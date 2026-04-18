@@ -5,27 +5,35 @@
  */
 
 import { NextResponse } from 'next/server';
-import { driverService } from '@/lib/supabase-service';
+import { AdminService } from '@/lib/supabase-admin';
+import { getTokenFromHeader, requireAdmin } from '@/lib/auth-middleware';
 
 /**
  * GET /api/drivers
- * Obtener todos los drivers
+ * Obtener todos los drivers (requiere autenticación por API)
  */
 export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
+
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const filters: any = {};
 
-    const result = await driverService.getAll(filters);
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
+    const adminService = new AdminService('Driver');
+    const data = await adminService.getAll(filters);
 
     return NextResponse.json({
-      data: result.data,
+      data: data,
       success: true,
-      count: result.data?.length || 0,
+      count: data?.length || 0,
     });
   } catch (error) {
     console.error('GET /api/drivers error:', error);
@@ -35,20 +43,27 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/drivers
- * Crear nuevo driver
+ * Crear nuevo driver (requiere autenticación por API)
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
 
-    const result = await driverService.create(body);
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+    if (!requireAdmin(token || '')) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      );
     }
 
+    const body = await request.json();
+
+    const adminService = new AdminService('Driver');
+    const data = await adminService.create(body);
+
     return NextResponse.json(
-      { data: result.data, success: true },
+      { data: data, success: true },
       { status: 201 }
     );
   } catch (error) {
