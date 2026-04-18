@@ -25,6 +25,7 @@ const approvalLabels = { pending: "Pendiente", approved: "Aprobado", rejected: "
 export default function DriversPage() {
   const [search, setSearch] = React.useState("");
   const [cityFilter, setCityFilter] = React.useState("all");
+  const [approvalFilter, setApprovalFilter] = React.useState("all");
   const [selectedDriver, setSelectedDriver] = React.useState(null);
   const [showDetail, setShowDetail] = React.useState(false);
   const [copiedCode, setCopiedCode] = React.useState(null);
@@ -82,6 +83,18 @@ export default function DriversPage() {
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: settings = null } = useQuery({
+    queryKey: ["appSettings"],
+    queryFn: async () => {
+      try {
+        const appSettings = await supabaseApi.appSettings.get();
+        return appSettings?.[0];
+      } catch { return null; }
+    },
+    staleTime: 60 * 60 * 1000,
+    gcTime: 120 * 60 * 1000,
   });
 
   const handleApprove = async (driver: any) => {
@@ -163,7 +176,8 @@ export default function DriversPage() {
       d.license_plate?.toLowerCase().includes(q) ||
       d.email?.toLowerCase().includes(q);
     const matchCity = cityFilter === "all" || d.city_id === cityFilter;
-    return matchSearch && matchCity;
+    const matchApproval = approvalFilter === "all" || d.approval_status === approvalFilter;
+    return matchSearch && matchCity && matchApproval;
   });
 
   return (
@@ -233,6 +247,18 @@ export default function DriversPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+            <SelectTrigger className="w-48 rounded-xl">
+              <CheckCircle className="w-4 h-4 mr-2 text-slate-400" />
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pending">Pendientes</SelectItem>
+              <SelectItem value="approved">Aprobados</SelectItem>
+              <SelectItem value="rejected">Rechazados</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -288,6 +314,20 @@ export default function DriversPage() {
                     ))}
                   </div>
                 )}
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <Badge className={`text-xs py-0.5 px-2 ${
+                    (driver.acceptance_rate || 100) >= 80 ? "bg-emerald-100 text-emerald-800" :
+                    (driver.acceptance_rate || 100) >= 60 ? "bg-amber-100 text-amber-800" :
+                    "bg-red-100 text-red-800"
+                  }`}>
+                    ✓ {driver.acceptance_rate || 100}% aceptación
+                  </Badge>
+                  {settings?.soft_block_low_acceptance_rate_enabled && (driver.acceptance_rate || 100) < (settings?.low_acceptance_rate_threshold || 60) && (
+                    <Badge className="text-xs py-0.5 px-2 bg-purple-100 text-purple-800">
+                      🚫 Soft Block
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               {driver.suspended_until && new Date(driver.suspended_until) > new Date() && (

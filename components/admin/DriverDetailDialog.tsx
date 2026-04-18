@@ -512,6 +512,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             <TabsTrigger value="services">Servicios</TabsTrigger>
             <TabsTrigger value="banking">Bancario</TabsTrigger>
             <TabsTrigger value="docs">Docs</TabsTrigger>
+            <TabsTrigger value="history">Historial</TabsTrigger>
             <TabsTrigger value="ratings">Califs.</TabsTrigger>
           </TabsList>
 
@@ -1000,6 +1001,66 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             {dynamicDocs.length === 0 && (
               <p className="text-xs text-slate-400 text-center py-6">Configure documentos requeridos en la sección de Configuración.</p>
             )}
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4 space-y-1">
+            {(() => {
+              const driverRides = rides.filter(r => r.driver_id === driver?.id).sort((a, b) => new Date(b.created_date || b.created_at) - new Date(a.created_date || a.created_at)).slice(0, 20);
+              return (
+                <>
+                  <div className="bg-blue-50 rounded-lg px-2.5 py-1 text-xs text-blue-700 mb-2">
+                    📋 Últimos {driverRides.length} viajes del conductor
+                  </div>
+                  {driverRides.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-6">Sin historial de viajes</p>
+                  )}
+                  <div className="space-y-1 max-h-96 overflow-y-auto">
+                    {driverRides.map(r => (
+                      <div key={r.id} className="border border-slate-100 rounded-lg p-2 space-y-1">
+                        <div className="flex items-center justify-between flex-wrap gap-1">
+                          <div>
+                            <span className="font-mono text-xs text-slate-600 font-bold">#{r.service_id || r.id?.slice(-6)}</span>
+                            <span className="text-xs text-slate-500 ml-2">{r.passenger_name || "Anónimo"}</span>
+                          </div>
+                          <Badge className={`text-xs py-0.5 ${
+                            r.status === "completed" ? "bg-emerald-100 text-emerald-800" :
+                            r.status === "cancelled" ? "bg-red-100 text-red-800" :
+                            r.status === "in_progress" ? "bg-blue-100 text-blue-800" :
+                            "bg-amber-100 text-amber-800"
+                          }`}>
+                            {r.status === "completed" ? "✓ Completado" :
+                             r.status === "cancelled" ? "✗ Cancelado" :
+                             r.status === "in_progress" ? "→ En progreso" :
+                             "○ Asignado"}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-slate-600 space-y-0.5">
+                          {r.pickup_address && (
+                            <p>📍 <span className="text-slate-500">{r.pickup_address.substring(0, 50)}</span></p>
+                          )}
+                          {r.dropoff_address && (
+                            <p>📍 <span className="text-slate-500">{r.dropoff_address.substring(0, 50)}</span></p>
+                          )}
+                          <div className="flex gap-2 flex-wrap text-slate-500">
+                            {r.ride_distance && <span>📏 {(r.ride_distance / 1000).toFixed(1)} km</span>}
+                            {r.service_type_name && <span>🚗 {r.service_type_name}</span>}
+                            {r.total_amount && <span>💰 ${r.total_amount}</span>}
+                          </div>
+                          <div className="text-xs text-slate-400 flex gap-2">
+                            {r.created_date && <span>📅 {new Date(r.created_date).toLocaleDateString("es-MX")}</span>}
+                            {r.passenger_rating_for_driver > 0 && (
+                              <span className="text-violet-600 flex items-center gap-0.5">
+                                ⭐ {r.passenger_rating_for_driver}/5 {r.passenger_rating_comment && `"${r.passenger_rating_comment.substring(0, 30)}..."`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="ratings" className="mt-4 space-y-0.5">
