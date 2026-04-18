@@ -322,7 +322,12 @@ export default function Dashboard() {
       updates.rating_window_expires_at = new Date(Date.now() + ratingWindowMinutes * 60 * 1000).toISOString();
     }
     try {
-      await supabaseApi.rideRequests.update(ride.id, updates);
+      const res = await fetch(`/api/ride-requests?id=${ride.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (!res.ok) throw new Error('Failed to update ride');
       
       // Update rides cache directly instead of invalidating
       queryClient.setQueryData(["rides"], (old: any = []) =>
@@ -340,7 +345,12 @@ export default function Dashboard() {
             driverUpdates.total_rides = (driver?.total_rides || 0) + 1;
             driverUpdates.total_earnings = (driver?.total_earnings || 0) + (updates.driver_earnings || 0);
           }
-          await supabaseApi.drivers.update(ride.driver_id, driverUpdates);
+          const res = await fetch(`/api/drivers?id=${ride.driver_id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(driverUpdates)
+          });
+          if (!res.ok) throw new Error('Failed to update driver');
           
           // Update drivers cache directly
           queryClient.setQueryData(["drivers"], (old: any = []) =>
@@ -879,7 +889,11 @@ export default function Dashboard() {
           onDelete={async (ride: any) => {
             if (!window.confirm(`¿Eliminar el viaje de ${ride.passenger_name}? Esta acción no se puede deshacer.`)) return;
             try {
-              await supabaseApi.rideRequests.delete(ride.id);
+              const res = await fetch(`/api/ride-requests?id=${ride.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (!res.ok) throw new Error('Failed to delete ride');
               // Update cache directly
               queryClient.setQueryData(["rides"], (old: any = []) =>
                 old.filter((r: any) => r.id !== ride.id)
