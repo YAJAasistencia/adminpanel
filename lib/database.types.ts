@@ -1,5 +1,5 @@
 // Auto-generated Supabase types
-// Generated: 2026-04-18 with AppSettings table
+// Generated: 2026-04-18 with complete AppSettings schema
 // Project: dsruuvvbeudbkdpevgwd
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
@@ -18,6 +18,7 @@ export type Database = {
           accent_color: string | null
           secondary_color: string | null
           currency: string | null
+          currency_symbol: string | null
           contact_phone: string | null
           contact_email: string | null
           welcome_message: string | null
@@ -25,30 +26,66 @@ export type Database = {
           base_fare: number | null
           price_per_km: number | null
           price_per_minute: number | null
+          price_per_hour: number | null
           platform_commission_pct: number | null
+          minimum_ride_amount: number | null
           timezone: string | null
           city_traffic_factor: number | null
           eta_speed_kmh: number | null
           require_admin_approval_to_start: boolean | null
           auto_assign_nearest_driver: boolean | null
           destination_required: boolean | null
+          allow_driver_cancel: boolean | null
+          allow_passenger_cancel: boolean | null
+          accept_cars: boolean | null
+          accept_motos: boolean | null
           auction_mode_enabled: boolean | null
           auction_primary_radius_km: number | null
           auction_secondary_radius_km: number | null
           auction_timeout_seconds: number | null
           auction_max_drivers: number | null
           auction_max_retries: number | null
-          maps_provider: string | null
-          google_maps_api_key: string | null
+          max_concurrent_rides: number | null
+          eta_update_interval_seconds: number | null
+          driver_location_update_interval_seconds: number | null
+          eta_modal_duration_seconds: number | null
+          service_flow_update_minutes: number | null
+          work_max_hours: number | null
+          work_break_interval_minutes: number | null
+          work_break_duration_minutes: number | null
+          work_long_break_duration_minutes: number | null
+          work_rest_trigger_minutes: number | null
+          work_rest_ratio: number | null
+          work_long_rest_minutes: number | null
+          driver_inactivity_timeout_minutes: number | null
+          rating_window_minutes: number | null
+          payment_timeout_hours: number | null
+          search_phase_seconds: number | null
+          cutoff_interval_days: number | null
+          rejection_rate_warning_threshold: number | null
+          rejection_count_threshold: number | null
+          soft_block_low_acceptance_rate_enabled: boolean | null
+          low_acceptance_rate_threshold: number | null
+          low_acceptance_rate_offer_reduction_pct: number | null
           support_whatsapp_number: string | null
           support_whatsapp_message: string | null
           wallet_min_balance: number | null
+          notification_sound_type: string | null
+          notification_volume: number | null
+          notification_interval_seconds: number | null
+          require_email_verification: boolean | null
+          show_passenger_phone_to_driver: boolean | null
+          show_driver_photo_to_passenger: boolean | null
+          payment_gateway: string | null
           payment_methods: Json | null
           driver_vehicle_docs: Json | null
           driver_required_docs: Json | null
           features_enabled: Json | null
           nav_config: Json | null
           landing_config: Json | null
+          pending_payment_methods: Json | null
+          version: number | null
+          notes: string | null
         }
         Insert: {
           id?: string
@@ -60,6 +97,7 @@ export type Database = {
           accent_color?: string | null
           secondary_color?: string | null
           currency?: string | null
+          currency_symbol?: string | null
           contact_phone?: string | null
           contact_email?: string | null
           welcome_message?: string | null
@@ -67,30 +105,66 @@ export type Database = {
           base_fare?: number | null
           price_per_km?: number | null
           price_per_minute?: number | null
+          price_per_hour?: number | null
           platform_commission_pct?: number | null
+          minimum_ride_amount?: number | null
           timezone?: string | null
           city_traffic_factor?: number | null
           eta_speed_kmh?: number | null
           require_admin_approval_to_start?: boolean | null
           auto_assign_nearest_driver?: boolean | null
           destination_required?: boolean | null
+          allow_driver_cancel?: boolean | null
+          allow_passenger_cancel?: boolean | null
+          accept_cars?: boolean | null
+          accept_motos?: boolean | null
           auction_mode_enabled?: boolean | null
           auction_primary_radius_km?: number | null
           auction_secondary_radius_km?: number | null
           auction_timeout_seconds?: number | null
           auction_max_drivers?: number | null
           auction_max_retries?: number | null
-          maps_provider?: string | null
-          google_maps_api_key?: string | null
+          max_concurrent_rides?: number | null
+          eta_update_interval_seconds?: number | null
+          driver_location_update_interval_seconds?: number | null
+          eta_modal_duration_seconds?: number | null
+          service_flow_update_minutes?: number | null
+          work_max_hours?: number | null
+          work_break_interval_minutes?: number | null
+          work_break_duration_minutes?: number | null
+          work_long_break_duration_minutes?: number | null
+          work_rest_trigger_minutes?: number | null
+          work_rest_ratio?: number | null
+          work_long_rest_minutes?: number | null
+          driver_inactivity_timeout_minutes?: number | null
+          rating_window_minutes?: number | null
+          payment_timeout_hours?: number | null
+          search_phase_seconds?: number | null
+          cutoff_interval_days?: number | null
+          rejection_rate_warning_threshold?: number | null
+          rejection_count_threshold?: number | null
+          soft_block_low_acceptance_rate_enabled?: boolean | null
+          low_acceptance_rate_threshold?: number | null
+          low_acceptance_rate_offer_reduction_pct?: number | null
           support_whatsapp_number?: string | null
           support_whatsapp_message?: string | null
           wallet_min_balance?: number | null
+          notification_sound_type?: string | null
+          notification_volume?: number | null
+          notification_interval_seconds?: number | null
+          require_email_verification?: boolean | null
+          show_passenger_phone_to_driver?: boolean | null
+          show_driver_photo_to_passenger?: boolean | null
+          payment_gateway?: string | null
           payment_methods?: Json | null
           driver_vehicle_docs?: Json | null
           driver_required_docs?: Json | null
           features_enabled?: Json | null
           nav_config?: Json | null
           landing_config?: Json | null
+          pending_payment_methods?: Json | null
+          version?: number | null
+          notes?: string | null
         }
         Update: {
           id?: string
@@ -102,6 +176,7 @@ export type Database = {
           accent_color?: string | null
           secondary_color?: string | null
           currency?: string | null
+          currency_symbol?: string | null
           contact_phone?: string | null
           contact_email?: string | null
           welcome_message?: string | null
@@ -109,30 +184,66 @@ export type Database = {
           base_fare?: number | null
           price_per_km?: number | null
           price_per_minute?: number | null
+          price_per_hour?: number | null
           platform_commission_pct?: number | null
+          minimum_ride_amount?: number | null
           timezone?: string | null
           city_traffic_factor?: number | null
           eta_speed_kmh?: number | null
           require_admin_approval_to_start?: boolean | null
           auto_assign_nearest_driver?: boolean | null
           destination_required?: boolean | null
+          allow_driver_cancel?: boolean | null
+          allow_passenger_cancel?: boolean | null
+          accept_cars?: boolean | null
+          accept_motos?: boolean | null
           auction_mode_enabled?: boolean | null
           auction_primary_radius_km?: number | null
           auction_secondary_radius_km?: number | null
           auction_timeout_seconds?: number | null
           auction_max_drivers?: number | null
           auction_max_retries?: number | null
-          maps_provider?: string | null
-          google_maps_api_key?: string | null
+          max_concurrent_rides?: number | null
+          eta_update_interval_seconds?: number | null
+          driver_location_update_interval_seconds?: number | null
+          eta_modal_duration_seconds?: number | null
+          service_flow_update_minutes?: number | null
+          work_max_hours?: number | null
+          work_break_interval_minutes?: number | null
+          work_break_duration_minutes?: number | null
+          work_long_break_duration_minutes?: number | null
+          work_rest_trigger_minutes?: number | null
+          work_rest_ratio?: number | null
+          work_long_rest_minutes?: number | null
+          driver_inactivity_timeout_minutes?: number | null
+          rating_window_minutes?: number | null
+          payment_timeout_hours?: number | null
+          search_phase_seconds?: number | null
+          cutoff_interval_days?: number | null
+          rejection_rate_warning_threshold?: number | null
+          rejection_count_threshold?: number | null
+          soft_block_low_acceptance_rate_enabled?: boolean | null
+          low_acceptance_rate_threshold?: number | null
+          low_acceptance_rate_offer_reduction_pct?: number | null
           support_whatsapp_number?: string | null
           support_whatsapp_message?: string | null
           wallet_min_balance?: number | null
+          notification_sound_type?: string | null
+          notification_volume?: number | null
+          notification_interval_seconds?: number | null
+          require_email_verification?: boolean | null
+          show_passenger_phone_to_driver?: boolean | null
+          show_driver_photo_to_passenger?: boolean | null
+          payment_gateway?: string | null
           payment_methods?: Json | null
           driver_vehicle_docs?: Json | null
           driver_required_docs?: Json | null
           features_enabled?: Json | null
           nav_config?: Json | null
           landing_config?: Json | null
+          pending_payment_methods?: Json | null
+          version?: number | null
+          notes?: string | null
         }
       }
       RideRequest: {
@@ -165,7 +276,6 @@ export type Database = {
           dropoff_lon: number | null
           created_at: string
           updated_at: string
-          created_by: string | null
         }
         Insert: {
           id?: string
@@ -196,7 +306,6 @@ export type Database = {
           dropoff_lon?: number | null
           created_at?: string
           updated_at?: string
-          created_by?: string | null
         }
         Update: {
           id?: string
@@ -227,7 +336,6 @@ export type Database = {
           dropoff_lon?: number | null
           created_at?: string
           updated_at?: string
-          created_by?: string | null
         }
       }
     }
