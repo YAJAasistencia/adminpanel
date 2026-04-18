@@ -49,7 +49,11 @@ export default function BonosPage() {
 
   const { data: rules = [] } = useQuery({
     queryKey: ["bonusRules"],
-    queryFn: () => supabaseApi.bonusRules.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/bonus-rules');
+      const json = await res.json();
+      return json.data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
@@ -110,9 +114,27 @@ export default function BonosPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editingRule
-      ? supabaseApi.bonusRules.update(editingRule.id, data)
-      : supabaseApi.bonusRules.create(data),
+    mutationFn: async (data) => {
+      if (editingRule) {
+        const res = await fetch(`/api/bonus-rules/${editingRule.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to update rule');
+        const json = await res.json();
+        return json.data;
+      } else {
+        const res = await fetch('/api/bonus-rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to create rule');
+        const json = await res.json();
+        return json.data;
+      }
+    },
     onSuccess: () => { 
       qc.invalidateQueries({ queryKey: ["bonusRules"] }); 
       setShowRuleDialog(false);
@@ -122,7 +144,14 @@ export default function BonosPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => supabaseApi.bonusRules.delete(id),
+    mutationFn: async (id) => {
+      const res = await fetch(`/api/bonus-rules/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error('Failed to delete rule');
+      return { success: true };
+    },
     onSuccess: () => { 
       qc.invalidateQueries({ queryKey: ["bonusRules"] });
       toast.success("Regla eliminada");
@@ -131,7 +160,15 @@ export default function BonosPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, val }: any) => supabaseApi.bonusRules.update(id, { is_active: val }),
+    mutationFn: async ({ id, val }: any) => {
+      const res = await fetch(`/api/bonus-rules/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: val })
+      });
+      if (!res.ok) throw new Error('Failed to toggle rule');
+      return { success: true };
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusRules"] }),
     onError: (error: any) => toast.error(error.message || "Error al actualizar"),
   });

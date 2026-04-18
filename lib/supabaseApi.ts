@@ -450,20 +450,20 @@ export const supabaseApi = {
   // ─── Bonus Rules ──────────────────────────────────────────────────────────
   bonusRules: {
     list: async () => {
-      const { data, error } = await supabase.from('BonusRule').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('bonus_rules').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     create: async (rule: any) => {
-      const { data, error } = await supabase.from('BonusRule').insert(rule).select().single();
+      const { data, error } = await supabase.from('bonus_rules').insert(rule).select().single();
       if (error) throw error;
       return data;
     },
     update: async (id: string, updates: any) => {
-      return updateWithFallback('BonusRule', id, updates);
+      return updateWithFallback('bonus_rules', id, updates);
     },
     delete: async (id: string) => {
-      const { error } = await supabase.from('BonusRule').delete().eq('id', id);
+      const { error } = await supabase.from('bonus_rules').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     },
