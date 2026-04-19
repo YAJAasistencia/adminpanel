@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { supabaseApi } from "@/lib/supabaseApi";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ function AnunciosContent() {
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
     queryFn: async () => {
-      const res = await fetch('/api/announcements');
+      const res = await fetchWithAuth('/api/announcements');
       const json = await res.json();
       return json.data || [];
     },
@@ -47,7 +48,7 @@ function AnunciosContent() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const res = await fetch('/api/cities');
+      const res = await fetchWithAuth('/api/cities');
       const json = await res.json();
       return json.data || [];
     },
@@ -58,7 +59,7 @@ function AnunciosContent() {
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: async () => {
-      const res = await fetch('/api/service-types');
+      const res = await fetchWithAuth('/api/service-types');
       const json = await res.json();
       return json.data || [];
     },
@@ -99,7 +100,7 @@ function AnunciosContent() {
         is_active: form.is_active,
       };
       if (editId) {
-        const res = await fetch(`/api/announcements?id=${editId}`, {
+        const res = await fetchWithAuth(`/api/announcements?id=${editId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -107,7 +108,7 @@ function AnunciosContent() {
         if (!res.ok) throw new Error('Failed to update announcement');
         toast.success("Anuncio actualizado");
       } else {
-        const res = await fetch('/api/announcements', {
+        const res = await fetchWithAuth('/api/announcements', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -127,7 +128,7 @@ function AnunciosContent() {
   const handleDelete = async (a: any) => {
     if (!window.confirm(`¿Eliminar el anuncio "${a.title}"?`)) return;
     try {
-      const res = await fetch(`/api/announcements?id=${a.id}`, {
+      const res = await fetchWithAuth(`/api/announcements?id=${a.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -141,7 +142,7 @@ function AnunciosContent() {
 
   const handleToggle = async (a: any) => {
     try {
-      const res = await fetch(`/api/announcements?id=${a.id}`, {
+      const res = await fetchWithAuth(`/api/announcements?id=${a.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !a.is_active })

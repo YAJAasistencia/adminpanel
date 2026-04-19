@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,7 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
   const handleSave = async () => {
     if (!companyId || selectedRides.length === 0) return;
     setSaving(true);
-    const res = await fetch('/api/invoices', {
+    const res = await fetchWithAuth('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -347,7 +348,7 @@ export default function Invoices() {
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
     queryFn: async () => {
-      const res = await fetch('/api/invoices');
+      const res = await fetchWithAuth('/api/invoices');
       if (!res.ok) throw new Error('Failed to fetch invoices');
       return res.json();
     },

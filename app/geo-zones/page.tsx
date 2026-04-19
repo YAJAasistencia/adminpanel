@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ function GeoZonesContent() {
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
     queryFn: async () => {
-      const res = await fetch('/api/geo-zones');
+      const res = await fetchWithAuth('/api/geo-zones');
       if (!res.ok) throw new Error('Failed to fetch geo zones');
       return res.json();
     },
@@ -144,14 +145,14 @@ function GeoZonesContent() {
       prioridad: parseInt(editing.prioridad) || 1,
     };
     if (editing.id) {
-      const res = await fetch(`/api/geo-zones?id=${editing.id}`, {
+      const res = await fetchWithAuth(`/api/geo-zones?id=${editing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Failed to update zone');
     } else {
-      const res = await fetch('/api/geo-zones', {
+      const res = await fetchWithAuth('/api/geo-zones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -166,7 +167,7 @@ function GeoZonesContent() {
 
   const handleDelete = async (z) => {
     if (!window.confirm(`¿Eliminar zona "${z.name}"?`)) return;
-    const res = await fetch(`/api/geo-zones?id=${z.id}`, {
+    const res = await fetchWithAuth(`/api/geo-zones?id=${z.id}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -176,7 +177,7 @@ function GeoZonesContent() {
   };
 
   const toggleActive = async (z) => {
-    const res = await fetch(`/api/geo-zones?id=${z.id}`, {
+    const res = await fetchWithAuth(`/api/geo-zones?id=${z.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !z.is_active })

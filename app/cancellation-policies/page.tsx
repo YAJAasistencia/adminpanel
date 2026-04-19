@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function CancellationPoliciesPage() {
         free_cancellation_minutes: parseInt(editPolicy.free_cancellation_minutes) || 0,
       };
       if (editPolicy.id) {
-        const res = await fetch(`/api/cancellation-policies?id=${editPolicy.id}`, {
+        const res = await fetchWithAuth(`/api/cancellation-policies?id=${editPolicy.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -57,7 +58,7 @@ export default function CancellationPoliciesPage() {
         if (!res.ok) throw new Error('Failed to update policy');
         toast.success("Política actualizada");
       } else {
-        const res = await fetch('/api/cancellation-policies', {
+        const res = await fetchWithAuth('/api/cancellation-policies', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -78,7 +79,7 @@ export default function CancellationPoliciesPage() {
   const handleDelete = async (p: any) => {
     if (!window.confirm(`¿Eliminar la política "${p.name}"?`)) return;
     try {
-      const res = await fetch(`/api/cancellation-policies?id=${p.id}`, {
+      const res = await fetchWithAuth(`/api/cancellation-policies?id=${p.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });

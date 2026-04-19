@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,7 @@ export default function RedZones() {
   const { data: zones = [] } = useQuery({
     queryKey: ["redZones"],
     queryFn: async () => {
-      const res = await fetch('/api/red-zones');
+      const res = await fetchWithAuth('/api/red-zones');
       if (!res.ok) throw new Error('Failed to fetch red zones');
       return res.json();
     },
@@ -72,14 +73,14 @@ export default function RedZones() {
     setSaving(true);
     const data = { ...editing, coordinates: polygon };
     if (editing.id) {
-      const res = await fetch(`/api/red-zones?id=${editing.id}`, {
+      const res = await fetchWithAuth(`/api/red-zones?id=${editing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Failed to update zone');
     } else {
-      const res = await fetch('/api/red-zones', {
+      const res = await fetchWithAuth('/api/red-zones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -94,7 +95,7 @@ export default function RedZones() {
 
   const handleDelete = async (z) => {
     if (!window.confirm(`¿Eliminar zona "${z.name}"?`)) return;
-    const res = await fetch(`/api/red-zones?id=${z.id}`, {
+    const res = await fetchWithAuth(`/api/red-zones?id=${z.id}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -104,7 +105,7 @@ export default function RedZones() {
   };
 
   const toggleActive = async (z) => {
-    const res = await fetch(`/api/red-zones?id=${z.id}`, {
+    const res = await fetchWithAuth(`/api/red-zones?id=${z.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !z.is_active })

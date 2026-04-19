@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,7 +54,7 @@ export default function AdminUsersPage() {
     queryKey: ["adminUsers"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/admin-users');
+        const res = await fetchWithAuth('/api/admin-users');
         if (!res.ok) throw new Error('Failed to fetch admin users');
         const json = await res.json();
         return json.data || [];
@@ -125,14 +126,14 @@ export default function AdminUsersPage() {
       }
 
       if (editing.id) {
-        const res = await fetch(`/api/admin-users?id=${editing.id}`, {
+        const res = await fetchWithAuth(`/api/admin-users?id=${editing.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Failed to update admin user');
       } else {
-        const res = await fetch('/api/admin-users', {
+        const res = await fetchWithAuth('/api/admin-users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

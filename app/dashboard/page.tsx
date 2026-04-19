@@ -325,7 +325,7 @@ export default function Dashboard() {
       updates.rating_window_expires_at = new Date(Date.now() + ratingWindowMinutes * 60 * 1000).toISOString();
     }
     try {
-      const res = await fetchWithAuth(`/api/ride-requests?id=${ride.id}`, {
+      const res = await fetchWithAuth(`/api/rides?id=${ride.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -892,7 +892,7 @@ export default function Dashboard() {
           onDelete={async (ride: any) => {
             if (!window.confirm(`¿Eliminar el viaje de ${ride.passenger_name}? Esta acción no se puede deshacer.`)) return;
             try {
-              const res = await fetchWithAuth(`/api/ride-requests?id=${ride.id}`, {
+              const res = await fetchWithAuth(`/api/rides?id=${ride.id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' }
               });

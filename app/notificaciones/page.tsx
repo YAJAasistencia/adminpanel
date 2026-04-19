@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import Layout from "@/components/admin/Layout";
 import { stopAllAlarms } from "@/components/shared/useRideNotifications";
 import { Bell, Send, Users, Filter, CheckCircle2, Clock, Search, Trash2 } from "lucide-react";
@@ -58,7 +59,7 @@ function NotificacionesContent() {
   const { data: sentNotifications = [] } = useQuery({
     queryKey: ["driver-notifications"],
     queryFn: async () => {
-      const res = await fetch('/api/driver-notifications');
+      const res = await fetchWithAuth('/api/driver-notifications');
       if (!res.ok) throw new Error('Failed to fetch driver notifications');
       return res.json();
     },
@@ -89,7 +90,7 @@ function NotificacionesContent() {
     const tag = `admin-notif-${Date.now()}`;
 
     // Persist record
-    const res = await fetch('/api/driver-notifications', {
+    const res = await fetchWithAuth('/api/driver-notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -49,7 +49,7 @@ function PriceCorrectionTab({ rides, company }) {
     const newPrice = parseFloat(corrections[ride.id]);
     if (isNaN(newPrice)) return;
     setSaving(p => ({ ...p, [ride.id]: true }));
-    const res = await fetchWithAuth(`/api/ride-requests?id=${ride.id}`, {
+    const res = await fetchWithAuth(`/api/rides?id=${ride.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_price: newPrice })

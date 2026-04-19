@@ -36,7 +36,7 @@ export default function DriversPage() {
     queryKey: ["drivers"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/drivers');
+        const res = await fetchWithAuth('/api/drivers');
         const json = await res.json();
         return json.data || [];
       } catch (error) {
@@ -59,7 +59,7 @@ export default function DriversPage() {
     queryKey: ["cities"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/cities');
+        const res = await fetchWithAuth('/api/cities');
         const json = await res.json();
         return json.data || [];
       } catch { return []; }
@@ -72,7 +72,7 @@ export default function DriversPage() {
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/service-types');
+        const res = await fetchWithAuth('/api/service-types');
         const json = await res.json();
         return json.data || [];
       } catch { return []; }
@@ -85,7 +85,7 @@ export default function DriversPage() {
     queryKey: ["rides"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/ride-requests');
+        const res = await fetchWithAuth('/api/rides');
         const json = await res.json();
         return json.data || [];
       } catch { return []; }
@@ -98,7 +98,7 @@ export default function DriversPage() {
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetchWithAuth('/api/settings');
         const json = await res.json();
         return json.data?.[0];
       } catch { return null; }

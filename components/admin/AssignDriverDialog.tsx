@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star, Car, AlertCircle, MapPin, Navigation, List, Map as MapIcon } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet";
@@ -87,7 +88,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
   const { data: geoZones = [] } = useQuery({
     queryKey: ["geoZones"],
     queryFn: async () => {
-      const res = await fetch('/api/geo-zones');
+      const res = await fetchWithAuth('/api/geo-zones');
       if (!res.ok) throw new Error('Failed to fetch geo zones');
       return res.json();
     },

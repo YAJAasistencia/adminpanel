@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,7 +18,7 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
   useEffect(() => {
     const load = async () => {
       const now = new Date();
-      const res = await fetch('/api/announcements');
+      const res = await fetchWithAuth('/api/announcements');
       const json = await res.json();
       const all = json.data || [];
       const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");

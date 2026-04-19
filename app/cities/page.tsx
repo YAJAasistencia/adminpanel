@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,7 +31,7 @@ export default function CitiesPage() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const res = await fetch('/api/cities');
+      const res = await fetchWithAuth('/api/cities');
       if (!res.ok) throw new Error('Failed to fetch cities');
       return res.json();
     },
@@ -48,7 +49,7 @@ export default function CitiesPage() {
   const { data: geoZones = [] } = useQuery({
     queryKey: ["geoZones"],
     queryFn: async () => {
-      const res = await fetch('/api/geo-zones');
+      const res = await fetchWithAuth('/api/geo-zones');
       if (!res.ok) throw new Error('Failed to fetch geo zones');
       return res.json();
     },
@@ -59,7 +60,7 @@ export default function CitiesPage() {
   const { data: redZones = [] } = useQuery({
     queryKey: ["redZones"],
     queryFn: async () => {
-      const res = await fetch('/api/red-zones');
+      const res = await fetchWithAuth('/api/red-zones');
       if (!res.ok) throw new Error('Failed to fetch red zones');
       return res.json();
     },
@@ -122,7 +123,7 @@ export default function CitiesPage() {
       console.log("[Cities] Guardando ciudad:", data);
       
       if (editCity.id) {
-        const res = await fetch(`/api/cities?id=${editCity.id}`, {
+        const res = await fetchWithAuth(`/api/cities?id=${editCity.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -130,7 +131,7 @@ export default function CitiesPage() {
         if (!res.ok) throw new Error('Failed to update city');
         toast.success("✅ Ciudad actualizada");
       } else {
-        const res = await fetch('/api/cities', {
+        const res = await fetchWithAuth('/api/cities', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -170,7 +171,7 @@ export default function CitiesPage() {
     if (!window.confirm(`¿Eliminar ciudad "${city.name}"?`)) return;
 
     try {
-      const res = await fetch(`/api/cities?id=${city.id}`, {
+      const res = await fetchWithAuth(`/api/cities?id=${city.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -185,7 +186,7 @@ export default function CitiesPage() {
 
   const handleToggle = async (city: any) => {
     try {
-      const res = await fetch(`/api/cities?id=${city.id}`, {
+      const res = await fetchWithAuth(`/api/cities?id=${city.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !city.is_active })

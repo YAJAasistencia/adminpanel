@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export default function BonosPage() {
   const { data: rules = [] } = useQuery({
     queryKey: ["bonusRules"],
     queryFn: async () => {
-      const res = await fetch('/api/bonus-rules');
+      const res = await fetchWithAuth('/api/bonus-rules');
       const json = await res.json();
       return json.data || [];
     },
@@ -61,7 +62,7 @@ export default function BonosPage() {
   const { data: logs = [] } = useQuery({
     queryKey: ["bonusLogs"],
     queryFn: async () => {
-      const res = await fetch('/api/bonus-logs');
+      const res = await fetchWithAuth('/api/bonus-logs');
       const json = await res.json();
       return json.data || [];
     },
@@ -72,7 +73,7 @@ export default function BonosPage() {
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers_bonus"],
     queryFn: async () => {
-      const res = await fetch('/api/drivers');
+      const res = await fetchWithAuth('/api/drivers');
       const json = await res.json();
       return json.data || [];
     },
@@ -83,7 +84,7 @@ export default function BonosPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["rides_bonus"],
     queryFn: async () => {
-      const res = await fetch('/api/ride-requests');
+      const res = await fetchWithAuth('/api/rides');
       const json = await res.json();
       return json.data || [];
     },
@@ -94,7 +95,7 @@ export default function BonosPage() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const res = await fetch('/api/cities');
+      const res = await fetchWithAuth('/api/cities');
       const json = await res.json();
       return json.data || [];
     },
@@ -105,7 +106,7 @@ export default function BonosPage() {
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: async () => {
-      const res = await fetch('/api/service-types');
+      const res = await fetchWithAuth('/api/service-types');
       const json = await res.json();
       return json.data || [];
     },
@@ -116,7 +117,7 @@ export default function BonosPage() {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (editingRule) {
-        const res = await fetch(`/api/bonus-rules/${editingRule.id}`, {
+        const res = await fetchWithAuth(`/api/bonus-rules/${editingRule.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -125,7 +126,7 @@ export default function BonosPage() {
         const json = await res.json();
         return json.data;
       } else {
-        const res = await fetch('/api/bonus-rules', {
+        const res = await fetchWithAuth('/api/bonus-rules', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -145,7 +146,7 @@ export default function BonosPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const res = await fetch(`/api/bonus-rules/${id}`, {
+      const res = await fetchWithAuth(`/api/bonus-rules/${id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -161,7 +162,7 @@ export default function BonosPage() {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, val }: any) => {
-      const res = await fetch(`/api/bonus-rules/${id}`, {
+      const res = await fetchWithAuth(`/api/bonus-rules/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: val })
@@ -175,7 +176,7 @@ export default function BonosPage() {
 
   const logMutation = useMutation({
     mutationFn: async (data) => {
-      const res = await fetch('/api/bonus-logs', {
+      const res = await fetchWithAuth('/api/bonus-logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -190,7 +191,7 @@ export default function BonosPage() {
 
   const updateLogMutation = useMutation({
     mutationFn: async ({ id, data }: any) => {
-      const res = await fetch(`/api/bonus-logs/${id}`, {
+      const res = await fetchWithAuth(`/api/bonus-logs/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
