@@ -45,7 +45,11 @@ export default function Dashboard() {
     queryKey: ["sosAlerts"],
     queryFn: async () => {
       try {
-        return await supabaseApi.sosAlerts.list() || [];
+        const { data, error } = await supabase
+          .from('sos_alerts')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 60 * 1000, // 1 minute - has real-time subscription
@@ -71,7 +75,11 @@ export default function Dashboard() {
     queryKey: ["drivers"],
     queryFn: async () => {
       try {
-        return await supabaseApi.drivers.list();
+        const { data, error } = await supabase
+          .from('drivers')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 1000, // Increased from 5s to 30s - we have real-time updates via subscription
@@ -83,7 +91,11 @@ export default function Dashboard() {
     queryKey: ["cities"],
     queryFn: async () => {
       try {
-        return await supabaseApi.cities.list();
+        const { data, error } = await supabase
+          .from('cities')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
@@ -109,7 +121,11 @@ export default function Dashboard() {
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        return await supabaseApi.serviceTypes.list();
+        const { data, error } = await supabase
+          .from('service_types')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
@@ -120,7 +136,11 @@ export default function Dashboard() {
     queryKey: ["policies"],
     queryFn: async () => {
       try {
-        return await supabaseApi.cancellationPolicies.list();
+        const { data, error } = await supabase
+          .from('cancellation_policies')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
