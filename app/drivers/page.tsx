@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,9 +35,11 @@ export default function DriversPage() {
     queryKey: ["drivers"],
     queryFn: async () => {
       try {
-        const res = await fetchWithAuth('/api/drivers');
-        const json = await res.json();
-        return json.data || [];
+        const { data, error } = await supabase
+          .from('Driver')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch (error) {
         toast.error("Error al cargar conductores");
         return [];
@@ -59,9 +60,11 @@ export default function DriversPage() {
     queryKey: ["cities"],
     queryFn: async () => {
       try {
-        const res = await fetchWithAuth('/api/cities');
-        const json = await res.json();
-        return json.data || [];
+        const { data, error } = await supabase
+          .from('cities')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000,
@@ -72,9 +75,11 @@ export default function DriversPage() {
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        const res = await fetchWithAuth('/api/service-types');
-        const json = await res.json();
-        return json.data || [];
+        const { data, error } = await supabase
+          .from('service_types')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000,
@@ -85,9 +90,11 @@ export default function DriversPage() {
     queryKey: ["rides"],
     queryFn: async () => {
       try {
-        const res = await fetchWithAuth('/api/rides');
-        const json = await res.json();
-        return json.data || [];
+        const { data, error } = await supabase
+          .from('ride_requests')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch { return []; }
     },
     staleTime: 30 * 1000,
@@ -98,9 +105,13 @@ export default function DriversPage() {
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const res = await fetchWithAuth('/api/settings');
-        const json = await res.json();
-        return json.data?.[0];
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('*')
+          .limit(1)
+          .single();
+        if (error && error.code !== 'PGRST116') throw error;
+        return data;
       } catch { return null; }
     },
     staleTime: 60 * 60 * 1000,
@@ -109,12 +120,11 @@ export default function DriversPage() {
 
   const handleApprove = async (driver: any) => {
     try {
-      const res = await fetchWithAuth(`/api/drivers?id=${driver.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approval_status: "approved" })
-      });
-      if (!res.ok) throw new Error('Failed to approve');
+      const { error } = await supabase
+        .from('Driver')
+        .update({ approval_status: "approved" })
+        .eq('id', driver.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.success(`${driver.full_name} aprobado`);
     } catch (error) {
@@ -124,12 +134,11 @@ export default function DriversPage() {
 
   const handleReject = async (driver: any) => {
     try {
-      const res = await fetchWithAuth(`/api/drivers?id=${driver.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approval_status: "rejected" })
-      });
-      if (!res.ok) throw new Error('Failed to reject');
+      const { error } = await supabase
+        .from('Driver')
+        .update({ approval_status: "rejected" })
+        .eq('id', driver.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.error(`${driver.full_name} rechazado`);
     } catch (error) {
@@ -140,11 +149,11 @@ export default function DriversPage() {
   const handleDelete = async (driver: any) => {
     if (!window.confirm(`¿Eliminar a ${driver.full_name}? Esta acción es irreversible.`)) return;
     try {
-      const res = await fetchWithAuth(`/api/drivers?id=${driver.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Failed to delete');
+      const { error } = await supabase
+        .from('Driver')
+        .delete()
+        .eq('id', driver.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.success(`${driver.full_name} eliminado`);
     } catch (error) {
