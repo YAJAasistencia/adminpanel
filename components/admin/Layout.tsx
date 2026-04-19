@@ -96,6 +96,35 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     }
   }, [session, queryClient]);
 
+  const accentColor = settings?.accent_color || "#3B82F6";
+  const primaryColor = settings?.primary_color || "#0F172A";
+  const secondaryColor = settings?.secondary_color || "#10B981";
+
+  // ── Favicon dinámico: usa el logo_url de la DB ──
+  useEffect(() => {
+    const logoUrl = settings?.logo_url;
+    if (!logoUrl) return;
+
+    // Actualizar todos los links de favicon con el logo de la empresa
+    const updateLink = (selector: string, href: string) => {
+      let link = document.querySelector(selector) as HTMLLinkElement;
+      if (link) {
+        link.href = href;
+      } else {
+        link = document.createElement("link");
+        const attrs = selector.match(/\[([^\]]+)\]/g);
+        attrs?.forEach(attr => {
+          const [key, val] = attr.replace(/[\[\]"']/g, '').split('=');
+          link.setAttribute(key, val);
+        });
+        link.href = href;
+        document.head.appendChild(link);
+      }
+    };
+    updateLink('link[rel="icon"]', logoUrl);
+    updateLink('link[rel="apple-touch-icon"]', logoUrl);
+  }, [settings?.logo_url]);
+
   const shareAdminLink = () => {
     navigator.clipboard.writeText(window.location.origin);
     toast.success("Enlace de gestión copiado");
@@ -147,35 +176,6 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       </div>
     );
   }
-
-  const accentColor = settings?.accent_color || "#3B82F6";
-  const primaryColor = settings?.primary_color || "#0F172A";
-  const secondaryColor = settings?.secondary_color || "#10B981";
-
-  // ── Favicon dinámico: usa el logo_url de la DB ──
-  useEffect(() => {
-    const logoUrl = settings?.logo_url;
-    if (!logoUrl) return;
-
-    // Actualizar todos los links de favicon con el logo de la empresa
-    const updateLink = (selector: string, href: string) => {
-      let link = document.querySelector(selector) as HTMLLinkElement;
-      if (link) {
-        link.href = href;
-      } else {
-        link = document.createElement("link");
-        const attrs = selector.match(/\[([^\]]+)\]/g);
-        attrs?.forEach(attr => {
-          const [key, val] = attr.replace(/[\[\]"']/g, '').split('=');
-          link.setAttribute(key, val);
-        });
-        link.href = href;
-        document.head.appendChild(link);
-      }
-    };
-    updateLink('link[rel="icon"]', logoUrl);
-    updateLink('link[rel="apple-touch-icon"]', logoUrl);
-  }, [settings?.logo_url]);
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
