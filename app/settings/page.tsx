@@ -171,10 +171,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (settings) {
+      // Convertir campos decimal (DB 0.0-1.0) → porcentaje (UI 0-100)
+      const dbRejectionThreshold = settings.rejection_rate_warning_threshold;
+      const dbAcceptanceThreshold = settings.low_acceptance_rate_threshold;
+
       // Merge inteligente: no sobrescribir arrays/objetos complejos
       setForm({
         ...defaults,
         ...settings,
+        rejection_rate_warning_threshold: dbRejectionThreshold != null ? Math.round(dbRejectionThreshold * 100) : defaults.rejection_rate_warning_threshold,
+        low_acceptance_rate_threshold: dbAcceptanceThreshold != null ? Math.round(dbAcceptanceThreshold * 100) : defaults.low_acceptance_rate_threshold,
         // Arrays: mergear, NO sobrescribir
         payment_methods: (settings.payment_methods && settings.payment_methods.length > 0) 
           ? settings.payment_methods 
@@ -259,7 +265,14 @@ export default function SettingsPage() {
         throw new Error("Todos los documentos deben tener un nombre");
       }
       
-      console.log("[Settings] Guardando configuración:", form);
+      // Convertir campos porcentaje (UI 0-100) → decimal (DB 0.0-1.0)
+      const payload = {
+        ...form,
+        rejection_rate_warning_threshold: (form.rejection_rate_warning_threshold ?? 60) / 100,
+        low_acceptance_rate_threshold: (form.low_acceptance_rate_threshold ?? 60) / 100,
+      };
+
+      console.log("[Settings] Guardando configuración:", payload);
       
       let updated;
       if (settings?.id) {
@@ -267,10 +280,10 @@ export default function SettingsPage() {
         const res = await fetchWithAuth(`/api/settings?id=${settings.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('Failed to update settings');
         const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to update settings');
         updated = json.data;
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
@@ -278,10 +291,10 @@ export default function SettingsPage() {
         const res = await fetchWithAuth('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('Failed to create settings');
         const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to create settings');
         updated = json.data;
         console.log("[Settings] CREATE exitoso:", updated);
       }
