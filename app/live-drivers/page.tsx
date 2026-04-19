@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -59,7 +58,11 @@ export default function LiveDriversPage() {
     queryKey: ["driversLive"],
     queryFn: async () => {
       try {
-        return await supabaseApi.drivers.list();
+        const { data, error } = await supabase
+          .from('Driver')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch (error) {
         toast.error("Error al cargar conductores");
         return [];
@@ -73,7 +76,11 @@ export default function LiveDriversPage() {
     queryKey: ["ridesLive"],
     queryFn: async () => {
       try {
-        return await supabaseApi.rideRequests.list();
+        const { data, error } = await supabase
+          .from('ride_requests')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch (error) {
         toast.error("Error al cargar viajes");
         return [];

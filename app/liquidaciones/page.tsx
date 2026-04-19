@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,14 +40,26 @@ export default function Liquidaciones() {
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
-    queryFn: () => supabaseApi.drivers.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('Driver')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: () => supabaseApi.settings.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -57,8 +69,11 @@ export default function Liquidaciones() {
   const { data: allRides = [] } = useQuery({
     queryKey: ["rides-completed"],
     queryFn: async () => {
-      const rides = await supabaseApi.rideRequests.list();
-      return rides.filter(r => r.status === "completed");
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select('*');
+      if (error) throw error;
+      return (data || []).filter(r => r.status === "completed");
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -94,18 +109,26 @@ export default function Liquidaciones() {
     if (!selectedDriverId || weekRides.length === 0) return;
     setMarking(true);
     const pending = weekRides.filter(r => r.payment_status !== "paid");
-    for (const r of pending) {
-      const amount = r.final_price || r.estimated_price || 0;
-      const commAmt = r.platform_commission != null ? r.platform_commission : +(amount * commissionPct / 100);
-      const driverAmt = r.driver_earnings != null ? r.driver_earnings : +(amount - commAmt);
-      await supabaseApi.rideRequests.update(r.id, {
-        payment_status: "paid",
-        driver_earnings: +driverAmt.toFixed(2),
-        platform_commission: +commAmt.toFixed(2),
-      });
+    try {
+      for (const r of pending) {
+        const amount = r.final_price || r.estimated_price || 0;
+        const commAmt = r.platform_commission != null ? r.platform_commission : +(amount * commissionPct / 100);
+        const driverAmt = r.driver_earnings != null ? r.driver_earnings : +(amount - commAmt);
+        const { error } = await supabase
+          .from('ride_requests')
+          .update({
+            payment_status: "paid",
+            driver_earnings: +driverAmt.toFixed(2),
+            platform_commission: +commAmt.toFixed(2),
+          })
+          .eq('id', r.id);
+        if (error) throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ["rides-completed"] });
+      toast.success("Semana marcada como pagada");
+    } catch (error) {
+      toast.error("Error al marcar semana como pagada");
     }
-    queryClient.invalidateQueries({ queryKey: ["rides-completed"] });
-    toast.success("Semana marcada como pagada");
     setMarking(false);
   };
 
