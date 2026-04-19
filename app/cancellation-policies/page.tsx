@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,13 @@ export default function CancellationPoliciesPage() {
 
   const { data: policies = [] } = useQuery({
     queryKey: ["policies"],
-    queryFn: () => supabaseApi.cancellationPolicies.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cancellation_policies')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const handleSave = async () => {
@@ -50,20 +55,17 @@ export default function CancellationPoliciesPage() {
         free_cancellation_minutes: parseInt(editPolicy.free_cancellation_minutes) || 0,
       };
       if (editPolicy.id) {
-        const res = await fetchWithAuth(`/api/cancellation-policies?id=${editPolicy.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to update policy');
+        const { error } = await supabase
+          .from('cancellation_policies')
+          .update(data)
+          .eq('id', editPolicy.id);
+        if (error) throw error;
         toast.success("Política actualizada");
       } else {
-        const res = await fetchWithAuth('/api/cancellation-policies', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to create policy');
+        const { error } = await supabase
+          .from('cancellation_policies')
+          .insert([data]);
+        if (error) throw error;
         toast.success("Política creada");
       }
       queryClient.invalidateQueries({ queryKey: ["policies"] });
@@ -79,11 +81,11 @@ export default function CancellationPoliciesPage() {
   const handleDelete = async (p: any) => {
     if (!window.confirm(`¿Eliminar la política "${p.name}"?`)) return;
     try {
-      const res = await fetchWithAuth(`/api/cancellation-policies?id=${p.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Failed to delete policy');
+      const { error } = await supabase
+        .from('cancellation_policies')
+        .delete()
+        .eq('id', p.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["policies"] });
       toast.success("Política eliminada");
     } catch (error: any) {

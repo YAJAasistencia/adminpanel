@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,12 +48,11 @@ function PriceCorrectionTab({ rides, company }) {
     const newPrice = parseFloat(corrections[ride.id]);
     if (isNaN(newPrice)) return;
     setSaving(p => ({ ...p, [ride.id]: true }));
-    const res = await fetchWithAuth(`/api/rides?id=${ride.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_price: newPrice })
-    });
-    if (!res.ok) throw new Error('Failed to update ride');
+    const { error } = await supabase
+      .from('rides')
+      .update({ company_price: newPrice })
+      .eq('id', ride.id);
+    if (error) throw error;
     setSaving(p => ({ ...p, [ride.id]: false }));
     setSaved(p => ({ ...p, [ride.id]: true }));
     setTimeout(() => setSaved(p => ({ ...p, [ride.id]: false })), 2500);
@@ -352,9 +350,11 @@ export default function Companies() {
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/geo-zones');
-      if (!res.ok) throw new Error('Failed to fetch geo zones');
-      return res.json();
+      const { data, error } = await supabase
+        .from('geo_zones')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -362,7 +362,13 @@ export default function Companies() {
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: () => supabaseApi.serviceTypes.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
@@ -370,9 +376,11 @@ export default function Companies() {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/companies');
-      if (!res.ok) throw new Error('Failed to fetch companies');
-      return res.json();
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -380,14 +388,26 @@ export default function Companies() {
 
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
-    queryFn: () => supabaseApi.surveys.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('surveys')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
-    queryFn: () => supabaseApi.rideRequests.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -442,19 +462,16 @@ export default function Companies() {
     };
     try {
       if (editing.id) {
-        const res = await fetchWithAuth(`/api/companies?id=${editing.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to update company');
+        const { error } = await supabase
+          .from('companies')
+          .update(data)
+          .eq('id', editing.id);
+        if (error) throw error;
       } else {
-        const res = await fetchWithAuth('/api/companies', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to create company');
+        const { error } = await supabase
+          .from('companies')
+          .insert([data]);
+        if (error) throw error;
       }
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       setSaving(false);
@@ -469,11 +486,11 @@ export default function Companies() {
   const handleDelete = async (c) => {
     if (!window.confirm(`¿Eliminar empresa "${c.razon_social}"?`)) return;
     try {
-      const res = await fetchWithAuth(`/api/companies?id=${c.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Failed to delete company');
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', c.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       toast.success("Empresa eliminada");
     } catch (error: any) {

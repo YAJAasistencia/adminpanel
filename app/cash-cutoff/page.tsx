@@ -5,7 +5,6 @@ import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,8 +70,12 @@ export default function CashCutoffPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["rides"],
     queryFn: async () => {
-      const all = await supabaseApi.rideRequests.list();
-      return all;
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('status', 'completed');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -81,8 +84,11 @@ export default function CashCutoffPage() {
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
     queryFn: async () => {
-      const all = await supabaseApi.drivers.list();
-      return all;
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -91,8 +97,11 @@ export default function CashCutoffPage() {
   const { data: cutoffs = [] } = useQuery({
     queryKey: ["cashCutoffs"],
     queryFn: async () => {
-      const all = await supabaseApi.cashCutoffs.list();
-      return all;
+      const { data, error } = await supabase
+        .from('cash_cutoffs')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

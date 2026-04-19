@@ -4,8 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -160,10 +159,12 @@ export default function SettingsPage() {
   const { data: settingsList = [], isLoading: settingsLoading } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/settings');
-      if (!res.ok) throw new Error('Failed to fetch settings');
-      const json = await res.json();
-      return json.data ? [json.data] : [];
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('*')
+        .limit(1);
+      if (error) throw error;
+      return data || [];
     },
   });
 
@@ -270,13 +271,13 @@ export default function SettingsPage() {
       if (!existingId) {
         console.log("[Settings] No tengo ID local, consultando servidor...");
         try {
-          const checkRes = await fetchWithAuth('/api/settings');
-          if (checkRes.ok) {
-            const checkJson = await checkRes.json();
-            if (checkJson.data?.id) {
-              existingId = checkJson.data.id;
-              console.log("[Settings] ID encontrado en servidor:", existingId);
-            }
+          const { data, error } = await supabase
+            .from('app_settings')
+            .select('id')
+            .limit(1);
+          if (!error && data && data.length > 0) {
+            existingId = data[0].id;
+            console.log("[Settings] ID encontrado en servidor:", existingId);
           }
         } catch { /* si falla, se creará como nuevo */ }
       }
@@ -293,27 +294,26 @@ export default function SettingsPage() {
 
       console.log("[Settings] Guardando configuración:", { existingId, payload });
       
-      // ── Paso 3: Siempre PATCH si existe, solo POST si es la primera vez ──
+      // ── Paso 3: Siempre UPDATE si existe, solo INSERT si es la primera vez ──
       let updated;
       if (existingId) {
-        const res = await fetchWithAuth(`/api/settings?id=${existingId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to update settings');
-        updated = json.data;
+        const { data, error } = await supabase
+          .from('app_settings')
+          .update(payload)
+          .eq('id', existingId)
+          .select()
+          .single();
+        if (error) throw error;
+        updated = data;
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
-        const res = await fetchWithAuth('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to create settings');
-        updated = json.data;
+        const { data, error } = await supabase
+          .from('app_settings')
+          .insert([payload])
+          .select()
+          .single();
+        if (error) throw error;
+        updated = data;
         console.log("[Settings] CREATE exitoso (primera configuración):", updated);
       }
       
@@ -337,21 +337,20 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const timestamp = Date.now();
+      const fileName = `logo-${timestamp}-${file.name}`;
       
-      const response = await fetchWithAuth("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const { data, error } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file, { upsert: false });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error en upload");
-      }
+      if (error) throw error;
       
-      const { url } = await response.json();
-      setForm(prev => ({ ...prev, logo_url: url }));
+      const { data: publicUrl } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName);
+      
+      setForm(prev => ({ ...prev, logo_url: publicUrl.publicUrl }));
       toast.success("Logo subido correctamente — recuerda guardar cambios");
     } catch (error: any) {
       toast.error(error.message || "Error al subir logo");

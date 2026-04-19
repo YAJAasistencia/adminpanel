@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -51,9 +50,11 @@ export default function BonosPage() {
   const { data: rules = [] } = useQuery({
     queryKey: ["bonusRules"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/bonus-rules');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('bonus_rules')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -62,9 +63,11 @@ export default function BonosPage() {
   const { data: logs = [] } = useQuery({
     queryKey: ["bonusLogs"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/bonus-logs');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('bonus_logs')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -73,9 +76,11 @@ export default function BonosPage() {
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers_bonus"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/drivers');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -84,9 +89,11 @@ export default function BonosPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["rides_bonus"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/rides');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -95,9 +102,11 @@ export default function BonosPage() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/cities');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('cities')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -106,9 +115,11 @@ export default function BonosPage() {
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/service-types');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -117,23 +128,22 @@ export default function BonosPage() {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (editingRule) {
-        const res = await fetchWithAuth(`/api/bonus-rules/${editingRule.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to update rule');
-        const json = await res.json();
-        return json.data;
+        const { data: result, error } = await supabase
+          .from('bonus_rules')
+          .update(data)
+          .eq('id', editingRule.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
       } else {
-        const res = await fetchWithAuth('/api/bonus-rules', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to create rule');
-        const json = await res.json();
-        return json.data;
+        const { data: result, error } = await supabase
+          .from('bonus_rules')
+          .insert([data])
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
       }
     },
     onSuccess: () => { 
@@ -146,11 +156,11 @@ export default function BonosPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const res = await fetchWithAuth(`/api/bonus-rules/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Failed to delete rule');
+      const { error } = await supabase
+        .from('bonus_rules')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
       return { success: true };
     },
     onSuccess: () => { 
@@ -162,12 +172,11 @@ export default function BonosPage() {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, val }: any) => {
-      const res = await fetchWithAuth(`/api/bonus-rules/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: val })
-      });
-      if (!res.ok) throw new Error('Failed to toggle rule');
+      const { error } = await supabase
+        .from('bonus_rules')
+        .update({ is_active: val })
+        .eq('id', id);
+      if (error) throw error;
       return { success: true };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusRules"] }),
@@ -176,14 +185,13 @@ export default function BonosPage() {
 
   const logMutation = useMutation({
     mutationFn: async (data) => {
-      const res = await fetchWithAuth('/api/bonus-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error('Failed to create log');
-      const json = await res.json();
-      return json.data;
+      const { data: result, error } = await supabase
+        .from('bonus_logs')
+        .insert([data])
+        .select()
+        .single();
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusLogs"] }),
     onError: (error: any) => toast.error(error.message || "Error al crear log"),
