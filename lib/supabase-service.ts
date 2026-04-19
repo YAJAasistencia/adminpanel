@@ -281,5 +281,7 @@ export const cancellationPolicyService = new SupabaseService('cancellation_polic
 export const appSettingsService = new SupabaseService('app_settings');
 export const adminUserService = new SupabaseService('admin_users');
 export const announcementService = new SupabaseService('announcements');
+export const cashCutoffService = new SupabaseService('cash_cutoffs');
+export const roadAssistUserService = new SupabaseService('road_assist_users');
 
 export default supabaseServer;
