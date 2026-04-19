@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
-import { supabaseApi } from "@/lib/supabaseApi";
+import { supabase } from "@/lib/supabase";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +36,11 @@ function AnunciosContent() {
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/announcements');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -48,9 +49,11 @@ function AnunciosContent() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/cities');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('cities')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -59,9 +62,11 @@ function AnunciosContent() {
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/service-types');
-      const json = await res.json();
-      return json.data || [];
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -100,20 +105,17 @@ function AnunciosContent() {
         is_active: form.is_active,
       };
       if (editId) {
-        const res = await fetchWithAuth(`/api/announcements?id=${editId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to update announcement');
+        const { error } = await supabase
+          .from('announcements')
+          .update(data)
+          .eq('id', editId);
+        if (error) throw error;
         toast.success("Anuncio actualizado");
       } else {
-        const res = await fetchWithAuth('/api/announcements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('Failed to create announcement');
+        const { error } = await supabase
+          .from('announcements')
+          .insert([data]);
+        if (error) throw error;
         toast.success("Anuncio creado");
       }
       qc.invalidateQueries({ queryKey: ["announcements"] });
@@ -128,11 +130,11 @@ function AnunciosContent() {
   const handleDelete = async (a: any) => {
     if (!window.confirm(`¿Eliminar el anuncio "${a.title}"?`)) return;
     try {
-      const res = await fetchWithAuth(`/api/announcements?id=${a.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Failed to delete announcement');
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', a.id);
+      if (error) throw error;
       qc.invalidateQueries({ queryKey: ["announcements"] });
       toast.success("Anuncio eliminado");
     } catch (error: any) {
@@ -142,12 +144,11 @@ function AnunciosContent() {
 
   const handleToggle = async (a: any) => {
     try {
-      const res = await fetchWithAuth(`/api/announcements?id=${a.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !a.is_active })
-      });
-      if (!res.ok) throw new Error('Failed to toggle announcement');
+      const { error } = await supabase
+        .from('announcements')
+        .update({ is_active: !a.is_active })
+        .eq('id', a.id);
+      if (error) throw error;
       qc.invalidateQueries({ queryKey: ["announcements"] });
     } catch (error: any) {
       toast.error(error.message || "Error al actualizar");
