@@ -2,8 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,10 +70,8 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
   const handleSave = async () => {
     if (!companyId || selectedRides.length === 0) return;
     setSaving(true);
-    const res = await fetchWithAuth('/api/invoices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      const invoiceData = {
         invoice_number: invoiceNumber,
         company_id: companyId,
         company_name: company.razon_social,
@@ -86,13 +83,19 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
         ride_count: selectedRides.length,
         status: "draft",
         notes,
-      })
-    });
-    if (!res.ok) throw new Error('Failed to create invoice');
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
-    setSaving(false);
-    toast.success("Factura creada");
-    onClose();
+      };
+      const { error } = await supabase
+        .from('invoices')
+        .insert([invoiceData]);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setSaving(false);
+      toast.success("Factura creada");
+      onClose();
+    } catch (error) {
+      toast.error("Error al crear factura");
+      setSaving(false);
+    }
   };
 
   const exportCSV = () => {
@@ -348,16 +351,24 @@ export default function Invoices() {
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
     queryFn: async () => {
-      const res = await fetchWithAuth('/api/invoices');
-      if (!res.ok) throw new Error('Failed to fetch invoices');
-      return res.json();
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*');
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
-    queryFn: () => supabaseApi.companies.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
