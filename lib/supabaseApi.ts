@@ -1,350 +1,758 @@
-import { fetchWithAuth } from '@/lib/fetchWithAuth';
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
+import * as bcryptjs from 'bcryptjs';
 
 // ─── Supabase API Functions ──────────────────────────────────────────────────
-// ALL CRUD operations go through /api/db (service_role key) to bypass RLS.
-// Only Supabase Storage uploads use the anon key directly.
+// Tabla → nombre real en Supabase (verificado contra schema)
+// PascalCase: Driver (única tabla PascalCase)
+// snake_case: admin_users, announcements, app_settings, bonus_logs, bonus_rules,
+//   cancellation_policies, cash_cutoffs, chat_messages, cities, companies,
+//   driver_notificaciones, geo_zones, invoices, red_zones, ride_requests,
+//   road_assist_users, service_types, sos_alerts, support_tickets,
+//   survey_responses, surveys
 
-// ─── Generic API helpers ─────────────────────────────────────────────────────
-
-async function apiGet(table: string, id: string) {
-  const res = await fetchWithAuth(`/api/db?table=${encodeURIComponent(table)}&id=${encodeURIComponent(id)}`);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `GET ${table}/${id} failed`);
-  return json.data;
-}
-
-async function apiList(table: string, opts?: {
-  order?: string;
-  ascending?: boolean;
-  limit?: number;
-  filters?: Record<string, any>;
-  select?: string;
-}) {
-  const params = new URLSearchParams({ table });
-  if (opts?.order) params.set('order', opts.order);
-  if (opts?.ascending !== undefined) params.set('ascending', String(opts.ascending));
-  if (opts?.limit) params.set('limit', String(opts.limit));
-  if (opts?.filters) params.set('filters', JSON.stringify(opts.filters));
-  if (opts?.select) params.set('select', opts.select);
-  const res = await fetchWithAuth(`/api/db?${params.toString()}`);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `LIST ${table} failed`);
-  return json.data || [];
-}
-
-async function apiCreate(table: string, record: any) {
-  const res = await fetchWithAuth(`/api/db?table=${encodeURIComponent(table)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `CREATE ${table} failed`);
-  return json.data;
-}
-
-async function apiUpdate(table: string, id: string, updates: any) {
-  const res = await fetchWithAuth(`/api/db?table=${encodeURIComponent(table)}&id=${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `UPDATE ${table}/${id} failed`);
-  return json.data;
-}
-
-async function apiDelete(table: string, id: string) {
-  const res = await fetchWithAuth(`/api/db?table=${encodeURIComponent(table)}&id=${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `DELETE ${table}/${id} failed`);
-  return { success: true };
-}
-
-function cleanFilters(filters?: any): Record<string, any> | undefined {
-  if (!filters) return undefined;
-  const clean: Record<string, any> = {};
-  for (const [k, v] of Object.entries(filters)) {
-    if (v !== undefined && v !== null) clean[k] = v;
+// ─── Helper: Update with fallback to GET (handles RLS select() restrictions) ───
+// ─── Helper: Update without .select() to avoid PostgREST schema introspection ───
+async function updateWithFallback(tableName: string, id: string, updates: any) {
+  try {
+    console.log(`[supabaseApi] UPDATE ${tableName} id=${id}`, updates);
+    // Realizar update SIN .select() para evitar introspección de schema
+    const { error: updateError } = await supabase.from(tableName).update(updates).eq('id', id);
+    if (updateError) throw updateError;
+    console.log(`[supabaseApi] UPDATE SUCCESS (without .select())`);
+    
+    // Luego hacer GET para obtener los datos actualizados
+    const { data, error: getError } = await supabase.from(tableName).select('*').eq('id', id).single();
+    if (getError) throw getError;
+    console.log(`[supabaseApi] Data fetched after update:`, data);
+    return data;
+  } catch (fetchError: any) {
+    console.error(`[supabaseApi] UPDATE FAILED on ${tableName}:`, fetchError);
+    throw new Error(`Actualización fallida en ${tableName}: ${fetchError?.message || 'Error en actualización'}`);
   }
-  return Object.keys(clean).length > 0 ? clean : undefined;
+}
+
+// ─── Helper: Create without .select() to avoid PostgREST schema introspection ───
+async function createWithFallback(tableName: string, record: any) {
+  try {
+    console.log(`[supabaseApi] INSERT ${tableName}`, record);
+    // Realizar insert SIN .select() para evitar introspección de schema
+    const { data: insertedData, error: insertError } = await supabase.from(tableName).insert(record);
+    if (insertError) throw insertError;
+    console.log(`[supabaseApi] INSERT SUCCESS (without .select())`);
+    
+    // Si el insert devolvió datos, usarlos; si no, hacer GET
+    if (insertedData && insertedData.length > 0) {
+      return insertedData[0];
+    }
+    
+    // Fallback: obtener el último record insertado (usar 'id' ya que no todas las tablas tienen created_at)
+    const { data, error: getError } = await supabase.from(tableName).select('*').order('id', { ascending: false }).limit(1).single();
+    if (getError) throw getError;
+    console.log(`[supabaseApi] Data fetched after insert:`, data);
+    return data;
+  } catch (fetchError: any) {
+    console.error(`[supabaseApi] INSERT FAILED on ${tableName}:`, fetchError);
+    throw new Error(`Inserción fallida en ${tableName}: ${fetchError?.message || 'Error en inserción'}`);
+  }
 }
 
 export const supabaseApi = {
 
   // ─── Cities ───────────────────────────────────────────────────────────────
   cities: {
-    list: async () => apiList('cities', { order: 'name', ascending: true }),
-    get: async (id: string) => apiGet('cities', id),
-    create: async (city: any) => apiCreate('cities', city),
-    update: async (id: string, updates: any) => apiUpdate('cities', id, updates),
-    delete: async (id: string) => apiDelete('cities', id),
+    list: async () => {
+      const { data, error } = await supabase.from('cities').select('*').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('cities').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (city: any) => {
+      return createWithFallback('cities', city);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('cities', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('cities').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Drivers ──────────────────────────────────────────────────────────────
   drivers: {
-    list: async (filters?: any) =>
-      apiList('Driver', { order: 'created_at', ascending: false, filters: cleanFilters(filters) }),
-    listForDashboard: async () =>
-      apiList('Driver', {
-        order: 'created_at', ascending: false,
-        select: 'id,full_name,phone,status,license_plate,approval_status,rating,total_rides,created_at',
-      }),
-    get: async (id: string) => apiGet('Driver', id),
-    create: async (driver: any) => apiCreate('Driver', driver),
-    update: async (id: string, updates: any) => apiUpdate('Driver', id, updates),
-    delete: async (id: string) => apiDelete('Driver', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('Driver').select('*').order('created_at', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    // Optimized version for dashboard - only essential fields
+    listForDashboard: async () => {
+      const fields = 'id,full_name,phone,status,license_plate,approval_status,rating,total_rides,created_at';
+      const { data, error } = await supabase.from('Driver').select(fields).order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('Driver').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (driver: any) => {
+      return createWithFallback('Driver', driver);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('Driver', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('Driver').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Ride Requests ────────────────────────────────────────────────────────
   rideRequests: {
-    list: async (filters?: any) =>
-      apiList('ride_requests', { order: 'requested_at', ascending: false, filters: cleanFilters(filters) }),
-    listForDashboard: async () =>
-      apiList('ride_requests', {
-        order: 'requested_at', ascending: false,
-        select: 'id,status,requested_at,driver_id,passenger_user_id,pickup_address,dropoff_address,estimated_price,final_price,passenger_rating_for_driver',
-      }),
-    get: async (id: string) => apiGet('ride_requests', id),
-    create: async (rideRequest: any) => apiCreate('ride_requests', rideRequest),
-    update: async (id: string, updates: any) => apiUpdate('ride_requests', id, updates),
-    delete: async (id: string) => apiDelete('ride_requests', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('ride_requests').select('*').order('requested_at', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    // Optimized version for dashboard - only essential fields
+    listForDashboard: async () => {
+      const fields = 'id,status,requested_at,driver_id,passenger_user_id,pickup_address,dropoff_address,estimated_price,final_price,passenger_rating_for_driver';
+      const { data, error } = await supabase.from('ride_requests').select(fields).order('requested_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('ride_requests').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (rideRequest: any) => {
+      return createWithFallback('ride_requests', rideRequest);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('ride_requests', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('ride_requests').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Geo Zones ────────────────────────────────────────────────────────────
   geoZones: {
-    list: async () => apiList('geo_zones', { order: 'name', ascending: true }),
-    get: async (id: string) => apiGet('geo_zones', id),
-    create: async (geoZone: any) => apiCreate('geo_zones', geoZone),
-    update: async (id: string, updates: any) => apiUpdate('geo_zones', id, updates),
-    delete: async (id: string) => apiDelete('geo_zones', id),
+    list: async () => {
+      const { data, error } = await supabase.from('geo_zones').select('*').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('geo_zones').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (geoZone: any) => {
+      return createWithFallback('geo_zones', geoZone);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('geo_zones', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('geo_zones').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Support Tickets ──────────────────────────────────────────────────────
   supportTickets: {
-    list: async (filters?: any) =>
-      apiList('support_tickets', { order: 'id', ascending: false, filters: cleanFilters(filters) }),
-    get: async (id: string) => apiGet('support_tickets', id),
-    create: async (ticket: any) => apiCreate('support_tickets', ticket),
-    update: async (id: string, updates: any) => apiUpdate('support_tickets', id, updates),
-    delete: async (id: string) => apiDelete('support_tickets', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('support_tickets').select('*').order('id', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('support_tickets').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (ticket: any) => {
+      return createWithFallback('support_tickets', ticket);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('support_tickets', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('support_tickets').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── Chat Messages ────────────────────────────────────────────────────────
+  // ─── Chat Messages (snake_case — sin PascalCase) ──────────────────────────
   chats: {
-    list: async (filters?: any) =>
-      apiList('chat_messages', { order: 'id', ascending: false, filters: cleanFilters(filters) }),
-    get: async (id: string) => apiGet('chat_messages', id),
-    create: async (chat: any) => apiCreate('chat_messages', chat),
-    update: async (id: string, updates: any) => apiUpdate('chat_messages', id, updates),
-    delete: async (id: string) => apiDelete('chat_messages', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('chat_messages').select('*').order('id', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('chat_messages').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (chat: any) => {
+      return createWithFallback('chat_messages', chat);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('chat_messages', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('chat_messages').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── SOS Alerts ───────────────────────────────────────────────────────────
   sosAlerts: {
-    list: async (filters?: any) =>
-      apiList('sos_alerts', { order: 'id', ascending: false, filters: cleanFilters(filters) }),
-    get: async (id: string) => apiGet('sos_alerts', id),
-    create: async (alert: any) => apiCreate('sos_alerts', alert),
-    update: async (id: string, updates: any) => apiUpdate('sos_alerts', id, updates),
-    delete: async (id: string) => apiDelete('sos_alerts', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('sos_alerts').select('*').order('id', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('sos_alerts').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (alert: any) => {
+      return createWithFallback('sos_alerts', alert);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('sos_alerts', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('sos_alerts').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Settings (app_settings) ───────────────────────────────────────────────
   settings: {
-    list: async () => apiList('app_settings', { order: 'created_at', ascending: false, limit: 1 }),
-    get: async (id: string) => apiGet('app_settings', id),
-    create: async (setting: any) => apiCreate('app_settings', setting),
-    update: async (id: string, updates: any) => apiUpdate('app_settings', id, updates),
-    delete: async (id: string) => apiDelete('app_settings', id),
+    list: async () => {
+      const { data, error } = await supabase.from('app_settings').select('*').order('created_at', { ascending: false }).limit(1);
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('app_settings').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (setting: any) => {
+      return createWithFallback('app_settings', setting);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('app_settings', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('app_settings').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Passengers / Road Assist Users ──────────────────────────────────────
   passengers: {
-    list: async () => apiList('road_assist_users', { order: 'id', ascending: false }),
-    get: async (id: string) => apiGet('road_assist_users', id),
-    create: async (passenger: any) => apiCreate('road_assist_users', passenger),
-    update: async (id: string, updates: any) => apiUpdate('road_assist_users', id, updates),
-    delete: async (id: string) => apiDelete('road_assist_users', id),
+    list: async () => {
+      const { data, error } = await supabase.from('road_assist_users').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('road_assist_users').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (passenger: any) => {
+      return createWithFallback('road_assist_users', passenger);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('road_assist_users', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('road_assist_users').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Service Types ────────────────────────────────────────────────────────
   serviceTypes: {
-    list: async () => apiList('service_types', { order: 'name', ascending: true }),
-    get: async (id: string) => apiGet('service_types', id),
-    create: async (serviceType: any) => apiCreate('service_types', serviceType),
-    update: async (id: string, updates: any) => apiUpdate('service_types', id, updates),
-    delete: async (id: string) => apiDelete('service_types', id),
+    list: async () => {
+      const { data, error } = await supabase.from('service_types').select('*').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('service_types').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (serviceType: any) => {
+      return createWithFallback('service_types', serviceType);
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('service_types', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('service_types').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Admin Users ──────────────────────────────────────────────────────────
   adminUsers: {
-    list: async () => apiList('admin_users', { order: 'created_at', ascending: false }),
-    get: async (id: string) => apiGet('admin_users', id),
-    create: async (user: any) => apiCreate('admin_users', user),
+    list: async () => {
+      const { data, error } = await supabase.from('admin_users').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('admin_users').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (user: any) => {
+      // Hashear contraseña si se proporciona
+      if (user.password) {
+        user.password_hash = await bcryptjs.hash(user.password, 10);
+        delete user.password; // No guardar contraseña en texto plano
+      }
+      
+      const { data, error } = await supabase.from('admin_users').insert(user).select().single();
+      if (error) throw error;
+      return data;
+    },
     update: async (id: string, updates: any) => {
       const { password, ...safeUpdates } = updates;
-      return apiUpdate('admin_users', id, safeUpdates);
+      const { data, error } = await supabase.from('admin_users').update(safeUpdates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
     },
-    delete: async (id: string) => apiDelete('admin_users', id),
+    delete: async (id: string) => {
+      const { error } = await supabase.from('admin_users').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Companies ────────────────────────────────────────────────────────────
   companies: {
-    list: async () => apiList('companies', { order: 'razon_social', ascending: true }),
-    get: async (id: string) => apiGet('companies', id),
-    create: async (company: any) => apiCreate('companies', company),
-    update: async (id: string, updates: any) => apiUpdate('companies', id, updates),
-    delete: async (id: string) => apiDelete('companies', id),
+    list: async () => {
+      const { data, error } = await supabase.from('companies').select('*').order('razon_social');
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('companies').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (company: any) => {
+      const { data, error } = await supabase.from('companies').insert(company).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('companies', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('companies').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Invoices ─────────────────────────────────────────────────────────────
   invoices: {
-    list: async (filters?: any) =>
-      apiList('invoices', { order: 'id', ascending: false, filters: cleanFilters(filters) }),
-    get: async (id: string) => apiGet('invoices', id),
-    create: async (invoice: any) => apiCreate('invoices', invoice),
-    update: async (id: string, updates: any) => apiUpdate('invoices', id, updates),
-    delete: async (id: string) => apiDelete('invoices', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('invoices').select('*').order('id', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('invoices').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (invoice: any) => {
+      const { data, error } = await supabase.from('invoices').insert(invoice).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('invoices', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('invoices').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Bonus Rules ──────────────────────────────────────────────────────────
   bonusRules: {
-    list: async () => apiList('bonus_rules', { order: 'id', ascending: false }),
-    create: async (rule: any) => apiCreate('bonus_rules', rule),
-    update: async (id: string, updates: any) => apiUpdate('bonus_rules', id, updates),
-    delete: async (id: string) => apiDelete('bonus_rules', id),
+    list: async () => {
+      const { data, error } = await supabase.from('bonus_rules').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (rule: any) => {
+      const { data, error } = await supabase.from('bonus_rules').insert(rule).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('bonus_rules', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('bonus_rules').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Bonus Logs ───────────────────────────────────────────────────────────
   bonusLogs: {
-    list: async (filters?: any) =>
-      apiList('bonus_logs', { order: 'period_start', ascending: false, filters: cleanFilters(filters) }),
-    create: async (log: any) => apiCreate('bonus_logs', log),
-    update: async (id: string, updates: any) => apiUpdate('bonus_logs', id, updates),
+    list: async (filters?: any) => {
+      let query = supabase.from('bonus_logs').select('*').order('period_start', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (log: any) => {
+      const { data, error } = await supabase.from('bonus_logs').insert(log).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('bonus_logs', id, updates);
+    },
   },
 
-  // ─── Payment Methods (sub-object within app_settings) ─────────────────────
+  // ─── Payment Methods (dentro de app_settings) ──────────────────────────────
   paymentMethods: {
     list: async () => {
-      const settings = await apiList('app_settings', { limit: 1 });
-      return settings?.[0]?.payment_methods || [];
+      const { data, error } = await supabase.from('app_settings').select('payment_methods').limit(1);
+      if (error) throw error;
+      return data?.[0]?.payment_methods || [];
     },
     create: async (method: any) => {
-      const settings = await apiList('app_settings', { limit: 1 });
-      const s = settings?.[0];
-      if (!s) throw new Error('No app_settings found');
-      const methods = [...(s.payment_methods || []), method];
-      await apiUpdate('app_settings', s.id, { payment_methods: methods });
+      const { data: current } = await supabase.from('app_settings').select('*').limit(1);
+      const settings = current?.[0];
+      if (!settings) throw new Error('No app_settings found');
+      const methods = [...(settings.payment_methods || []), method];
+      const { error } = await supabase.from('app_settings').update({ payment_methods: methods }).eq('id', settings.id);
+      if (error) throw error;
       return method;
     },
     update: async (id: string, updates: any) => {
-      const settings = await apiList('app_settings', { limit: 1 });
-      const s = settings?.[0];
-      if (!s) throw new Error('No app_settings found');
-      const methods = (s.payment_methods || []).map((m: any) =>
+      const { data: current } = await supabase.from('app_settings').select('*').limit(1);
+      const settings = current?.[0];
+      if (!settings) throw new Error('No app_settings found');
+      const methods = (settings.payment_methods || []).map((m: any) =>
         m.id === id || m.key === id ? { ...m, ...updates } : m
       );
-      await apiUpdate('app_settings', s.id, { payment_methods: methods });
+      const { error } = await supabase.from('app_settings').update({ payment_methods: methods }).eq('id', settings.id);
+      if (error) throw error;
       return updates;
     },
     delete: async (id: string) => {
-      const settings = await apiList('app_settings', { limit: 1 });
-      const s = settings?.[0];
-      if (!s) throw new Error('No app_settings found');
-      const methods = (s.payment_methods || []).filter((m: any) => m.id !== id && m.key !== id);
-      await apiUpdate('app_settings', s.id, { payment_methods: methods });
+      const { data: current } = await supabase.from('app_settings').select('*').limit(1);
+      const settings = current?.[0];
+      if (!settings) throw new Error('No app_settings found');
+      const methods = (settings.payment_methods || []).filter((m: any) => m.id !== id && m.key !== id);
+      const { error } = await supabase.from('app_settings').update({ payment_methods: methods }).eq('id', settings.id);
+      if (error) throw error;
       return { success: true };
     },
   },
 
   // ─── Red Zones ────────────────────────────────────────────────────────────
   redZones: {
-    list: async () => apiList('red_zones', { order: 'name', ascending: true }),
-    create: async (zone: any) => apiCreate('red_zones', zone),
-    update: async (id: string, updates: any) => apiUpdate('red_zones', id, updates),
-    delete: async (id: string) => apiDelete('red_zones', id),
+    list: async () => {
+      const { data, error } = await supabase.from('red_zones').select('*').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (zone: any) => {
+      const { data, error } = await supabase.from('red_zones').insert(zone).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('red_zones', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('red_zones').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── Surveys ──────────────────────────────────────────────────────────────
+  // ─── Surveys (snake_case — sin PascalCase) ────────────────────────────────
   surveys: {
-    list: async () => apiList('surveys', { order: 'id', ascending: false }),
-    create: async (survey: any) => apiCreate('surveys', survey),
-    update: async (id: string, updates: any) => apiUpdate('surveys', id, updates),
-    delete: async (id: string) => apiDelete('surveys', id),
+    list: async () => {
+      const { data, error } = await supabase.from('surveys').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (survey: any) => {
+      const { data, error } = await supabase.from('surveys').insert(survey).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('surveys', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('surveys').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── Notifications (driver_notificaciones) ────────────────────────────────
+  // ─── Notifications (usa driver_notificaciones — tabla real en Supabase) ──────
+  // NOTA: La tabla 'notifications' NO existe. Se redirige a driver_notificaciones.
   notifications: {
-    list: async (filters?: any) =>
-      apiList('driver_notificaciones', { order: 'id', ascending: false, filters: cleanFilters(filters) }),
-    create: async (notification: any) => apiCreate('driver_notificaciones', notification),
-    update: async (id: string, updates: any) => apiUpdate('driver_notificaciones', id, updates),
-    delete: async (id: string) => apiDelete('driver_notificaciones', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('driver_notificaciones').select('*').order('id', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (notification: any) => {
+      const { data, error } = await supabase.from('driver_notificaciones').insert(notification).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('driver_notificaciones', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('driver_notificaciones').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── Liquidations (NO EXISTE en Supabase) ─────────────────────────────────
+  // ─── Liquidations ─────────────────────────────────────────────────────────
+  // NOTA: La tabla 'liquidations' NO existe en Supabase. Retorna arrays vacíos.
   liquidations: {
     list: async (_filters?: any) => {
       console.warn('[supabaseApi] liquidations table does not exist in Supabase');
       return [];
     },
-    create: async (_liquidation: any) => { throw new Error('La tabla liquidations no existe en Supabase'); },
-    update: async (_id: string, _updates: any) => { throw new Error('La tabla liquidations no existe en Supabase'); },
-    delete: async (_id: string) => { throw new Error('La tabla liquidations no existe en Supabase'); },
+    create: async (_liquidation: any) => {
+      throw new Error('La tabla liquidations no existe en Supabase');
+    },
+    update: async (_id: string, _updates: any) => {
+      throw new Error('La tabla liquidations no existe en Supabase');
+    },
+    delete: async (_id: string) => {
+      throw new Error('La tabla liquidations no existe en Supabase');
+    },
   },
 
-  // ─── Announcements ────────────────────────────────────────────────────────
+  // ─── Announcements (snake_case — sin PascalCase) ──────────────────────────
   announcements: {
-    list: async () => apiList('announcements', { order: 'id', ascending: false }),
-    create: async (announcement: any) => apiCreate('announcements', announcement),
-    update: async (id: string, updates: any) => apiUpdate('announcements', id, updates),
-    delete: async (id: string) => apiDelete('announcements', id),
+    list: async () => {
+      const { data, error } = await supabase.from('announcements').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (announcement: any) => {
+      const { data, error } = await supabase.from('announcements').insert(announcement).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('announcements', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('announcements').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── Cancellation Policies ────────────────────────────────────────────────
+  // ─── Cancellation Policies (snake_case — sin PascalCase) ─────────────────
   cancellationPolicies: {
-    list: async () => apiList('cancellation_policies', { order: 'name', ascending: true }),
-    create: async (policy: any) => apiCreate('cancellation_policies', policy),
-    update: async (id: string, updates: any) => apiUpdate('cancellation_policies', id, updates),
-    delete: async (id: string) => apiDelete('cancellation_policies', id),
+    list: async () => {
+      const { data, error } = await supabase.from('cancellation_policies').select('*').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (policy: any) => {
+      const { data, error } = await supabase.from('cancellation_policies').insert(policy).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('cancellation_policies', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('cancellation_policies').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── Cash Cutoffs ─────────────────────────────────────────────────────────
+  // ─── Cash Cutoffs (snake_case — sin PascalCase) ───────────────────────────
   cashCutoffs: {
-    list: async () => apiList('cash_cutoffs', { order: 'cutoff_date', ascending: false }),
-    create: async (cutoff: any) => apiCreate('cash_cutoffs', cutoff),
-    update: async (id: string, updates: any) => apiUpdate('cash_cutoffs', id, updates),
-    delete: async (id: string) => apiDelete('cash_cutoffs', id),
+    list: async () => {
+      const { data, error } = await supabase.from('cash_cutoffs').select('*').order('cutoff_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (cutoff: any) => {
+      const { data, error } = await supabase.from('cash_cutoffs').insert(cutoff).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('cash_cutoffs', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('cash_cutoffs').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Road Assist Users (alias de passengers) ──────────────────────────────
   roadAssistUsers: {
-    list: async () => apiList('road_assist_users', { order: 'id', ascending: false }),
-    get: async (id: string) => apiGet('road_assist_users', id),
-    update: async (id: string, updates: any) => apiUpdate('road_assist_users', id, updates),
+    list: async () => {
+      const { data, error } = await supabase.from('road_assist_users').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    get: async (id: string) => {
+      const { data, error } = await supabase.from('road_assist_users').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('road_assist_users', id, updates);
+    },
   },
 
   // ─── Survey Responses ─────────────────────────────────────────────────────
   surveyResponses: {
-    list: async (filters?: any) =>
-      apiList('survey_responses', { order: 'id', ascending: false, filters: cleanFilters(filters) }),
-    create: async (response: any) => apiCreate('survey_responses', response),
-    delete: async (id: string) => apiDelete('survey_responses', id),
+    list: async (filters?: any) => {
+      let query = supabase.from('survey_responses').select('*').order('id', { ascending: false });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) query = (query as any).eq(key, value);
+        });
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (response: any) => {
+      const { data, error } = await supabase.from('survey_responses').insert(response).select().single();
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('survey_responses').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
   // ─── Driver Notifications ─────────────────────────────────────────────────
   driverNotifications: {
-    list: async () => apiList('driver_notificaciones', { order: 'id', ascending: false }),
-    create: async (notification: any) => apiCreate('driver_notificaciones', notification),
-    update: async (id: string, updates: any) => apiUpdate('driver_notificaciones', id, updates),
-    delete: async (id: string) => apiDelete('driver_notificaciones', id),
+    list: async () => {
+      const { data, error } = await supabase.from('driver_notificaciones').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    create: async (notification: any) => {
+      const { data, error } = await supabase.from('driver_notificaciones').insert(notification).select().single();
+      if (error) throw error;
+      return data;
+    },
+    update: async (id: string, updates: any) => {
+      return updateWithFallback('driver_notificaciones', id, updates);
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('driver_notificaciones').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
   },
 
-  // ─── File Uploads (Supabase Storage — uses anon key directly) ──────────────
+  // ─── File Uploads (Supabase Storage) ─────────────────────────────────────
   uploads: {
     uploadFile: async ({ file, bucket = 'assets' }: { file: File; bucket?: string }) => {
       const ext = file.name.split('.').pop();
