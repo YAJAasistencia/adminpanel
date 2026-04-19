@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { setSystemTimezone } from "@/components/shared/dateUtils";
 
 export interface AppSettings {
@@ -22,20 +21,7 @@ export interface AppSettings {
 export default function useAppSettings() {
   const { data, isLoading } = useQuery<AppSettings[]>({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        // Intenta con autenticaci\u00f3n (admin panel) para sortear RLS
-        const res = await fetchWithAuth('/api/settings');
-        if (res.ok) {
-          const json = await res.json();
-          return json.data ? [json.data] : [];
-        }
-      } catch {
-        // sin acceso a localStorage (SSR) o sin token
-      }
-      // Fallback: clave an\u00f3nima (p\u00e1ginas p\u00faublicas / driver app)
-      return supabaseApi.settings.list();
-    },
+    queryFn: () => supabaseApi.settings.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     initialData: [],

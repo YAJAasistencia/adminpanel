@@ -152,17 +152,29 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   const primaryColor = settings?.primary_color || "#0F172A";
   const secondaryColor = settings?.secondary_color || "#10B981";
 
-  // Favicon din\u00e1mico: cambia el icono de la pesta\u00f1a al logo configurado
+  // ── Favicon dinámico: usa el logo_url de la DB ──
   useEffect(() => {
-    if (!settings?.logo_url) return;
-    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    link.href = settings.logo_url;
-    link.type = "image/png";
+    const logoUrl = settings?.logo_url;
+    if (!logoUrl) return;
+
+    // Actualizar todos los links de favicon con el logo de la empresa
+    const updateLink = (selector: string, href: string) => {
+      let link = document.querySelector(selector) as HTMLLinkElement;
+      if (link) {
+        link.href = href;
+      } else {
+        link = document.createElement("link");
+        const attrs = selector.match(/\[([^\]]+)\]/g);
+        attrs?.forEach(attr => {
+          const [key, val] = attr.replace(/[\[\]"']/g, '').split('=');
+          link.setAttribute(key, val);
+        });
+        link.href = href;
+        document.head.appendChild(link);
+      }
+    };
+    updateLink('link[rel="icon"]', logoUrl);
+    updateLink('link[rel="apple-touch-icon"]', logoUrl);
   }, [settings?.logo_url]);
 
   return (
@@ -170,8 +182,9 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       <style>{`
         :root {
           --accent: ${accentColor};
-          --primary: ${primaryColor};
-          --secondary: ${secondaryColor};
+          --app-primary: ${primaryColor};
+          --app-accent: ${accentColor};
+          --app-secondary: ${secondaryColor};
         }
         html, body { overscroll-behavior: none; }
         .overflow-y-auto, .overflow-y-scroll, .overflow-auto { -webkit-overflow-scrolling: touch; }
@@ -183,9 +196,9 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
           <Menu className="w-5 h-5 text-slate-600" />
         </button>
         <div className="flex items-center gap-2">
-          {settings?.logo_url ? (
-            <img src={settings.logo_url} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
-          ) : null}
+          {settings?.logo_url && (
+            <img src={settings.logo_url} alt="Logo" className="w-6 h-6 rounded object-contain" />
+          )}
           <h1 className="font-bold text-slate-900 text-sm">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</h1>
         </div>
         <Button variant="outline" size="sm" className="h-8 w-8" onClick={shareAdminLink}>

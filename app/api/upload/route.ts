@@ -9,16 +9,15 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   );
   try {
-    // ✅ AUTENTICACIÓN: Verificar que la solicitud viene del admin autenticado
+    // ✅ AUTENTICACIÓN: Verificar JWT token o sesión de admin
     const authHeader = request.headers.get('authorization');
+    const token = getTokenFromHeader(authHeader || '');
     const adminSession = request.headers.get('x-admin-session');
 
-    // Nota: Para mayor seguridad, validar contra sesión en servidor
-    // Por ahora, requerimos que exista un header de sesión
-    if (!adminSession) {
-      console.warn('[upload] ⚠️ Intento de upload sin sesión de admin');
+    if (!requireAdmin(token || '') && !adminSession) {
+      console.warn('[upload] ⚠️ Intento de upload sin autenticación');
       return NextResponse.json(
-        { error: 'Unauthorized - Admin session required' },
+        { error: 'Unauthorized - Authentication required' },
         { status: 401 }
       );
     }

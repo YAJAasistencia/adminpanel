@@ -158,15 +158,13 @@ export default function SettingsPage() {
   };
 
   const { data: settingsList = [], isLoading: settingsLoading } = useQuery({
-    // Clave propia para evitar colisión con el cache anónimo de useAppSettings
-    queryKey: ["appSettingsAdmin"],
+    queryKey: ["appSettings"],
     queryFn: async () => {
       const res = await fetchWithAuth('/api/settings');
       if (!res.ok) throw new Error('Failed to fetch settings');
       const json = await res.json();
       return json.data ? [json.data] : [];
     },
-    staleTime: 0, // siempre refetch al montar
   });
 
   const settings = settingsList[0];
@@ -267,21 +265,37 @@ export default function SettingsPage() {
         throw new Error("Todos los documentos deben tener un nombre");
       }
       
-      // Convertir campos porcentaje (UI 0-100) → decimal (DB 0.0-1.0)
-      // Limpiar campos de solo lectura que no deben ir al INSERT/UPDATE
-      const { id: _id, created_at: _ca, version: _v, ...formClean } = form;
+      // ── Paso 1: Siempre verificar si ya existe un registro en la DB ──
+      let existingId = settings?.id;
+      if (!existingId) {
+        console.log("[Settings] No tengo ID local, consultando servidor...");
+        try {
+          const checkRes = await fetchWithAuth('/api/settings');
+          if (checkRes.ok) {
+            const checkJson = await checkRes.json();
+            if (checkJson.data?.id) {
+              existingId = checkJson.data.id;
+              console.log("[Settings] ID encontrado en servidor:", existingId);
+            }
+          }
+        } catch { /* si falla, se creará como nuevo */ }
+      }
+
+      // ── Paso 2: Limpiar campos de solo lectura del payload ──
+      const { id: _id, created_at: _ca, updated_at: _ua, version: _v, ...formClean } = form as any;
       const payload = {
         ...formClean,
+        // Convertir porcentaje (UI 0-100) → decimal (DB 0.0-1.0)
         rejection_rate_warning_threshold: (form.rejection_rate_warning_threshold ?? 60) / 100,
         low_acceptance_rate_threshold: (form.low_acceptance_rate_threshold ?? 60) / 100,
+        updated_at: new Date().toISOString(),
       };
 
-      console.log("[Settings] Guardando configuración:", payload);
+      console.log("[Settings] Guardando configuración:", { existingId, payload });
       
+      // ── Paso 3: Siempre PATCH si existe, solo POST si es la primera vez ──
       let updated;
-      const existingId = settings?.id || form.id;
       if (existingId) {
-        console.log(`[Settings] UPDATE AppSettings id=${existingId}`);
         const res = await fetchWithAuth(`/api/settings?id=${existingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -292,7 +306,6 @@ export default function SettingsPage() {
         updated = json.data;
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
-        console.log("[Settings] CREATE AppSettings");
         const res = await fetchWithAuth('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -301,26 +314,16 @@ export default function SettingsPage() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to create settings');
         updated = json.data;
-        console.log("[Settings] CREATE exitoso:", updated);
+        console.log("[Settings] CREATE exitoso (primera configuración):", updated);
       }
       
       // Actualizar cache inmediatamente con datos guardados
       if (updated) {
-        // Actualiza la clave admin (esta página)
-        queryClient.setQueryData(["appSettingsAdmin"], [updated]);
-        // Actualiza también la clave global (Layout, sidebar, favicon)
         queryClient.setQueryData(["appSettings"], [updated]);
-        // Inyectar el id en el form para que próximos guardados hagan PATCH
-        setForm(prev => ({ ...prev, id: updated.id }));
-        console.log("[Settings] Query cache actualizado, id=", updated.id);
       }
       
-      // Refetch ambas claves
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["appSettingsAdmin"] }),
-        queryClient.refetchQueries({ queryKey: ["appSettings"] }),
-      ]);
-      console.log("[Settings] Queries refetchadas");
+      // Refetch para asegurar sincronización
+      await queryClient.refetchQueries({ queryKey: ["appSettings"] });
       toast.success("✅ Configuración guardada correctamente");
     } catch (error: any) {
       console.error("[Settings] Error al guardar:", error);
@@ -334,22 +337,12 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      // ✅ Obtener sesión de admin del localStorage
-      const adminSession = localStorage.getItem('adminSession');
-      if (!adminSession) {
-        toast.error("Sesión expirada - inicia sesión nuevamente");
-        return;
-      }
-
       const formData = new FormData();
       formData.append("file", file);
       
-      const response = await fetch("/api/upload", {
+      const response = await fetchWithAuth("/api/upload", {
         method: "POST",
         body: formData,
-        headers: {
-          "x-admin-session": adminSession,
-        },
       });
       
       if (!response.ok) {
@@ -358,8 +351,8 @@ export default function SettingsPage() {
       }
       
       const { url } = await response.json();
-      update("logo_url", url);
-      toast.success("Logo subido");
+      setForm(prev => ({ ...prev, logo_url: url }));
+      toast.success("Logo subido correctamente — recuerda guardar cambios");
     } catch (error: any) {
       toast.error(error.message || "Error al subir logo");
     }
