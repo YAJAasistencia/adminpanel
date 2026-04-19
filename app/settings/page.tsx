@@ -337,8 +337,16 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      // Sanitizar nombre del archivo: remover caracteres especiales
+      const ext = file.name.split('.').pop() || 'png';
+      const sanitizedName = file.name
+        .replace(/\.[^/.]+$/, '') // Remover extensión original
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-') // Reemplazar caracteres especiales con guiones
+        .replace(/^-+|-+$/g, ''); // Remover guiones al inicio/final
+      
       const timestamp = Date.now();
-      const fileName = `logo-${timestamp}-${file.name}`;
+      const fileName = `logo-${timestamp}-${sanitizedName}.${ext}`;
       
       const { data, error } = await supabase.storage
         .from('logos')
