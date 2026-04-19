@@ -9,6 +9,8 @@ import { LogIn, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import useAppSettings from "@/components/shared/useAppSettings";
 import { ADMIN_SESSION_KEY } from "@/components/shared/useAdminSession";
+import * as bcryptjs from 'bcryptjs';
+import { supabase } from '@/lib/supabase';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutos
@@ -63,107 +65,66 @@ export default function AdminLoginPage() {
     e.preventDefault();
     if (!email || !password) return;
 
-    // ⏸️  SEGURIDAD PAUSADA - Verificación de bloqueo desactivada temporalmente
-    // const attempts = getAttemptData();
-    // if (attempts.lockedUntil && Date.now() < attempts.lockedUntil) {
-    //   const mins = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
-    //   setError(`Demasiados intentos fallidos. Intenta en ${mins} minuto(s).`);
-    //   return;
-    // }
+    // Verificación de bloqueo
+    const attempts = getAttemptData();
+    if (attempts.lockedUntil && Date.now() < attempts.lockedUntil) {
+      const mins = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+      setError(`Demasiados intentos fallidos. Intenta en ${mins} minuto(s).`);
+      return;
+    }
 
     setLoading(true);
     setError("");
 
     try {
-      console.log('[LOGIN] Calling /api/login endpoint...');
-      
-      // Use backend endpoint to bypass RLS and browser limitations
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      });
+      // Buscar usuario en Supabase admin_users
+      const { data: user, error } = await supabase
+        .from('admin_users')
+        .select('id,email,full_name,role,allowed_pages,is_active,password_hash')
+        .eq('email', email.trim().toLowerCase())
+        .limit(1)
+        .single();
 
-      const result = await response.json();
-      
-      console.log('[LOGIN] API Response:', {
-        status: response.status,
-        success: result.success,
-        error: result.error,
-        userEmail: result.user?.email,
-        tokenLength: result.token?.length || 0,
-        tokenExists: !!result.token,
-      });
-
-      if (!response.ok || !result.success) {
-        console.error('[LOGIN] ❌ API returned error:', result.error);
-        setError(result.error || "Credenciales incorrectas.");
+      if (error || !user) {
+        const a = getAttemptData();
+        const newCount = (a.count || 0) + 1;
+        saveAttemptData({ count: newCount, lockedUntil: newCount >= MAX_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0 });
+        setError('Credenciales incorrectas.');
         setLoading(false);
         return;
       }
 
-      const { user, token } = result;
-
-      console.log('[LOGIN] ✅ Authentication successful, token received:', {
-        tokenExists: !!token,
-        tokenLength: token?.length || 0,
-        tokenPreview: token ? token.substring(0, 20) + '...' : 'NO TOKEN',
-      });
-
-      // Validate token is not empty before storing
-      if (!token || token === '' || typeof token !== 'string') {
-        console.error('[LOGIN] ❌ CRITICAL: Token is invalid/empty', {
-          tokenExists: !!token,
-          tokenType: typeof token,
-          tokenLength: token?.length || 0,
-        });
-        setError('Servidor retornó token inválido. Intenta de nuevo.');
+      if (user.is_active === false) {
+        setError('Esta cuenta está desactivada.');
         setLoading(false);
         return;
       }
 
-      console.log('[LOGIN] ✅ Token validation passed - ready to store');
+      // Comparar contraseña con hash
+      const ok = await bcryptjs.compare(password, (user as any).password_hash || '');
+      if (!ok) {
+        const a = getAttemptData();
+        const newCount = (a.count || 0) + 1;
+        saveAttemptData({ count: newCount, lockedUntil: newCount >= MAX_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0 });
+        setError('Credenciales incorrectas.');
+        setLoading(false);
+        return;
+      }
 
-      // Login exitoso: limpiar contador de intentos
+      // Login exitoso
       resetAttempts();
-
-      // Guardar sesión de admin CON JWT token
       const sessionData = {
         id: user.id,
         email: user.email,
-        name: user.name,
+        full_name: user.full_name,
         role: user.role,
-        allowed_pages: [],
-        token: token, // Store valid JWT for authenticated requests - always non-empty
+        allowed_pages: user.allowed_pages || [],
       };
-
-      console.log('[LOGIN] Session data to store:', {
-        ...sessionData,
-        token: sessionData.token ? sessionData.token.substring(0, 20) + '...' : 'EMPTY',
-      });
-
-      localStorage.setItem(
-        ADMIN_SESSION_KEY,
-        JSON.stringify(sessionData)
-      );
-
-      // Verify it was stored
-      const readBack = localStorage.getItem(ADMIN_SESSION_KEY);
-      const parsedBack = readBack ? JSON.parse(readBack) : null;
-      
-      console.log('[LOGIN] ✅ Session stored and verified, token in storage:', {
-        stored: !!readBack,
-        tokenExists: !!parsedBack?.token,
-        tokenLength: parsedBack?.token?.length || 0,
-      });
-
-      console.log('[LOGIN] Redirecting to dashboard...');
-      
-      // Redirigir al dashboard
-      router.push("/dashboard");
-    } catch (error: any) {
-      console.error('[LOGIN] ❌ Exception:', error);
-      setError(error.message || "Error al iniciar sesión");
+      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(sessionData));
+      router.push('/dashboard');
+    } catch (err: any) {
+      console.error('[LOGIN] Exception:', err);
+      setError(err?.message || 'Error al iniciar sesión');
       setLoading(false);
     }
   };
