@@ -44,7 +44,7 @@ export default function CitiesPage() {
     queryKey: ["drivers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('drivers')
+        .from('Driver')
         .select('*');
       if (error) throw error;
       return data || [];

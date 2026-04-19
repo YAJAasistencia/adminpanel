@@ -49,7 +49,7 @@ export default function ChatsPage() {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('rides')
+          .from('ride_requests')
           .select('*');
         if (error) throw error;
         return data || [];

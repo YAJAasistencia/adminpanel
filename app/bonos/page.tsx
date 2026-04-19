@@ -77,7 +77,7 @@ export default function BonosPage() {
     queryKey: ["drivers_bonus"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('drivers')
+        .from('Driver')
         .select('*');
       if (error) throw error;
       return data || [];
@@ -90,7 +90,7 @@ export default function BonosPage() {
     queryKey: ["rides_bonus"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('rides')
+        .from('ride_requests')
         .select('*');
       if (error) throw error;
       return data || [];

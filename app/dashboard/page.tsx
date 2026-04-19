@@ -61,7 +61,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('rides')
+          .from('ride_requests')
           .select('*');
         if (error) throw error;
         return data || [];
@@ -76,7 +76,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('drivers')
+          .from('Driver')
           .select('*');
         if (error) throw error;
         return data || [];
@@ -284,7 +284,7 @@ export default function Dashboard() {
                 setEtaModalData({ ride: fullRide, driver, phase: "assigned" });
               } else {
                 const { data: fetched, error } = await supabase
-                  .from('drivers')
+                  .from('Driver')
                   .select('*')
                   .eq('id', d.driver_id)
                   .single();
@@ -358,7 +358,7 @@ export default function Dashboard() {
     }
     try {
       const { error } = await supabase
-        .from('rides')
+        .from('ride_requests')
         .update(updates)
         .eq('id', ride.id);
       if (error) throw error;
@@ -380,7 +380,7 @@ export default function Dashboard() {
             driverUpdates.total_earnings = (driver?.total_earnings || 0) + (updates.driver_earnings || 0);
           }
           const { error: driverError } = await supabase
-            .from('drivers')
+            .from('Driver')
             .update(driverUpdates)
             .eq('id', ride.driver_id);
           if (driverError) throw driverError;
@@ -923,7 +923,7 @@ export default function Dashboard() {
             if (!window.confirm(`¿Eliminar el viaje de ${ride.passenger_name}? Esta acción no se puede deshacer.`)) return;
             try {
               const { error } = await supabase
-                .from('rides')
+                .from('ride_requests')
                 .delete()
                 .eq('id', ride.id);
               if (error) throw error;

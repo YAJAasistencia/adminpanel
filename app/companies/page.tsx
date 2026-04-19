@@ -49,7 +49,7 @@ function PriceCorrectionTab({ rides, company }) {
     if (isNaN(newPrice)) return;
     setSaving(p => ({ ...p, [ride.id]: true }));
     const { error } = await supabase
-      .from('rides')
+      .from('ride_requests')
       .update({ company_price: newPrice })
       .eq('id', ride.id);
     if (error) throw error;
@@ -403,7 +403,7 @@ export default function Companies() {
     queryKey: ["allRides"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('rides')
+        .from('ride_requests')
         .select('*');
       if (error) throw error;
       return data || [];

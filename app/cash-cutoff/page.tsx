@@ -71,7 +71,7 @@ export default function CashCutoffPage() {
     queryKey: ["rides"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('rides')
+        .from('ride_requests')
         .select('*')
         .eq('status', 'completed');
       if (error) throw error;
@@ -85,7 +85,7 @@ export default function CashCutoffPage() {
     queryKey: ["drivers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('drivers')
+        .from('Driver')
         .select('*');
       if (error) throw error;
       return data || [];
