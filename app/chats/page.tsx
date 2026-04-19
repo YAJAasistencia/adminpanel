@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,11 @@ export default function ChatsPage() {
     queryKey: ["ridesWithMessages"],
     queryFn: async () => {
       try {
-        return await supabaseApi.rideRequests.list();
+        const { data, error } = await supabase
+          .from('rides')
+          .select('*');
+        if (error) throw error;
+        return data || [];
       } catch (error) {
         console.error("Error fetching rides:", error);
         return [];
