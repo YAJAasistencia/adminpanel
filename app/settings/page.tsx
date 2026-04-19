@@ -142,7 +142,6 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...defaults });
-  const [formReady, setFormReady] = useState(false);
   const [copied, setCopied] = useState(null);
 
   const getAppOrigin = () => {
@@ -159,13 +158,15 @@ export default function SettingsPage() {
   };
 
   const { data: settingsList = [], isLoading: settingsLoading } = useQuery({
-    queryKey: ["appSettings"],
+    // Clave propia para evitar colisión con el cache anónimo de useAppSettings
+    queryKey: ["appSettingsAdmin"],
     queryFn: async () => {
       const res = await fetchWithAuth('/api/settings');
       if (!res.ok) throw new Error('Failed to fetch settings');
       const json = await res.json();
       return json.data ? [json.data] : [];
     },
+    staleTime: 0, // siempre refetch al montar
   });
 
   const settings = settingsList[0];
@@ -209,16 +210,8 @@ export default function SettingsPage() {
         },
       });
       console.log("[Settings] Datos cargados desde Supabase:", settings);
-      setFormReady(true);
     }
   }, [settings]);
-
-  // Mark form ready once query completes with no settings (first-time setup)
-  useEffect(() => {
-    if (!settingsLoading && !settings) {
-      setFormReady(true);
-    }
-  }, [settingsLoading, settings]);
 
   const update = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -313,13 +306,21 @@ export default function SettingsPage() {
       
       // Actualizar cache inmediatamente con datos guardados
       if (updated) {
+        // Actualiza la clave admin (esta página)
+        queryClient.setQueryData(["appSettingsAdmin"], [updated]);
+        // Actualiza también la clave global (Layout, sidebar, favicon)
         queryClient.setQueryData(["appSettings"], [updated]);
-        console.log("[Settings] Query cache actualizado");
+        // Inyectar el id en el form para que próximos guardados hagan PATCH
+        setForm(prev => ({ ...prev, id: updated.id }));
+        console.log("[Settings] Query cache actualizado, id=", updated.id);
       }
       
-      // Refetch para asegurar sincronización
-      await queryClient.refetchQueries({ queryKey: ["appSettings"] });
-      console.log("[Settings] Query refetchada");
+      // Refetch ambas claves
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["appSettingsAdmin"] }),
+        queryClient.refetchQueries({ queryKey: ["appSettings"] }),
+      ]);
+      console.log("[Settings] Queries refetchadas");
       toast.success("✅ Configuración guardada correctamente");
     } catch (error: any) {
       console.error("[Settings] Error al guardar:", error);
@@ -388,8 +389,8 @@ export default function SettingsPage() {
             <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
             <p className="text-sm text-slate-400 mt-0.5">Gestiona todos los parámetros del sistema</p>
           </div>
-          <Button onClick={handleSave} disabled={saving || settingsLoading || !formReady} className="bg-slate-900 hover:bg-slate-800 rounded-xl px-8">
-            <Save className="w-4 h-4 mr-2" /> {settingsLoading || !formReady ? "Cargando..." : saving ? "Guardando..." : "Guardar cambios"}
+          <Button onClick={handleSave} disabled={saving || settingsLoading} className="bg-slate-900 hover:bg-slate-800 rounded-xl px-8">
+            <Save className="w-4 h-4 mr-2" /> {settingsLoading ? "Cargando..." : saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
 

@@ -149,11 +149,30 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   }
 
   const accentColor = settings?.accent_color || "#3B82F6";
+  const primaryColor = settings?.primary_color || "#0F172A";
+  const secondaryColor = settings?.secondary_color || "#10B981";
+
+  // Favicon din\u00e1mico: cambia el icono de la pesta\u00f1a al logo configurado
+  useEffect(() => {
+    if (!settings?.logo_url) return;
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = settings.logo_url;
+    link.type = "image/png";
+  }, [settings?.logo_url]);
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
       <style>{`
-        :root { --accent: ${accentColor}; }
+        :root {
+          --accent: ${accentColor};
+          --primary: ${primaryColor};
+          --secondary: ${secondaryColor};
+        }
         html, body { overscroll-behavior: none; }
         .overflow-y-auto, .overflow-y-scroll, .overflow-auto { -webkit-overflow-scrolling: touch; }
       `}</style>
@@ -163,7 +182,12 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-slate-100">
           <Menu className="w-5 h-5 text-slate-600" />
         </button>
-        <h1 className="font-bold text-slate-900 text-sm">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</h1>
+        <div className="flex items-center gap-2">
+          {settings?.logo_url ? (
+            <img src={settings.logo_url} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
+          ) : null}
+          <h1 className="font-bold text-slate-900 text-sm">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</h1>
+        </div>
         <Button variant="outline" size="sm" className="h-8 w-8" onClick={shareAdminLink}>
           <Share2 className="w-4 h-4" />
         </Button>
