@@ -8,7 +8,6 @@ import Layout from "@/components/admin/Layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { Driver, AppSettings } from "@/types";
 
 interface RejectionStats {
@@ -36,15 +35,11 @@ export default function RejectionAnalysis() {
     const fetchData = async () => {
       try {
         // Fetch settings
-        const res = await fetchWithAuth('/api/settings');
-        const json = await res.json();
-        const settingsData = json.data || [];
+        const settingsData = await supabaseApi.settings.list();
         setSettings(settingsData[0]);
 
         // Fetch all drivers with rejection info
-        const driversRes = await fetchWithAuth('/api/drivers');
-        const driversJson = await driversRes.json();
-        const drivers = driversJson.data || [];
+        const drivers = await supabaseApi.drivers.list();
 
         // Calculate stats
         const total_drivers = drivers.length;
