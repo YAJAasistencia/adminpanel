@@ -142,6 +142,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...defaults });
+  const [formReady, setFormReady] = useState(false);
   const [copied, setCopied] = useState(null);
 
   const getAppOrigin = () => {
@@ -157,7 +158,7 @@ export default function SettingsPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const { data: settingsList = [] } = useQuery({
+  const { data: settingsList = [], isLoading: settingsLoading } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
       const res = await fetchWithAuth('/api/settings');
@@ -208,8 +209,16 @@ export default function SettingsPage() {
         },
       });
       console.log("[Settings] Datos cargados desde Supabase:", settings);
+      setFormReady(true);
     }
   }, [settings]);
+
+  // Mark form ready once query completes with no settings (first-time setup)
+  useEffect(() => {
+    if (!settingsLoading && !settings) {
+      setFormReady(true);
+    }
+  }, [settingsLoading, settings]);
 
   const update = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -266,8 +275,10 @@ export default function SettingsPage() {
       }
       
       // Convertir campos porcentaje (UI 0-100) → decimal (DB 0.0-1.0)
+      // Limpiar campos de solo lectura que no deben ir al INSERT/UPDATE
+      const { id: _id, created_at: _ca, version: _v, ...formClean } = form;
       const payload = {
-        ...form,
+        ...formClean,
         rejection_rate_warning_threshold: (form.rejection_rate_warning_threshold ?? 60) / 100,
         low_acceptance_rate_threshold: (form.low_acceptance_rate_threshold ?? 60) / 100,
       };
@@ -275,9 +286,10 @@ export default function SettingsPage() {
       console.log("[Settings] Guardando configuración:", payload);
       
       let updated;
-      if (settings?.id) {
-        console.log(`[Settings] UPDATE AppSettings id=${settings.id}`);
-        const res = await fetchWithAuth(`/api/settings?id=${settings.id}`, {
+      const existingId = settings?.id || form.id;
+      if (existingId) {
+        console.log(`[Settings] UPDATE AppSettings id=${existingId}`);
+        const res = await fetchWithAuth(`/api/settings?id=${existingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -376,8 +388,8 @@ export default function SettingsPage() {
             <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
             <p className="text-sm text-slate-400 mt-0.5">Gestiona todos los parámetros del sistema</p>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 rounded-xl px-8">
-            <Save className="w-4 h-4 mr-2" /> {saving ? "Guardando..." : "Guardar cambios"}
+          <Button onClick={handleSave} disabled={saving || settingsLoading || !formReady} className="bg-slate-900 hover:bg-slate-800 rounded-xl px-8">
+            <Save className="w-4 h-4 mr-2" /> {settingsLoading || !formReady ? "Cargando..." : saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
 
