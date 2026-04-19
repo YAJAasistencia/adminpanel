@@ -3,8 +3,8 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { supabase } from "@/lib/supabase";
+import * as bcryptjs from "bcryptjs";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -54,10 +54,11 @@ export default function AdminUsersPage() {
     queryKey: ["adminUsers"],
     queryFn: async () => {
       try {
-        const res = await fetchWithAuth('/api/admin-users');
-        if (!res.ok) throw new Error('Failed to fetch admin users');
-        const json = await res.json();
-        return json.data || [];
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id,email,full_name,role,allowed_pages,is_active');
+        if (error) throw error;
+        return data || [];
       } catch (error) {
         console.error("Error fetching admin users:", error);
         return [];
@@ -122,23 +123,29 @@ export default function AdminUsersPage() {
       };
 
       if (editing.password) {
-        Object.assign(payload, { password: editing.password });
+        const hash = await bcryptjs.hash(editing.password, 10);
+        Object.assign(payload, { password_hash: hash });
       }
 
       if (editing.id) {
-        const res = await fetchWithAuth(`/api/admin-users?id=${editing.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error('Failed to update admin user');
+        // Update existing user
+        const { error } = await supabase
+          .from('admin_users')
+          .update(payload)
+          .eq('id', editing.id);
+        if (error) throw error;
       } else {
-        const res = await fetchWithAuth('/api/admin-users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error('Failed to create admin user');
+        // Create new user - password is required for new users
+        if (!editing.password) {
+          toast.error("La contraseña es requerida para nuevos usuarios");
+          setSaving(false);
+          return;
+        }
+        const hash = await bcryptjs.hash(editing.password, 10);
+        const { error } = await supabase
+          .from('admin_users')
+          .insert([{ ...payload, password_hash: hash }]);
+        if (error) throw error;
       }
 
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
@@ -154,8 +161,11 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (u: any) => {
     try {
-      const res = await fetch(`/api/admin-users?id=${u.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete admin user');
+      const { error } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('id', u.id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       toast.success("Usuario eliminado correctamente");
     } catch (error: any) {
