@@ -294,7 +294,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
         console.log('[DriverDetailDialog] Saving driver:', { driverId: driver.id, dataToSave });
         const result = await supabaseApi.drivers.update(driver.id, dataToSave);
         console.log('[DriverDetailDialog] Update result:', result);
-        queryClient.setQueryData(["drivers"], (old = []) =>
+        queryClient.setQueryData(["drivers"], (old: any[] = []) =>
           old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
         );
         queryClient.invalidateQueries({ queryKey: ["drivers"] });
@@ -339,7 +339,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           supabaseApi.drivers.update(driver.id, { doc_urls: newUrls }).catch(err => {
             console.error("Error updating driver doc URLs:", err);
           });
-          queryClient.setQueryData(["drivers"], (old = []) =>
+          queryClient.setQueryData(["drivers"], (old: any[] = []) =>
             old.map(d => d.id === driver.id ? { ...d, doc_urls: newUrls } : d)
           );
         }
@@ -369,7 +369,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
         rejected_docs: rejectedList,
       });
       // Update cache directly so the re-render doesn't reset local state
-      queryClient.setQueryData(["drivers"], (old = []) =>
+      queryClient.setQueryData(["drivers"], (old: any[] = []) =>
         old.map(d => d.id === driver.id ? { ...d, approved_docs: approvedList, rejected_docs: rejectedList } : d)
       );
     } catch (err) {
@@ -448,7 +448,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
         return;
       }
       await supabaseApi.drivers.update(driver.id, { vehicles: updated });
-      queryClient.setQueryData(["drivers"], (old = []) =>
+      queryClient.setQueryData(["drivers"], (old: any[] = []) =>
         old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
       );
     } catch (err) {
@@ -633,7 +633,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   setEditDriver(prev => {
                     const updated = [...(prev.vehicles || []), newVehicle];
                     supabaseApi.drivers.update(driver.id, { vehicles: updated }).catch(err => console.error("Error updating vehicles:", err));
-                    queryClient.setQueryData(["drivers"], (old = []) =>
+                    queryClient.setQueryData(["drivers"], (old: any[] = []) =>
                       old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                     );
                     return { ...prev, vehicles: updated };
@@ -673,7 +673,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                       setEditDriver(prev => {
                         const updated = (prev.vehicles || []).map(x => x.id === updatedVehicle.id ? updatedVehicle : x);
                         supabaseApi.drivers.update(driver.id, { vehicles: updated }).catch(err => console.error("Error updating vehicles:", err));
-                        queryClient.setQueryData(["drivers"], (old = []) =>
+                        queryClient.setQueryData(["drivers"], (old: any[] = []) =>
                           old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                         );
                         return { ...prev, vehicles: updated };
@@ -691,7 +691,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 setEditDriver(prev => {
                   const updated = (prev.vehicles || []).map((x, j) => j === i ? { ...x, admin_disabled: newDisabled } : x);
                   supabaseApi.drivers.update(driver.id, { vehicles: updated }).catch(err => console.error("Error updating vehicles:", err));
-                  queryClient.setQueryData(["drivers"], (old = []) =>
+                  queryClient.setQueryData(["drivers"], (old: any[] = []) =>
                     old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                   );
                   return { ...prev, vehicles: updated };
@@ -737,7 +737,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                       const expiryKey = `doc_${doc.key}_expiry`;
                       const url = v[urlKey];
                       const expiry = v[expiryKey];
-                      const days = expiry ? Math.ceil((new Date(expiry) - new Date()) / 86400000) : null;
+                      const days = expiry ? Math.ceil((new Date(String(expiry)).getTime() - Date.now()) / 86400000) : null;
                       const isVDocApproved = (v.approved_docs || []).includes(doc.key);
                       const isVDocRejected = (v.rejected_docs || []).includes(doc.key);
                       const requireExpiry = doc.require_expiry !== false;
@@ -803,7 +803,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                                     setEditDriver(prev => {
                                       const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [urlKey]: file_url } : x);
                                       supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles }).catch(err => console.error("Error updating vehicles:", err));
-                                      queryClient.setQueryData(["drivers"], (old = []) =>
+                                      queryClient.setQueryData(["drivers"], (old: any[] = []) =>
                                         old.map(d => d.id === driver.id ? { ...d, vehicles: updatedVehicles } : d)
                                       );
                                       return { ...prev, vehicles: updatedVehicles };
@@ -832,7 +832,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                                   setEditDriver(prev => {
                                     const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [expiryKey]: val } : x);
                                     supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles }).catch(err => console.error("Error updating vehicles:", err));
-                                    queryClient.setQueryData(["drivers"], (old = []) =>
+                                    queryClient.setQueryData(["drivers"], (old: any[] = []) =>
                                       old.map(d => d.id === driver.id ? { ...d, vehicles: updatedVehicles } : d)
                                     );
                                     return { ...prev, vehicles: updatedVehicles };
@@ -940,7 +940,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               const isApproved = !!docApproved[doc.key];
               const isRejected = !!docRejected[doc.key];
               const expiry = docExpiries[doc.key] || "";
-              const expiryDays = expiry ? Math.ceil((new Date(expiry) - new Date()) / 86400000) : null;
+              const expiryDays = expiry ? Math.ceil((new Date(String(expiry)).getTime() - Date.now()) / 86400000) : null;
               return (
                 <div key={doc.key} className={`p-2 rounded-lg border-2 transition-all ${isApproved ? "border-emerald-300 bg-emerald-50" : isRejected ? "border-red-200 bg-red-50" : docUrl ? "border-amber-200 bg-amber-50" : "border-slate-100"}`}>
                   <div className="flex items-center justify-between gap-1 flex-wrap">
@@ -1005,7 +1005,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
           <TabsContent value="history" className="mt-4 space-y-1">
             {(() => {
-              const driverRides = rides.filter(r => r.driver_id === driver?.id).sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at)).slice(0, 20);
+              const driverRides = rides.filter(r => r.driver_id === driver?.id).sort((a: any, b: any) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime()).slice(0, 20);
               return (
                 <>
                   <div className="bg-blue-50 rounded-lg px-2.5 py-1 text-xs text-blue-700 mb-2">
