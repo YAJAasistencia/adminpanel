@@ -167,7 +167,7 @@ export default function RideLiveMap({ ride, settings }) {
               <Popup>🏁 Destino: {ride.dropoff_address}</Popup>
             </Marker>
           )}
-          {route && <Polyline positions={route} color={carColor} weight={4} opacity={0.85} dashArray={ride.status === "assigned" ? "8,5" : undefined} />}
+          {Array.isArray(route) && route.length > 0 && <Polyline positions={route} color={carColor} weight={4} opacity={0.85} dashArray={ride.status === "assigned" ? "8,5" : undefined} />}
         </MapContainer>
       </div>
     </div>

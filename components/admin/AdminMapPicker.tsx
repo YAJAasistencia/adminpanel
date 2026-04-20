@@ -113,7 +113,7 @@ export default function AdminMapPicker({ open, onOpenChange, lat, lon, label, is
             <MapPin className="w-4 h-4 text-slate-500" />
             Ajustar {label || "ubicación"} en mapa
           </DialogTitle>
-          <p className="text-xs text-slate-400 mt-0.5">Arrastra el marcador o haz clic en el mapa para precisar</p>
+          <DialogDescription className="text-xs text-slate-400 mt-0.5">Arrastra el marcador o haz clic en el mapa para precisar</DialogDescription>
         </DialogHeader>
 
         <div style={{ height: 380 }} className="relative">

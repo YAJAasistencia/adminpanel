@@ -152,7 +152,7 @@ export default function RideRouteMap({ ride }) {
                   <Popup><span className="text-xs font-medium">🏁 Destino<br />{ride.dropoff_address}</span></Popup>
                 </Marker>
               )}
-              {route && <Polyline positions={route} color="#6366F1" weight={4} opacity={0.8} />}
+              {Array.isArray(route) && route.length > 0 && <Polyline positions={route} color="#6366F1" weight={4} opacity={0.8} />}
             </MapContainer>
           </div>
         </>
