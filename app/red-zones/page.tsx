@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +52,7 @@ export default function RedZones() {
 
   const { data: zones = [] } = useQuery({
     queryKey: ["redZones"],
-    queryFn: async () => {
-      const res = await fetchWithAuth('/api/red-zones');
-      if (!res.ok) throw new Error('Failed to fetch red zones');
-      return res.json();
-    },
+    queryFn: () => supabaseApi.redZones.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -72,46 +67,40 @@ export default function RedZones() {
     if (polygon.length < 3) { toast.error("Dibuja al menos 3 puntos"); return; }
     setSaving(true);
     const data = { ...editing, coordinates: polygon };
-    if (editing.id) {
-      const res = await fetchWithAuth(`/api/red-zones?id=${editing.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error('Failed to update zone');
-    } else {
-      const res = await fetchWithAuth('/api/red-zones', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error('Failed to create zone');
+    try {
+      if (editing.id) {
+        await supabaseApi.redZones.update(editing.id, data);
+      } else {
+        await supabaseApi.redZones.create(data);
+      }
+      queryClient.invalidateQueries({ queryKey: ["redZones"] });
+      setSaving(false);
+      setShowDialog(false);
+      toast.success("Zona roja guardada");
+    } catch (err) {
+      toast.error("Error al guardar zona");
+      setSaving(false);
     }
-    queryClient.invalidateQueries({ queryKey: ["redZones"] });
-    setSaving(false);
-    setShowDialog(false);
-    toast.success("Zona roja guardada");
   };
 
   const handleDelete = async (z) => {
     if (!window.confirm(`¿Eliminar zona "${z.name}"?`)) return;
-    const res = await fetchWithAuth(`/api/red-zones?id=${z.id}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to delete zone');
-    queryClient.invalidateQueries({ queryKey: ["redZones"] });
-    toast.success("Zona eliminada");
+    try {
+      await supabaseApi.redZones.delete(z.id);
+      queryClient.invalidateQueries({ queryKey: ["redZones"] });
+      toast.success("Zona roja eliminada");
+    } catch (err) {
+      toast.error("Error al eliminar zona");
+    }
   };
 
   const toggleActive = async (z) => {
-    const res = await fetchWithAuth(`/api/red-zones?id=${z.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: !z.is_active })
-    });
-    if (!res.ok) throw new Error('Failed to toggle zone');
-    queryClient.invalidateQueries({ queryKey: ["redZones"] });
+    try {
+      await supabaseApi.redZones.update(z.id, { is_active: !z.is_active });
+      queryClient.invalidateQueries({ queryKey: ["redZones"] });
+    } catch (err) {
+      toast.error("Error al cambiar estado de zona");
+    }
   };
 
   const activeCount = zones.filter(z => z.is_active).length;

@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -199,14 +200,7 @@ export default function BonosPage() {
 
   const updateLogMutation = useMutation({
     mutationFn: async ({ id, data }: any) => {
-      const res = await fetchWithAuth(`/api/bonus-logs/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error('Failed to update log');
-      const json = await res.json();
-      return json.data;
+      return await supabaseApi.bonusLogs.update(id, data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bonusLogs"] });

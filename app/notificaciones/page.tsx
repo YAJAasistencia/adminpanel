@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import Layout from "@/components/admin/Layout";
 import { stopAllAlarms } from "@/components/shared/useRideNotifications";
 import { Bell, Send, Users, Filter, CheckCircle2, Clock, Search, Trash2 } from "lucide-react";
@@ -58,11 +57,7 @@ function NotificacionesContent() {
   });
   const { data: sentNotifications = [] } = useQuery({
     queryKey: ["driver-notifications"],
-    queryFn: async () => {
-      const res = await fetchWithAuth('/api/driver-notifications');
-      if (!res.ok) throw new Error('Failed to fetch driver notifications');
-      return res.json();
-    },
+    queryFn: () => supabaseApi.driverNotifications.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -90,10 +85,8 @@ function NotificacionesContent() {
     const tag = `admin-notif-${Date.now()}`;
 
     // Persist record
-    const res = await fetchWithAuth('/api/driver-notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      await supabaseApi.driverNotifications.create({
         title: title.trim(),
         body: body.trim(),
         driver_ids: filteredDrivers.map((d) => d.id),
@@ -102,16 +95,18 @@ function NotificacionesContent() {
         filter_service_type: filterService !== "all" ? filterService : null,
         recipient_count: filteredDrivers.length,
         tag,
-      })
-    });
-    if (!res.ok) throw new Error('Failed to create notification');
+      });
 
-    qc.invalidateQueries({ queryKey: ["driver-notifications"] });
+      qc.invalidateQueries({ queryKey: ["driver-notifications"] });
 
-    setSentCount(filteredDrivers.length);
-    setTitle("");
-    setBody("");
-    setSending(false);
+      setSentCount(filteredDrivers.length);
+      setTitle("");
+      setBody("");
+      setSending(false);
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      setSending(false);
+    }
   };
 
   return (
