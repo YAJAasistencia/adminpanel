@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -220,8 +220,7 @@ function AnunciosContent() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="dialog-size-2xl max-h-[90vh] overflow-y-auto p-4">
             <DialogHeader>
-              <DialogTitle>{editId ? "Editar anuncio" : "Nuevo anuncio"}</DialogTitle>
-            </DialogHeader>
+              <DialogTitle>{editId ? "Editar anuncio" : "Nuevo anuncio"}</DialogTitle>              <DialogDescription style={{ display: 'none' }}>Crear o editar anuncio del sistema</DialogDescription>            </DialogHeader>
             <div className="space-y-4 py-2">
               <div>
                 <Label>Título *</Label>

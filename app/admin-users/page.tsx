@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Shield, Eye, EyeOff, Copy, ExternalLink, KeyRound } from "lucide-react";
 import { toast } from "sonner";
@@ -275,8 +275,7 @@ export default function AdminUsersPage() {
         <Dialog open={showDialog} onOpenChange={(v) => { setShowDialog(v); if (!v) setEditing(null); }}>
           <DialogContent className="dialog-size-2xl max-h-[90vh] overflow-y-auto p-4">
             <DialogHeader>
-              <DialogTitle>{editing?.id ? "Editar usuario" : "Nuevo usuario"}</DialogTitle>
-            </DialogHeader>
+              <DialogTitle>{editing?.id ? "Editar usuario" : "Nuevo usuario"}</DialogTitle>              <DialogDescription style={{ display: 'none' }}>Formulario para gestionar usuario administrador</DialogDescription>            </DialogHeader>
             {editing && (
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-2 gap-4">

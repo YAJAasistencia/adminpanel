@@ -19,7 +19,7 @@ import {
   Ban, RefreshCw, TrendingUp, DollarSign, Users, Activity, Search, Filter,
   Unlock, MessageSquare, Lock
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { formatCDMX } from "@/components/shared/dateUtils";
 

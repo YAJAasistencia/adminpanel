@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { MessageSquare, Clock, CheckCircle2, XCircle, AlertTriangle, Search, Save, Send, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -207,6 +207,7 @@ function SupportTicketsContent() {
         <DialogContent className="dialog-size-2xl max-h-[90vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>Ticket de soporte</DialogTitle>
+            <DialogDescription style={{ display: 'none' }}>Detalles y respuesta del ticket de soporte</DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="space-y-4 py-2">

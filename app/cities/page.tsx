@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Plus, MapPin, Pencil, Trash2, Globe, AlertCircle, Map, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -341,6 +341,7 @@ export default function CitiesPage() {
           <DialogContent className="dialog-size-lg max-h-[90vh] overflow-y-auto p-4">
             <DialogHeader>
               <DialogTitle>{editCity?.id ? "Editar ciudad" : "Nueva ciudad"}</DialogTitle>
+              <DialogDescription style={{ display: 'none' }}>Formulario para editar o crear ciudad</DialogDescription>
             </DialogHeader>
             {editCity && (
               <div className="space-y-4 py-2">

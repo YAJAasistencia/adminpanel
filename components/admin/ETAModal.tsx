@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Car, MapPin, Clock, Navigation, X, RefreshCw, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
@@ -278,6 +278,7 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl dialog-size-2xl`}>
+        <DialogDescription style={{ display: 'none' }}>Estimación de tiempo de llegada</DialogDescription>
         {isNoDrivers ? (
           <NoDriversPhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />
         ) : isAssigned ? (

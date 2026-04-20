@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Trophy, Plus, Play, CheckCircle2, XCircle, DollarSign, Trash2, ToggleLeft, ToggleRight, AlertCircle, Clock, Edit2 } from "lucide-react";
@@ -534,8 +534,7 @@ export default function BonosPage() {
         <Dialog open={showRuleDialog} onOpenChange={setShowRuleDialog}>
           <DialogContent className="dialog-size-xl max-h-[90vh] overflow-y-auto p-4 rounded-2xl">
             <DialogHeader>
-              <DialogTitle>{editingRule ? "Editar regla" : "Nueva regla de bono"}</DialogTitle>
-            </DialogHeader>
+              <DialogTitle>{editingRule ? "Editar regla" : "Nueva regla de bono"}</DialogTitle>              <DialogDescription style={{ display: 'none' }}>Gestionar reglas de bonificación para conductores</DialogDescription>            </DialogHeader>
             <div className="space-y-4 py-2">
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">Nombre de la regla</label>

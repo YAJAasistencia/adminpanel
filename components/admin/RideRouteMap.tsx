@@ -108,9 +108,13 @@ export default function RideRouteMap({ ride }) {
       .then(r => r.json())
       .then(data => {
         const coords = data?.routes?.[0]?.geometry?.coordinates;
-        if (coords) setRoute(coords.map(([lng, lat]) => [lat, lng]));
+        if (Array.isArray(coords) && coords.length > 0) {
+          setRoute(coords.map(([lng, lat]) => [lat, lng]));
+        } else {
+          setRoute(null);
+        }
       })
-      .catch(() => {});
+      .catch(() => { setRoute(null); });
   }, [ride?.pickup_lat, ride?.pickup_lon, ride?.dropoff_lat, ride?.dropoff_lon]);
 
   if (!ride) return null;
