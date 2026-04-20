@@ -127,8 +127,8 @@ export default function ServiceTypes() {
 		if (!editingCat?.newName?.trim()) return;
 		setCatSaving(true);
 		try {
-			const toRename = services.filter(s => (s.category?.trim() || "Sin categoría") === editingCat.oldName);
-			await Promise.all(toRename.map(s => supabaseApi.serviceTypes.update(s.id, { category: editingCat.newName.trim() })));
+			const toRename = services.filter(s => (s.category?.trim() || "Sin categoría") === editingCat?.oldName);
+			await Promise.all(toRename.map(s => supabaseApi.serviceTypes.update(s.id, { category: editingCat?.newName?.trim() })));
 			queryClient.invalidateQueries({ queryKey: ["serviceTypes"] });
 			setCatSaving(false);
 			setEditingCat(null);
