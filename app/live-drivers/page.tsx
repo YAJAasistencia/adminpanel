@@ -296,11 +296,11 @@ export default function LiveDriversPage() {
                       <Popup>
                         <div className="min-w-[200px] text-xs">
                           <p className="font-bold text-slate-900">
-                            {driver.full_name}
+                            {driver.full_name || "Desconocido"}
                           </p>
                           <p className="text-slate-600">
-                            {driver.vehicle_brand} {driver.vehicle_model} ·{" "}
-                            {driver.license_plate}
+                            {driver.vehicle_brand || "Marca"} {driver.vehicle_model || "Modelo"} ·{" "}
+                            {driver.license_plate || "Sin placa"}
                           </p>
                           <p className={`text-xs font-medium mt-1 ${getStatusColor(driver.status)}`}>
                             {getStatusLabel(driver.status)}
@@ -308,7 +308,7 @@ export default function LiveDriversPage() {
                           {activeRide && (
                             <div className="mt-2 pt-2 border-t border-slate-200">
                               <p className="text-blue-700 font-medium">
-                                🚗 {activeRide.passenger_name}
+                                🚗 {activeRide.passenger_name || "Pasajero"}
                               </p>
                               <p className={`text-xs mt-1 ${getStatusColor(activeRide.status, "ride")}`}>
                                 {getStatusLabel(activeRide.status, "ride")}
@@ -389,15 +389,15 @@ export default function LiveDriversPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-800">
-                      {driver.full_name}
+                      {driver.full_name || "Desconocido"}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {driver.vehicle_brand} {driver.vehicle_model} ·{" "}
-                      {driver.license_plate}
+                      {driver.vehicle_brand || "Marca"} {driver.vehicle_model || "Modelo"} ·{" "}
+                      {driver.license_plate || "Sin placa"}
                     </p>
                     {activeRide && (
                       <p className="text-xs text-blue-600 mt-0.5">
-                        En viaje → {activeRide.passenger_name}{" "}
+                        En viaje → {activeRide.passenger_name || "Pasajero"}{" "}
                         <span className="text-slate-400">
                           ({activeRide.status})
                         </span>
