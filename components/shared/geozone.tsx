@@ -4,13 +4,17 @@
  * point: { lat, lng }
  */
 export function pointInPolygon(point, coordinates) {
-  if (!coordinates || coordinates.length < 3) return false;
+  if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 3) return false;
   const { lat, lng } = point;
   let inside = false;
   const n = coordinates.length;
   for (let i = 0, j = n - 1; i < n; j = i++) {
-    const [xi, yi] = coordinates[i];
-    const [xj, yj] = coordinates[j];
+    const coord = coordinates[i];
+    if (!Array.isArray(coord) || coord.length < 2) continue; // Skip invalid coordinates
+    const [xi, yi] = coord;
+    const coordJ = coordinates[j];
+    if (!Array.isArray(coordJ) || coordJ.length < 2) continue; // Skip invalid coordinates
+    const [xj, yj] = coordJ;
     const intersect = ((yi > lng) !== (yj > lng)) &&
       (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
     if (intersect) inside = !inside;
@@ -25,8 +29,8 @@ export function pointInPolygon(point, coordinates) {
 export function detectZone(lat, lng, zones) {
   if (!lat || !lng || !zones?.length) return null;
   const matching = zones
-    .filter(z => z.is_active && pointInPolygon({ lat, lng }, z.coordinates))
-    .sort((a, b) => (b.prioridad || 0) - (a.prioridad || 0));
+    .filter(z => z && z.is_active && z.coordinates && Array.isArray(z.coordinates) && pointInPolygon({ lat, lng }, z.coordinates))
+    .sort((a, b) => (b?.prioridad ?? 0) - (a?.prioridad ?? 0));
   return matching[0] || null;
 }
 
@@ -35,7 +39,7 @@ export function detectZone(lat, lng, zones) {
  */
 export function detectRedZone(lat, lng, redZones) {
   if (!lat || !lng || !redZones?.length) return null;
-  return redZones.find(z => z.is_active && pointInPolygon({ lat, lng }, z.coordinates)) || null;
+  return redZones.find(z => z && z.is_active && z.coordinates && Array.isArray(z.coordinates) && pointInPolygon({ lat, lng }, z.coordinates)) || null;
 }
 
 /**
