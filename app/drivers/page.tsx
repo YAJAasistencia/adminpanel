@@ -204,7 +204,7 @@ export default function DriversPage() {
       toast.error("El conductor no tiene correo configurado");
       return;
     }
-    const url = window.location.origin + `/DriverApp?driverEmail=${encodeURIComponent(driver.email)}`;
+    const url = window.location.origin + `/driver-app?driverEmail=${encodeURIComponent(driver.email)}`;
     navigator.clipboard.writeText(url);
     setCopiedCode(driver.id);
     toast.success("Enlace copiado");

@@ -148,7 +148,7 @@ export default function SettingsPage() {
   };
   const appOrigin = getAppOrigin();
   const passengerAppUrl = `${appOrigin}/RoadAssistApp`;
-  const driverAppUrl = `${appOrigin}/DriverApp`;
+  const driverAppUrl = `${appOrigin}/driver-app`;
 
   const copyLink = (url, key) => {
     navigator.clipboard.writeText(url);

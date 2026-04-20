@@ -165,7 +165,7 @@ export async function showDriverNotification({ title, body, rideId, tag, url }: 
     body,
     tag: tag || (rideId ? `ride-${rideId}` : `notif-${Date.now()}`),
     ride: { id: rideId },
-    url: url || "/DriverApp",
+    url: url || "/driver-app",
   };
 
   if (swReg?.active) {
