@@ -513,7 +513,7 @@ function DriverMenu({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-bold truncate">{driver.full_name}</p>
+            <p className="text-white font-bold truncate">{driver.full_name || "Desconocido"}</p>
             <div className="flex items-center gap-1.5">
               <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
               <span className="text-white/50 text-xs">
