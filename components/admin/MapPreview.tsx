@@ -116,7 +116,7 @@ export default function MapPreview({ pickup, dropoff, routePoints, height = 220,
                   <Popup>🏁 Destino</Popup>
                 </Marker>
               )}
-              {routePoints && routePoints.length > 1 && (
+              {Array.isArray(routePoints) && routePoints.length > 1 && (
                 <Polyline positions={routePoints} pathOptions={{ color: "#3B82F6", weight: 4, opacity: 0.7 }} />
               )}
             </MapContainer>
