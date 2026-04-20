@@ -209,7 +209,7 @@ export default function CitiesPage() {
   // CRÍTICO #6: Búsqueda y filtros
   const filteredCities = cities.filter((city: any) => {
     const matchesSearch = !search || 
-      city.name.toLowerCase().includes(search.toLowerCase()) ||
+      city.name?.toLowerCase().includes(search.toLowerCase()) ||
       city.state?.toLowerCase().includes(search.toLowerCase()) ||
       city.country?.toLowerCase().includes(search.toLowerCase());
     
