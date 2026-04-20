@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -532,6 +532,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1000px' }}>
         <DialogHeader>
           <DialogTitle>Nuevo viaje</DialogTitle>
+          <DialogDescription style={{ display: 'none' }}>Formulario para crear un nuevo viaje</DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5 py-1">
 
