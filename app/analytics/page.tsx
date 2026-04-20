@@ -568,7 +568,7 @@ function AnalyticsContent() {
                 <SelectContent className="z-[700]">
                   <SelectItem value="all">Todos los servicios</SelectItem>
                   {serviceTypes.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    <SelectItem key={s.id} value={s.id}>{s.name || "Sin nombre"}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -583,7 +583,7 @@ function AnalyticsContent() {
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="general">🚶 Generales (sin empresa)</SelectItem>
                   {companies.map(c => (
-                    <SelectItem key={c.id} value={c.id}>🏢 {c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>🏢 {c.name || "Sin nombre"}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -669,7 +669,7 @@ function AnalyticsContent() {
                     <span className="text-2xl font-black text-purple-600">{driver.full_name?.charAt(0)}</span>
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-slate-900 text-lg">{driver.full_name}</p>
+                    <p className="font-bold text-slate-900 text-lg">{driver.full_name || "Desconocido"}</p>
                     <p className="text-slate-500 text-sm">{driver.phone || driver.email || ""}</p>
                   </div>
                   <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4">
