@@ -161,17 +161,39 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const fetchRoute = async (pickup, dropoff) => {
     if (!pickup || !dropoff) return;
     setRouteLoading(true);
-    const pLon = pickup.lon || pickup.lng;
-    const dLon = dropoff.lon || dropoff.lng;
-    const url = `https://router.project-osrm.org/route/v1/driving/${pLon},${pickup.lat};${dLon},${dropoff.lat}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.routes?.[0]) {
-      const km = (data.routes[0].distance / 1000).toFixed(1);
-      const mins = Math.round(data.routes[0].duration / 60);
-      // Extract polyline points from GeoJSON
-      const coords = data.routes[0].geometry?.coordinates;
-      if (coords) setRoutePoints(coords.map(([lng, lat]) => [lat, lng]));
+    try {
+      const pLon = pickup.lon || pickup.lng;
+      const dLon = dropoff.lon || dropoff.lng;
+      
+      // Validate coordinates are valid numbers
+      if (typeof pickup.lat !== 'number' || typeof pLon !== 'number' || 
+          typeof dropoff.lat !== 'number' || typeof dLon !== 'number') {
+        console.warn("[CreateRideDialog] Invalid coordinates:", { pickup, dropoff });
+        setRouteLoading(false);
+        return;
+      }
+      
+      const url = `https://router.project-osrm.org/route/v1/driving/${pLon},${pickup.lat};${dLon},${dropoff.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error("[CreateRideDialog] OSRM request failed:", res.status);
+        setRouteLoading(false);
+        return;
+      }
+      
+      const data = await res.json();
+      if (data.routes?.[0]?.geometry?.coordinates) {
+        const km = (data.routes[0].distance / 1000).toFixed(1);
+        const mins = Math.round(data.routes[0].duration / 60);
+        const coords = data.routes[0].geometry.coordinates;
+        
+        // Validate coordinates are arrays
+        if (Array.isArray(coords) && coords.length > 0) {
+          setRoutePoints(coords.map(([lng, lat]) => [lat, lng]));
+        } else {
+          console.warn("[CreateRideDialog] Invalid coordinates from OSRM:", coords);
+          setRoutePoints(null);
+        }
       setForm(prev => {
         const zone = detectZone(pickup.lat, pickup.lng || pickup.lon, zones);
         setDetectedZone(zone || null);
@@ -210,8 +232,16 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
         }
         return { ...prev, distance_km: km, duration_minutes: String(mins), estimated_price: price };
       });
+      } else {
+        console.warn("[CreateRideDialog] No valid route from OSRM");
+        setRoutePoints(null);
+      }
+    } catch (err) {
+      console.error("[CreateRideDialog] Error fetching route:", err);
+      setRoutePoints(null);
+    } finally {
+      setRouteLoading(false);
     }
-    setRouteLoading(false);
   };
 
   const handlePickupChange = (addr, coords) => {
