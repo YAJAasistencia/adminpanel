@@ -431,13 +431,13 @@ export default function Dashboard() {
 
   const filtered = rides.filter((r: any) => {
     const matchSearch = !search ||
-      r.passenger_name?.toLowerCase().includes(search.toLowerCase()) ||
-      r.passenger_phone?.toLowerCase().includes(search.toLowerCase()) ||
-      r.driver_name?.toLowerCase().includes(search.toLowerCase()) ||
-      r.driver_phone?.toLowerCase().includes(search.toLowerCase()) ||
-      r.pickup_address?.toLowerCase().includes(search.toLowerCase()) ||
-      r.dropoff_address?.toLowerCase().includes(search.toLowerCase()) ||
-      r.id?.toLowerCase().includes(search.toLowerCase());
+      (r.passenger_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (String(r.passenger_phone) || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.driver_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (String(r.driver_phone) || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.pickup_address || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.dropoff_address || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.id || "").toLowerCase().includes(search.toLowerCase());
 
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
 

@@ -406,7 +406,7 @@ export default function Invoices() {
   const filtered = invoices.filter(inv => {
     if (statusFilter !== "all" && inv.status !== statusFilter) return false;
     if (companyFilter !== "all" && inv.company_id !== companyFilter) return false;
-    if (search && !inv.company_name?.toLowerCase().includes(search.toLowerCase()) && !inv.invoice_number?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !(inv.company_name || "").toLowerCase().includes(search.toLowerCase()) && !(String(inv.invoice_number) || "").toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 

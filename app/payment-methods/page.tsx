@@ -523,8 +523,8 @@ function TransactionsTab({ rides, settings }) {
   const filtered = transactions.filter(t => {
     const q = search.toLowerCase();
     const qClient = clientFilter.toLowerCase();
-    const matchSearch = !q || t.passenger?.toLowerCase().includes(q) || t.service_id?.toLowerCase().includes(q) || t.driver?.toLowerCase().includes(q);
-    const matchClient = !qClient || t.passenger?.toLowerCase().includes(qClient);
+    const matchSearch = !q || (t.passenger || "").toLowerCase().includes(q) || (String(t.service_id) || "").toLowerCase().includes(q) || (t.driver || "").toLowerCase().includes(q);
+    const matchClient = !qClient || (t.passenger || "").toLowerCase().includes(qClient);
     const matchStatus = statusFilter === "all" || t.payment_status === statusFilter || t.financial_status === statusFilter;
     return matchSearch && matchClient && matchStatus;
   });
@@ -662,7 +662,7 @@ function WalletsTab({ users, rides, settings }) {
 
   const filtered = walletUsers.filter(u => {
     const q = search.toLowerCase();
-    const matchSearch = !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.phone?.includes(q);
+    const matchSearch = !q || (u.name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q) || (String(u.phone) || "").includes(q);
     const matchStatus = statusFilter === "all" || u.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -799,7 +799,7 @@ function DriverPayoutsTab({ rides, drivers, settings }) {
 
   const filtered = payoutRides.filter(p => {
     const q = search.toLowerCase();
-    const matchSearch = !q || p.driver_name?.toLowerCase().includes(q) || p.service_id?.toLowerCase().includes(q) || p.driver_phone?.includes(q);
+    const matchSearch = !q || (p.driver_name || "").toLowerCase().includes(q) || (String(p.service_id) || "").toLowerCase().includes(q) || (String(p.driver_phone) || "").includes(q);
     const matchStatus = statusFilter === "all" || p.payout_status === statusFilter;
     return matchSearch && matchStatus;
   });

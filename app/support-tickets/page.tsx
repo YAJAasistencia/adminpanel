@@ -59,12 +59,12 @@ function SupportTicketsContent() {
     const matchStatus = statusFilter === "all" || t.status === statusFilter;
     const q = search.toLowerCase().trim();
     const matchSearch = !q || 
-      t.subject?.toLowerCase().includes(q) ||
-      t.driver_name?.toLowerCase().includes(q) ||
-      t.passenger_name?.toLowerCase().includes(q) ||
-      t.passenger_phone?.includes(q) ||
-      t.ticket_number?.toLowerCase().includes(q) ||
-      t.service_id?.toLowerCase().includes(q);
+      (t.subject || "").toLowerCase().includes(q) ||
+      (t.driver_name || "").toLowerCase().includes(q) ||
+      (t.passenger_name || "").toLowerCase().includes(q) ||
+      (String(t.passenger_phone) || "").includes(q) ||
+      (t.ticket_number || "").toLowerCase().includes(q) ||
+      (String(t.service_id) || "").toLowerCase().includes(q);
     const matchDate = true; // support_tickets has no timestamp column
     return matchStatus && matchSearch && matchDate;
   });
