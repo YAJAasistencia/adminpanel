@@ -113,14 +113,14 @@ export default function LandingEditor({ value, onChange }) {
       const ext = file.name.split('.').pop() || 'png';
       const fileName = `landing-logo-${timestamp}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage
-        .from("app-uploads")
-        .upload(`logos/${fileName}`, file);
+        .from("logos")
+        .upload(fileName, file);
       
       if (error) throw error;
       
       const { data: publicUrlData } = supabase.storage
-        .from("app-uploads")
-        .getPublicUrl(`logos/${fileName}`);
+        .from("logos")
+        .getPublicUrl(fileName);
       
       update("brand_logo_url", publicUrlData.publicUrl);
     } catch (err) {
