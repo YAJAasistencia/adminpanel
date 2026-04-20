@@ -56,7 +56,7 @@ export default function DriversPage() {
     }
   }, [drivers, selectedDriver]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const channel = supabase.channel("drivers_panel").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "Driver" },
@@ -135,7 +135,7 @@ export default function DriversPage() {
         .eq('id', driver.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.success(`${driver.full_name} aprobado`);
+      toast.success(`${driver.full_name || "Conductor"} aprobado`);
     } catch (error) {
       toast.error("Error al aprobar conductor");
     }
@@ -149,14 +149,14 @@ export default function DriversPage() {
         .eq('id', driver.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.error(`${driver.full_name} rechazado`);
+      toast.error(`${driver.full_name || "Conductor"} rechazado`);
     } catch (error) {
       toast.error("Error al rechazar conductor");
     }
   };
 
   const handleDelete = async (driver: any) => {
-    if (!window.confirm(`¿Eliminar a ${driver.full_name}? Esta acción es irreversible.`)) return;
+    if (!window.confirm(`¿Eliminar a ${driver.full_name || "Conductor"}? Esta acción es irreversible.`)) return;
     try {
       const { error } = await supabase
         .from('Driver')
@@ -164,7 +164,7 @@ export default function DriversPage() {
         .eq('id', driver.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.success(`${driver.full_name} eliminado`);
+      toast.success(`${driver.full_name || "Conductor"} eliminado`);
     } catch (error) {
       toast.error("Error al eliminar conductor");
     }
@@ -309,10 +309,10 @@ export default function DriversPage() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">
-                    {driver.full_name?.charAt(0)}
+                    {driver.full_name?.charAt(0) || "D"}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 text-sm">{driver.full_name}</h3>
+                    <h3 className="font-semibold text-slate-900 text-sm">{driver.full_name || "Desconocido"}</h3>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
                       <span className="text-xs text-slate-500">
@@ -335,7 +335,7 @@ export default function DriversPage() {
               <div className="space-y-1.5 mb-3">
                 <p className="text-xs text-slate-500 flex items-center gap-1.5">
                   <Car className="w-3.5 h-3.5" />
-                  {driver.vehicle_brand} {driver.vehicle_model} {driver.vehicle_year} · {driver.license_plate}
+                  {driver.vehicle_brand || "Marca"} {driver.vehicle_model || "Modelo"} {driver.vehicle_year || ""} · {driver.license_plate || "S/P"}
                 </p>
                 {driver.phone && (
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">
