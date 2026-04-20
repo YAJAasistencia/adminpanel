@@ -176,7 +176,7 @@ export default function ChatWidget({ ride }: { ride: any }) {
           </div>
 
           {/* Input */}
-          {!["completed", "cancelled"].includes(ride.status) && (
+          {!["completed", "cancelled"].includes(ride?.status) && (
             <div className="flex gap-1.5 bg-white rounded-lg p-1.5 border border-slate-200">
               <Input
                 placeholder="Escribe un mensaje..."
@@ -202,7 +202,7 @@ export default function ChatWidget({ ride }: { ride: any }) {
             </div>
           )}
 
-          {["completed", "cancelled"].includes(ride.status) && (
+          {["completed", "cancelled"].includes(ride?.status) && (
             <p className="text-xs text-slate-400 text-center py-2">
               💬 Chat cerrado. El servicio ya fue completado.
             </p>
