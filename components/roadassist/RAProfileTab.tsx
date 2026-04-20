@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeFileName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Phone, Mail, LogOut, Lock, KeyRound, CheckCircle, X, Trash2, ChevronRight, Star, MessageSquare, AlertCircle, Wallet, Camera } from "lucide-react";
@@ -95,10 +96,13 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     setUploadingPhoto(true);
     try {
       // Upload to Supabase storage
-      const { data, error } = await supabase.storage.from("user-photos").upload(`${user.id}/${file.name}`, file);
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const filePath = `${user.id}/${sanitizedName}.${ext}`;
+      const { data, error } = await supabase.storage.from("user-photos").upload(filePath, file);
       if (error) throw error;
       // Get public URL
-      const file_url = supabase.storage.from("user-photos").getPublicUrl(`${user.id}/${file.name}`).data.publicUrl;
+      const file_url = supabase.storage.from("user-photos").getPublicUrl(filePath).data.publicUrl;
       // Update user record
       await supabase.from("road_assist_users").update({ photo_url: file_url }).eq("id", user.id);
       onUserUpdate({ ...user, photo_url: file_url });

@@ -38,7 +38,9 @@ function VehicleForm({ vehicle, docs, onSave, onCancel }) {
   const uploadDoc = async (docKey, file) => {
     setUploading(p => ({ ...p, [docKey]: true }));
     const timestamp = Date.now();
-    const fileName = `vehicle-doc-${timestamp}-${file.name}`;
+    const sanitizedName = sanitizeFileName(file.name);
+    const ext = file.name.split('.').pop() || 'pdf';
+    const fileName = `vehicle-doc-${timestamp}-${sanitizedName}.${ext}`;
     const { data, error } = await supabase.storage.from("app-uploads").upload(`vehicle-docs/${fileName}`, file);
     if (error) throw error;
     const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`vehicle-docs/${fileName}`);

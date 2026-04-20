@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeFileName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
@@ -125,7 +126,9 @@ export default function DriverSurveyModal({ survey, ride, driver, onComplete, on
       const blob = await (await fetch(signatureDataUrl)).blob();
       const file = new File([blob], "firma.png", { type: "image/png" });
       const timestamp = Date.now();
-      const fileName = `survey-${timestamp}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'png';
+      const fileName = `survey-${timestamp}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage.from("app-uploads").upload(`surveys/${fileName}`, file);
       if (error) throw error;
       const { data: publicUrl } = supabase.storage.from("app-uploads").getPublicUrl(`surveys/${fileName}`);

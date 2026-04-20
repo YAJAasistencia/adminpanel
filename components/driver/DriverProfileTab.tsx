@@ -152,7 +152,9 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
     setUploadingPhoto(true);
     try {
       const timestamp = Date.now();
-      const fileName = `driver-photo-${timestamp}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `driver-photo-${timestamp}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-photos/${fileName}`, file);
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-photos/${fileName}`);

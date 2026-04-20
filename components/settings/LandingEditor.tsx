@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeFileName } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,7 +109,9 @@ export default function LandingEditor({ value, onChange }) {
     setUploading(true);
     try {
       const timestamp = Date.now();
-      const fileName = `landing-logo-${timestamp}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'png';
+      const fileName = `landing-logo-${timestamp}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage
         .from("app-uploads")
         .upload(`logos/${fileName}`, file);

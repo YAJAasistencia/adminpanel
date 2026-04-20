@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star, Car, MapPin, DollarSign, CreditCard, FileText, CheckCircle, Clock, Upload, X, TimerOff, ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
+import { sanitizeFileName } from "@/lib/utils";
 import DriverSmsNotifier from "@/components/admin/DriverSmsNotifier";
 import { toast } from "sonner";
 
@@ -50,7 +51,9 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
     setUploading(p => ({ ...p, [docKey]: true }));
     try {
       // Upload file to Supabase storage
-      const filename = `${Date.now()}-${file.name || 'upload'}`;
+      const sanitizedName = sanitizeFileName(file.name || 'upload');
+      const ext = file.name?.split('.').pop() || 'pdf';
+      const filename = `${Date.now()}-${sanitizedName}.${ext}`;
       const path = `drivers/${filename}`;
       
       const { error: uploadError } = await supabase

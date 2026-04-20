@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { sanitizeFileName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -154,7 +155,9 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     setUploadingProof(true);
     try {
       const timestamp = Date.now();
-      const fileName = `proof-${timestamp}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `proof-${timestamp}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage.from("app-uploads").upload(`ride-proofs/${fileName}`, file);
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`ride-proofs/${fileName}`);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeFileName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -208,7 +209,9 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setUploadingPhoto(true);
     try {
       const timestamp = Date.now();
-      const fileName = `photo-${timestamp}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `photo-${timestamp}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-registration/${fileName}`, file);
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/${fileName}`);
@@ -287,7 +290,9 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setUploadingPersonalDoc(p => ({ ...p, [docKey]: true }));
     try {
       const timestamp = Date.now();
-      const fileName = `personal-doc-${timestamp}-${docKey}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'pdf';
+      const fileName = `personal-doc-${timestamp}-${docKey}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-registration/personal/${fileName}`, file);
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/personal/${fileName}`);
@@ -318,7 +323,9 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setUploadingVehicleDoc(p => ({ ...p, [docKey]: true }));
     try {
       const timestamp = Date.now();
-      const fileName = `vehicle-doc-${timestamp}-${docKey}-${file.name}`;
+      const sanitizedName = sanitizeFileName(file.name);
+      const ext = file.name.split('.').pop() || 'pdf';
+      const fileName = `vehicle-doc-${timestamp}-${docKey}-${sanitizedName}.${ext}`;
       const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-registration/vehicle/${fileName}`, file);
       if (error) throw error;
       const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/vehicle/${fileName}`);
