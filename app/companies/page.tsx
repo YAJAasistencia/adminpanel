@@ -37,7 +37,7 @@ function PriceCorrectionTab({ rides, company }) {
 
   const completedRides = rides
     .filter(r => r.status === "completed")
-    .filter(r => !search || r.passenger_name?.toLowerCase().includes(search.toLowerCase()) || r.service_id?.includes(search))
+    .filter(r => !search || (r.passenger_name || "").toLowerCase().includes(search.toLowerCase()) || (r.service_id || "").toString().includes(search))
     .slice(0, 100);
 
   const getVal = (ride) => corrections[ride.id] !== undefined
