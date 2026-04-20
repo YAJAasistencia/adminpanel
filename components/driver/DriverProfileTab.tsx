@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, User, LogOut, Trash2, ChevronRight, Star, X, MessageSquare, Clock, Battery } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { sanitizeFileName } from "@/lib/utils";
 import DriverVehiclesPanel from "@/components/driver/DriverVehiclesPanel";
 import { useQuery } from "@tanstack/react-query";
 
