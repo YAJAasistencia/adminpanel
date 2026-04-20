@@ -283,7 +283,7 @@ export default function BonosPage() {
           if (rule.service_type_id) driverRides = driverRides.filter(r => r.service_type_id === rule.service_type_id);
 
           let achieved = 0;
-          if (rule.condition_type.includes("rides")) {
+          if ((rule.condition_type || "").includes("rides")) {
             achieved = driverRides.length;
           } else {
             achieved = driverRides.reduce((s, r) => s + (r.driver_earnings || 0), 0);
@@ -433,7 +433,7 @@ export default function BonosPage() {
                     </div>
                   </div>
                   <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-600 mb-3">
-                    Si logra <strong>{rule.condition_type.includes("earnings") ? `$${rule.condition_value}` : `${rule.condition_value} viajes`}</strong>
+                    Si logra <strong>{(rule.condition_type || "").includes("earnings") ? `$${rule.condition_value}` : `${rule.condition_value} viajes`}</strong>
                     {rule.city_name ? ` en ${rule.city_name}` : ""}
                     {rule.service_type_name ? ` (${rule.service_type_name})` : ""}
                   </div>
@@ -494,8 +494,8 @@ export default function BonosPage() {
                       <p className="text-xs text-slate-500 mt-0.5">{log.rule_name} · {log.period_label}</p>
                       <p className="text-xs text-slate-400 mt-1">
                         {CONDITION_LABELS[log.condition_type]}: logró <strong className="text-slate-600">
-                          {log.condition_type.includes("earnings") ? `$${log.achieved_value?.toFixed(0)}` : log.achieved_value}
-                        </strong> / mínimo {log.condition_type.includes("earnings") ? `$${log.condition_value}` : log.condition_value}
+                          {(log.condition_type || "").includes("earnings") ? `$${log.achieved_value?.toFixed(0)}` : log.achieved_value}
+                        </strong> / mínimo {(log.condition_type || "").includes("earnings") ? `$${log.condition_value}` : log.condition_value}
                         {log.city_name ? ` · ${log.city_name}` : ""}
                       </p>
                     </div>
@@ -568,7 +568,7 @@ export default function BonosPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1 block">
-                    {form.condition_type.includes("earnings") ? "Ganancias mínimas ($)" : "Viajes mínimos"}
+                    {(form.condition_type || "").includes("earnings") ? "Ganancias mínimas ($)" : "Viajes mínimos"}
                   </label>
                   <Input type="number" min={1} value={form.condition_value}
                     onChange={e => setForm(p => ({ ...p, condition_value: parseFloat(e.target.value) || 0 }))}
@@ -612,7 +612,7 @@ export default function BonosPage() {
 
               <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm text-slate-600">
                 <AlertCircle className="w-4 h-4 inline mr-1.5 text-slate-400" />
-                Si el conductor completa <strong>{form.condition_type.includes("earnings") ? `$${form.condition_value}` : `${form.condition_value} viajes`}</strong>
+                Si el conductor completa <strong>{(form.condition_type || "").includes("earnings") ? `$${form.condition_value}` : `${form.condition_value} viajes`}</strong>
                 {form.period === "weekly" ? " en la semana" : " en el mes"}
                 {form.city_name ? ` en ${form.city_name}` : ""},
                 {" "}recibirá un bono de <strong className="text-emerald-600">${form.bonus_amount}</strong>.
