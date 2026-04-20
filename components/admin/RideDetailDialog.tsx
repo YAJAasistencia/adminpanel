@@ -218,6 +218,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             Detalle del servicio
             <Badge className="ml-auto text-xs" variant="outline">#{ride.service_id || ride.id?.slice(-8).toUpperCase()}</Badge>
           </DialogTitle>
+          <DialogDescription style={{ display: 'none' }}>Ver información completa del viaje</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-0.5 py-0.5">

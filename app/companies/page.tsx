@@ -295,6 +295,7 @@ function CompanyDetailDialog({ company, rides, onClose }) {
             <Building2 className="w-5 h-5 text-slate-600" />
             {company?.razon_social}
           </DialogTitle>
+          <DialogDescription style={{ display: 'none' }}>Detalles de la empresa</DialogDescription>
         </DialogHeader>
         {company && (
           <Tabs defaultValue="kpis">

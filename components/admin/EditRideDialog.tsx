@@ -307,6 +307,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
             ✏️ Editar Viaje
             <Badge variant="outline" className="text-xs ml-auto">#{ride.service_id || ride.id?.slice(-8).toUpperCase()}</Badge>
           </DialogTitle>
+          <DialogDescription style={{ display: 'none' }}>Editar detalles del viaje</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-0.5 py-0.5">
