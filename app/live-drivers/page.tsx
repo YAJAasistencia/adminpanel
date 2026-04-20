@@ -93,7 +93,7 @@ export default function LiveDriversPage() {
   useEffect(() => {
     const channel = supabase.channel("drivers_live").on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "drivers" },
+      { event: "*", schema: "public", table: "Driver" },
       () => queryClient.invalidateQueries({ queryKey: ["driversLive"] })
     ).subscribe();
     return () => { channel.unsubscribe(); };

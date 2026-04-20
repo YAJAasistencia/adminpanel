@@ -45,7 +45,7 @@ export default function DriversPage() {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
@@ -55,6 +55,15 @@ export default function DriversPage() {
       if (fresh) setSelectedDriver(fresh);
     }
   }, [drivers, selectedDriver]);
+
+  useEffect(() => {
+    const channel = supabase.channel("drivers_panel").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "Driver" },
+      () => queryClient.invalidateQueries({ queryKey: ["drivers"] })
+    ).subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [queryClient]);
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
