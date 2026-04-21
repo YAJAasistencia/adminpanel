@@ -1,3 +1,117 @@
+7864-bba79de3504bb8d3.js:1 ReferenceError: supabaseApi is not defined
+    at 9681-cbfd057a8ef2c7fc.js:1:3691
+    at ap (fd9d1056-1728c050809bd237.js:9:68405)
+    at aM (fd9d1056-1728c050809bd237.js:9:79901)
+    at aO (fd9d1056-1728c050809bd237.js:9:80539)
+    at aR (fd9d1056-1728c050809bd237.js:9:80423)
+    at aO (fd9d1056-1728c050809bd237.js:9:80519)
+    at aR (fd9d1056-1728c050809bd237.js:9:80423)
+    at aO (fd9d1056-1728c050809bd237.js:9:81484)
+    at aR (fd9d1056-1728c050809bd237.js:9:80423)
+    at aO (fd9d1056-1728c050809bd237.js:9:80519)
+window.console.error @ 7864-bba79de3504bb8d3.js:1
+r9 @ fd9d1056-1728c050809bd237.js:9
+n.callback @ fd9d1056-1728c050809bd237.js:9
+nf @ fd9d1056-1728c050809bd237.js:9
+nd @ fd9d1056-1728c050809bd237.js:9
+am @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+aT @ fd9d1056-1728c050809bd237.js:9
+ay @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+iI @ fd9d1056-1728c050809bd237.js:9
+nG @ fd9d1056-1728c050809bd237.js:9
+iB @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+M @ 7864-bba79de3504bb8d3.js:25
+postMessage
+l @ 7864-bba79de3504bb8d3.js:25
+M @ 7864-bba79de3504bb8d3.js:25
+postMessage
+l @ 7864-bba79de3504bb8d3.js:25
+x @ 7864-bba79de3504bb8d3.js:25
+t.unstable_scheduleCallback @ 7864-bba79de3504bb8d3.js:25
+n0 @ fd9d1056-1728c050809bd237.js:9
+nJ @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+postMessage
+l @ 7864-bba79de3504bb8d3.js:25
+x @ 7864-bba79de3504bb8d3.js:25
+t.unstable_scheduleCallback @ 7864-bba79de3504bb8d3.js:25
+n0 @ fd9d1056-1728c050809bd237.js:9
+nJ @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+5247-d4163fe5d173de36.js:24 WebSocket connection to 'wss://dsruuvvbeudbkdpevgwd.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzcnV1dnZiZXVkYmtkcGV2Z3dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NTMwODAsImV4cCI6MjA5MTMyOTA4MH0.b9pMUsCW8RN6RDLCEPmIJba2CO03BUYJi8UOvfwibCg&vsn=2.0.0' failed: WebSocket is closed before the connection is established.
+(anónimas) @ 5247-d4163fe5d173de36.js:24
+waitForBufferDone @ 5247-d4163fe5d173de36.js:24
+teardown @ 5247-d4163fe5d173de36.js:24
+disconnect @ 5247-d4163fe5d173de36.js:24
+(anónimas) @ 5247-d4163fe5d173de36.js:24
+disconnect @ 5247-d4163fe5d173de36.js:24
+disconnect @ 5247-d4163fe5d173de36.js:42
+removeChannel @ 5247-d4163fe5d173de36.js:42
+await in removeChannel
+removeChannel @ 5247-d4163fe5d173de36.js:42
+(anónimas) @ 9681-cbfd057a8ef2c7fc.js:1
+ac @ fd9d1056-1728c050809bd237.js:9
+ad @ fd9d1056-1728c050809bd237.js:9
+aW @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+aQ @ fd9d1056-1728c050809bd237.js:9
+aV @ fd9d1056-1728c050809bd237.js:9
+iB @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+iI @ fd9d1056-1728c050809bd237.js:9
+nG @ fd9d1056-1728c050809bd237.js:9
+iB @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+M @ 7864-bba79de3504bb8d3.js:25
+postMessage
+l @ 7864-bba79de3504bb8d3.js:25
+M @ 7864-bba79de3504bb8d3.js:25
+postMessage
+l @ 7864-bba79de3504bb8d3.js:25
+x @ 7864-bba79de3504bb8d3.js:25
+t.unstable_scheduleCallback @ 7864-bba79de3504bb8d3.js:25
+n0 @ fd9d1056-1728c050809bd237.js:9
+nJ @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
+postMessage
+l @ 7864-bba79de3504bb8d3.js:25
+x @ 7864-bba79de3504bb8d3.js:25
+t.unstable_scheduleCallback @ 7864-bba79de3504bb8d3.js:25
+n0 @ fd9d1056-1728c050809bd237.js:9
+nJ @ fd9d1056-1728c050809bd237.js:9
+(anónimas) @ fd9d1056-1728c050809bd237.js:9
 "use client";
 export const dynamic = 'force-dynamic';
 

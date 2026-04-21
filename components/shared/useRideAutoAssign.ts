@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 
 interface City {
