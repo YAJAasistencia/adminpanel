@@ -68,8 +68,3 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// ─── Fetch passthrough (required to be a valid PWA SW) ────────────────────────
-self.addEventListener("fetch", (event) => {
-  // Passthrough — no caching strategy, just let requests go through.
-  return;
-});
