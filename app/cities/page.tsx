@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,52 +29,28 @@ export default function CitiesPage() {
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cities.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('Driver')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.drivers.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: geoZones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.geoZones.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: redZones = [] } = useQuery({
     queryKey: ["redZones"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('red_zones')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.redZones.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -134,17 +110,10 @@ export default function CitiesPage() {
       console.log("[Cities] Guardando ciudad:", data);
       
       if (editCity.id) {
-        const { error } = await supabase
-          .from('cities')
-          .update(data)
-          .eq('id', editCity.id);
-        if (error) throw error;
+        await supabaseApi.cities.update(editCity.id, data);
         toast.success("✅ Ciudad actualizada");
       } else {
-        const { error } = await supabase
-          .from('cities')
-          .insert([data]);
-        if (error) throw error;
+        await supabaseApi.cities.create(data);
         toast.success("✅ Ciudad creada");
       }
       queryClient.invalidateQueries({ queryKey: ["cities"] });
@@ -179,11 +148,7 @@ export default function CitiesPage() {
     if (!window.confirm(`¿Eliminar ciudad "${city.name}"?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('cities')
-        .delete()
-        .eq('id', city.id);
-      if (error) throw error;
+      await supabaseApi.cities.delete(city.id);
       queryClient.invalidateQueries({ queryKey: ["cities"] });
       toast.success("Ciudad eliminada");
     } catch (error: any) {
@@ -194,11 +159,7 @@ export default function CitiesPage() {
 
   const handleToggle = async (city: any) => {
     try {
-      const { error } = await supabase
-        .from('cities')
-        .update({ is_active: !city.is_active })
-        .eq('id', city.id);
-      if (error) throw error;
+      await supabaseApi.cities.update(city.id, { is_active: !city.is_active });
       queryClient.invalidateQueries({ queryKey: ["cities"] });
     } catch (error) {
       toast.error("Error al actualizar ciudad");

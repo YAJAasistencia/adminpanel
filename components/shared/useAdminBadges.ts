@@ -22,15 +22,11 @@ export default function useAdminBadges(): AdminBadges {
 
   const computeBadges = useCallback(async () => {
     try {
-      const [rides, tickets, alerts, { data: chats }] = await Promise.all([
+      const [rides, tickets, alerts, chats] = await Promise.all([
         supabaseApi.rideRequests.list(),
         supabaseApi.supportTickets.list(),
         supabaseApi.sosAlerts.list(),
-        supabase
-          .from("chat_messages")
-          .select("*")
-          .order("id", { ascending: false })
-          .limit(200),
+        supabaseApi.chats.list(),
       ]);
 
       const activeRideIds = new Set(

@@ -30,13 +30,8 @@ export default function ChatWidget({ ride }: { ride: any }) {
     queryKey: ["rideChat", ride?.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from("chat_messages")
-          .select("*")
-          .eq("ride_id", ride.id)
-          .order("id", { ascending: true });
-        if (error) throw error;
-        return data || [];
+        const all = await supabaseApi.chats.list();
+        return all.filter((m: any) => m.ride_id === ride.id).sort((a: any, b: any) => (a.id || "").localeCompare(b.id || ""));
       } catch (err) {
         console.error("Error fetching chat messages:", err);
         return [];
@@ -81,14 +76,12 @@ export default function ChatWidget({ ride }: { ride: any }) {
 
     setIsSending(true);
     try {
-      const { error } = await supabase.from("chat_messages").insert({
+      await supabaseApi.chats.create({
         ride_id: ride.id,
         sender_role: "admin",
         sender_name: "Admin",
         message: messageText.trim(),
       });
-
-      if (error) throw error;
 
       setMessageText("");
       toast.success("Mensaje enviado");

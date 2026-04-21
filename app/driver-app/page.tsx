@@ -1276,12 +1276,10 @@ export default function DriverApp() {
           }
         }
         if (survey) {
-          const { data: existing, error } = await supabase
-            .from("survey_responses")
-            .select("*")
-            .eq("ride_id", ride.id);
+          const existing = await supabaseApi.surveyResponses.list();
+          const rideResponses = existing.filter((r: any) => r.ride_id === ride.id);
 
-          if (!error && existing?.length === 0) {
+          if (rideResponses.length === 0) {
             setPendingSurvey({ survey, ride });
             return;
           }

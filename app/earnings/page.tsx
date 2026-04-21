@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/admin/Layout";
 import { Card } from "@/components/ui/card";
@@ -30,24 +30,12 @@ export default function Earnings() {
 
   const { data: rides = [] } = useQuery({
     queryKey: ["rides"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.rideRequests.list(),
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('Driver')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.drivers.list(),
   });
 
   const since = filterMode === "days"

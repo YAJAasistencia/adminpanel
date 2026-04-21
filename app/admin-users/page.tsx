@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import * as bcryptjs from "bcryptjs";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -54,11 +54,7 @@ export default function AdminUsersPage() {
     queryKey: ["adminUsers"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('id,email,full_name,role,allowed_pages,is_active');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.adminUsers.list();
       } catch (error) {
         console.error("Error fetching admin users:", error);
         return [];
@@ -128,24 +124,15 @@ export default function AdminUsersPage() {
       }
 
       if (editing.id) {
-        // Update existing user
-        const { error } = await supabase
-          .from('admin_users')
-          .update(payload)
-          .eq('id', editing.id);
-        if (error) throw error;
+        await supabaseApi.adminUsers.update(editing.id, payload);
       } else {
-        // Create new user - password is required for new users
         if (!editing.password) {
           toast.error("La contraseña es requerida para nuevos usuarios");
           setSaving(false);
           return;
         }
         const hash = await bcryptjs.hash(editing.password, 10);
-        const { error } = await supabase
-          .from('admin_users')
-          .insert([{ ...payload, password_hash: hash }]);
-        if (error) throw error;
+        await supabaseApi.adminUsers.create({ ...payload, password_hash: hash });
       }
 
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
@@ -161,11 +148,7 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (u: any) => {
     try {
-      const { error } = await supabase
-        .from('admin_users')
-        .delete()
-        .eq('id', u.id);
-      if (error) throw error;
+      await supabaseApi.adminUsers.delete(u.id);
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       toast.success("Usuario eliminado correctamente");
     } catch (error: any) {

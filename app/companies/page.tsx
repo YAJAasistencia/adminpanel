@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,11 +49,7 @@ function PriceCorrectionTab({ rides, company }) {
     const newPrice = parseFloat(corrections[ride.id]);
     if (isNaN(newPrice)) return;
     setSaving(p => ({ ...p, [ride.id]: true }));
-    const { error } = await supabase
-      .from('ride_requests')
-      .update({ company_price: newPrice })
-      .eq('id', ride.id);
-    if (error) throw error;
+    await supabaseApi.rideRequests.update(ride.id, { company_price: newPrice });
     setSaving(p => ({ ...p, [ride.id]: false }));
     setSaved(p => ({ ...p, [ride.id]: true }));
     setTimeout(() => setSaved(p => ({ ...p, [ride.id]: false })), 2500);
@@ -350,65 +347,35 @@ export default function Companies() {
 
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.geoZones.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.serviceTypes.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.companies.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('surveys')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.surveys.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["allRides"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.rideRequests.list(),
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -463,16 +430,9 @@ export default function Companies() {
     };
     try {
       if (editing.id) {
-        const { error } = await supabase
-          .from('companies')
-          .update(data)
-          .eq('id', editing.id);
-        if (error) throw error;
+        await supabaseApi.companies.update(editing.id, data);
       } else {
-        const { error } = await supabase
-          .from('companies')
-          .insert([data]);
-        if (error) throw error;
+        await supabaseApi.companies.create(data);
       }
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       setSaving(false);
@@ -487,11 +447,7 @@ export default function Companies() {
   const handleDelete = async (c) => {
     if (!window.confirm(`¿Eliminar empresa "${c.razon_social}"?`)) return;
     try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', c.id);
-      if (error) throw error;
+      await supabaseApi.companies.delete(c.id);
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       toast.success("Empresa eliminada");
     } catch (error: any) {

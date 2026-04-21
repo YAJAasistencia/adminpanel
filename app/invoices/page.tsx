@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,10 +85,7 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
         status: "draft",
         notes,
       };
-      const { error } = await supabase
-        .from('invoices')
-        .insert([invoiceData]);
-      if (error) throw error;
+      await supabaseApi.invoices.create(invoiceData);
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       setSaving(false);
       toast.success("Factura creada");
@@ -350,25 +348,13 @@ export default function Invoices() {
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.invoices.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.companies.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

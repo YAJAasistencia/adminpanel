@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -44,13 +44,7 @@ function SupportTicketsContent() {
 
   const { data: tickets = [] } = useQuery({
     queryKey: ["supportTickets"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.supportTickets.list(),
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -70,11 +64,7 @@ function SupportTicketsContent() {
   });
 
   const handleSaveResponse = async () => {
-    const { error } = await supabase
-      .from('support_tickets')
-      .update({ admin_response: response })
-      .eq('id', selected.id);
-    if (error) throw error;
+    await supabaseApi.supportTickets.update(selected.id, { admin_response: response });
     queryClient.invalidateQueries({ queryKey: ["supportTickets"] });
     setSelected(prev => ({ ...prev, admin_response: response }));
     toast.success("Respuesta guardada (sin enviar)");
@@ -82,14 +72,7 @@ function SupportTicketsContent() {
 
   const handleSendResponse = async () => {
     if (!response.trim()) return;
-    const { error } = await supabase
-      .from('support_tickets')
-      .update({
-        admin_response: response,
-        status: "in_review",
-      })
-      .eq('id', selected.id);
-    if (error) throw error;
+    await supabaseApi.supportTickets.update(selected.id, { admin_response: response, status: "in_review" });
     queryClient.invalidateQueries({ queryKey: ["supportTickets"] });
     setSelected(prev => ({ ...prev, admin_response: response, status: "in_review" }));
     toast.success("Respuesta enviada — caso en revisión hasta que el usuario conteste");
@@ -97,22 +80,14 @@ function SupportTicketsContent() {
 
   const handleDelete = async (ticket) => {
     if (!window.confirm(`¿Eliminar el ticket "${ticket.subject}"? Esta acción no se puede deshacer.`)) return;
-    const { error } = await supabase
-      .from('support_tickets')
-      .delete()
-      .eq('id', ticket.id);
-    if (error) throw error;
+    await supabaseApi.supportTickets.delete(ticket.id);
     queryClient.invalidateQueries({ queryKey: ["supportTickets"] });
     if (selected?.id === ticket.id) { setSelected(null); setResponse(""); }
     toast.success("Ticket eliminado");
   };
 
   const handleStatusChange = async (ticket, newStatus) => {
-    const { error } = await supabase
-      .from('support_tickets')
-      .update({ status: newStatus })
-      .eq('id', ticket.id);
-    if (error) throw error;
+    await supabaseApi.supportTickets.update(ticket.id, { status: newStatus });
     queryClient.invalidateQueries({ queryKey: ["supportTickets"] });
     // Update local selected state so dialog reflects change immediately
     if (selected?.id === ticket.id) {

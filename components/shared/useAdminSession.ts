@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPageUrl } from "@/utils";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 export interface AdminSession {
   id: string;
@@ -50,15 +51,8 @@ export function useAdminSession() {
       }
 
       try {
-        const { data, error } = await supabase
-          .from("admin_users")
-          .select("*")
-          .eq("email", stored.email)
-          .limit(1);
-
-        if (error) throw error;
-
-        const user = data?.[0];
+        const allUsers = await supabaseApi.adminUsers.list();
+        const user = allUsers.find((u: any) => u.email === stored.email);
         if (!user || user.is_active === false) {
           clearSession();
           setSession(null);

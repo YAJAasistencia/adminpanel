@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,39 +35,21 @@ function AnunciosContent() {
 
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.announcements.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cities.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.serviceTypes.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -105,17 +87,10 @@ function AnunciosContent() {
         is_active: form.is_active,
       };
       if (editId) {
-        const { error } = await supabase
-          .from('announcements')
-          .update(data)
-          .eq('id', editId);
-        if (error) throw error;
+        await supabaseApi.announcements.update(editId, data);
         toast.success("Anuncio actualizado");
       } else {
-        const { error } = await supabase
-          .from('announcements')
-          .insert([data]);
-        if (error) throw error;
+        await supabaseApi.announcements.create(data);
         toast.success("Anuncio creado");
       }
       qc.invalidateQueries({ queryKey: ["announcements"] });
@@ -130,11 +105,7 @@ function AnunciosContent() {
   const handleDelete = async (a: any) => {
     if (!window.confirm(`¿Eliminar el anuncio "${a.title}"?`)) return;
     try {
-      const { error } = await supabase
-        .from('announcements')
-        .delete()
-        .eq('id', a.id);
-      if (error) throw error;
+      await supabaseApi.announcements.delete(a.id);
       qc.invalidateQueries({ queryKey: ["announcements"] });
       toast.success("Anuncio eliminado");
     } catch (error: any) {
@@ -144,11 +115,7 @@ function AnunciosContent() {
 
   const handleToggle = async (a: any) => {
     try {
-      const { error } = await supabase
-        .from('announcements')
-        .update({ is_active: !a.is_active })
-        .eq('id', a.id);
-      if (error) throw error;
+      await supabaseApi.announcements.update(a.id, { is_active: !a.is_active });
       qc.invalidateQueries({ queryKey: ["announcements"] });
     } catch (error: any) {
       toast.error(error.message || "Error al actualizar");

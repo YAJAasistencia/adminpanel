@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -97,26 +97,14 @@ function GeoZonesContent() {
 
   const { data: zones = [] } = useQuery({
     queryKey: ["geoZones"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('geo_zones')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.geoZones.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["ridesForZones"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.rideRequests.list(),
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -153,16 +141,9 @@ function GeoZonesContent() {
     };
     try {
       if (editing.id) {
-        const { error } = await supabase
-          .from('geo_zones')
-          .update(data)
-          .eq('id', editing.id);
-        if (error) throw error;
+        await supabaseApi.geoZones.update(editing.id, data);
       } else {
-        const { error } = await supabase
-          .from('geo_zones')
-          .insert([data]);
-        if (error) throw error;
+        await supabaseApi.geoZones.create(data);
       }
       queryClient.invalidateQueries({ queryKey: ["geoZones"] });
       setSaving(false);
@@ -177,11 +158,7 @@ function GeoZonesContent() {
   const handleDelete = async (z) => {
     if (!window.confirm(`¿Eliminar zona "${z.name}"?`)) return;
     try {
-      const { error } = await supabase
-        .from('geo_zones')
-        .delete()
-        .eq('id', z.id);
-      if (error) throw error;
+      await supabaseApi.geoZones.delete(z.id);
       queryClient.invalidateQueries({ queryKey: ["geoZones"] });
       toast.success("Zona eliminada");
     } catch (error) {
@@ -191,11 +168,7 @@ function GeoZonesContent() {
 
   const toggleActive = async (z) => {
     try {
-      const { error } = await supabase
-        .from('geo_zones')
-        .update({ is_active: !z.is_active })
-        .eq('id', z.id);
-      if (error) throw error;
+      await supabaseApi.geoZones.update(z.id, { is_active: !z.is_active });
       queryClient.invalidateQueries({ queryKey: ["geoZones"] });
     } catch (error) {
       toast.error("Error al actualizar zona");
