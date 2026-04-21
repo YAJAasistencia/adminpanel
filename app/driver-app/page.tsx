@@ -8,7 +8,6 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useDriverNotifications, requestNotificationPermission, stopNewRideAlarm, startNewRideAlarm } from "@/components/shared/useRideNotifications";
 import { Button } from "@/components/ui/button";
 import { Car, Star, Clock, User, AlertTriangle, DollarSign, ShieldAlert, HelpCircle, Wifi, MapPin, CheckCircle2, XCircle, ChevronLeft, Map, Download, AlertCircle, Navigation, TrendingUp, History, LogOut, X, Menu } from "lucide-react";
-import { AnimatePresence as AP } from "framer-motion";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from "react-leaflet";
 // Leaflet CSS is imported via npm package
