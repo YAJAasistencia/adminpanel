@@ -130,24 +130,19 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     radiusKm: number | null = null,
   ) => {
     const localCities = citiesRef.current;
-    const maxConcurrentRides = settingsRef.current?.max_concurrent_rides ?? 1;
 
-    // Count active rides per driver instead of just checking if they have any
-    const driverActiveRideCount = new Map<string, number>();
-    allRides
-      .filter((r) => ["en_route", "arrived", "in_progress", "admin_approved", "assigned"].includes(r.status || "") && r.driver_id)
-      .forEach((r) => {
-        const count = driverActiveRideCount.get(r.driver_id!) || 0;
-        driverActiveRideCount.set(r.driver_id!, count + 1);
-      });
+    // Only exclude drivers who have ACCEPTED a ride (en_route/arrived/in_progress/admin_approved)
+    // Drivers with status "assigned" but not yet accepted are still available (driver.status is still "available")
+    const busyRideDriverIds = new Set(
+      allRides
+        .filter((r) => ["en_route", "arrived", "in_progress", "admin_approved"].includes(r.status || "") && r.driver_id)
+        .map((r) => r.driver_id as string)
+    );
 
     return allDrivers.filter((driver) => {
       if (driver.status !== "available") return false;
       if (driver.approval_status !== "approved") return false;
-      
-      // Check if driver has reached max concurrent rides
-      const activeRideCount = driverActiveRideCount.get(driver.id) || 0;
-      if (activeRideCount >= maxConcurrentRides) return false;
+      if (busyRideDriverIds.has(driver.id)) return false;
 
       if (ride.service_type_name) {
         if (!driver.service_type_names?.includes(ride.service_type_name)) return false;
@@ -231,7 +226,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     queryClient.setQueryData(["lastAssignedDriver"], best);
     queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
       old.map((r) => r.id === ride.id
-        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned" }
+        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned", updated_at: assignedNow }
         : r)
     );
 
@@ -269,34 +264,19 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
     if (candidates.length === 0) {
       if (ride.assignment_mode !== "manual") {
-        // Count how many times we've retried
-        const prevExcluded = Array.isArray(ride._excluded_driver_ids) ? ride._excluded_driver_ids : [];
-        const retryCount = Math.ceil(prevExcluded.length / (s?.auction_max_drivers ?? 5));
-        const maxRetries = s?.auction_max_retries ?? 3;
-
-        let nextUpdate: any = {
+        const now = new Date().toISOString();
+        const nextUpdate = {
           status: "pending",
           assignment_mode: "manual",
-          manual_assignment_requested_at: new Date().toISOString(),
+          manual_assignment_requested_at: now,
           driver_id: null,
           auction_driver_ids: [],
         };
-
-        // If exceeded max retries, mark as no_drivers
-        if (retryCount >= maxRetries) {
-          nextUpdate = {
-            ...nextUpdate,
-            status: "no_drivers",
-            cancellation_reason: "No hay conductores disponibles después de múltiples intentos",
-          };
-        }
-
         await supabaseApi.rideRequests.update(ride.id, nextUpdate);
-
         queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
           old.map((r) => r.id === ride.id ? {
-            ...r,
-            ...nextUpdate,
+            ...r, status: "pending", assignment_mode: "manual",
+            manual_assignment_requested_at: now, driver_id: null, auction_driver_ids: []
           } : r)
         );
       }
@@ -491,6 +471,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           ride.status === "assigned" &&
           ride.driver_id &&
           !ride.en_route_at &&
+          !ride.driver_accepted_at &&
           ride.assignment_mode !== "manual"
         ) {
           if (assignedRideTimersRef.current[ride.id]) continue;
@@ -520,6 +501,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               status: "pending",
               driver_id: null,
               driver_name: null,
+              _excluded_driver_ids: excludedIds,
             });
 
             const useAuction = !!settingsRef.current?.auction_mode_enabled || current.assignment_mode === "auction";
@@ -532,6 +514,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
           assignedRideTimersRef.current[ride.id] = timer;
         } else if (
+          ride.driver_accepted_at ||
           ride.en_route_at ||
           ["completed", "cancelled", "en_route", "arrived", "in_progress", "admin_approved"].includes(ride.status || "")
         ) {
