@@ -1,7 +1,7 @@
 import { supabaseApi } from "@/lib/supabaseApi";
 
 const VAPID_PUBLIC_KEY =
-  "BEl62iUYgUivxIkv69yViEuiBIa40HI80NM9bBdqVW9_5V6RgdNFXTMJ6n6XBWG1HQyLGHmlWyFI7Y1mBKjVEs";
+  "BJAiNTakC4wPq6j1Lv0xAPTvkybNTCga9BcPYSMzzrhjILPv88w8pQMyZTW7D1Qa25de5oLjcnlrRkboGFyq15w";
 
 type PushPermissionResult = "granted" | "denied" | "default" | "unsupported";
 
