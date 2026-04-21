@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000;
@@ -49,12 +49,12 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     if (!email) { setError("Ingresa tu correo"); return; }
     setLoading(true); setError(""); setForgotMsg(""); setGeneratedCode("");
     try {
-      const { data, error: queryError } = await supabase.from("Driver").select("*").eq("email", email.trim().toLowerCase()).limit(1);
-      if (queryError || !data || data.length === 0) { setError("No existe una cuenta de conductor con ese correo"); setLoading(false); return; }
+      const data = await supabaseApi.drivers.list({ email: email.trim().toLowerCase() });
+      if (!data || data.length === 0) { setError("No existe una cuenta de conductor con ese correo"); setLoading(false); return; }
       const driver = data[0];
       const token = genToken();
       const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      await supabase.from("Driver").update({ reset_token: token, reset_token_expires: expires }).eq("id", driver.id);
+      await supabaseApi.drivers.update(driver.id, { reset_token: token, reset_token_expires: expires });
       // DEVELOPMENT MODE: Mostrar código en pantalla para testing
       setGeneratedCode(token);
       setForgotMsg(`Código generado: ${token}\n\nEste código expira en 30 minutos.`);
@@ -97,12 +97,12 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     if (!/\d/.test(forgotNewPass)) { setError("La contraseña debe incluir al menos 1 número"); return; }
     setLoading(true); setError("");
     try {
-      const { data, error: fetchErr } = await supabase.from("Driver").select("*").eq("email", email.trim().toLowerCase()).limit(1);
-      if (fetchErr || !data || data.length === 0) { setError("Correo no encontrado"); setLoading(false); return; }
+      const data = await supabaseApi.drivers.list({ email: email.trim().toLowerCase() });
+      if (!data || data.length === 0) { setError("Correo no encontrado"); setLoading(false); return; }
       const d = data[0];
       if (d.reset_token !== forgotToken.trim().toUpperCase()) { setError("El código es incorrecto"); setLoading(false); return; }
       if (new Date() > new Date(d.reset_token_expires)) { setError("El código expiró. Solicita uno nuevo."); setLoading(false); return; }
-      await supabase.from("Driver").update({ password: forgotNewPass, reset_token: null, reset_token_expires: null }).eq("id", d.id);
+      await supabaseApi.drivers.update(d.id, { password: forgotNewPass, reset_token: null, reset_token_expires: null });
       setLoading(false);
       setForgotMsg("✅ ¡Contraseña actualizada!");
       toast.success("Contraseña cambiada correctamente. Inicia sesión con tu nueva contraseña.");
@@ -128,8 +128,8 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     setLoading(true);
     setError("");
     try {
-      const { data, error: fetchErr } = await supabase.from("Driver").select("*").eq("email", email.trim().toLowerCase()).limit(1);
-      if (fetchErr || !data || data.length === 0) {
+      const data = await supabaseApi.drivers.list({ email: email.trim().toLowerCase() });
+      if (!data || data.length === 0) {
         const a = getAttempts();
         const newCount = (a.count || 0) + 1;
         saveAttempts({ count: newCount, lockedUntil: newCount >= MAX_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0 });
@@ -151,7 +151,7 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
 
       resetAttempts();
       const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
-      await supabase.from("Driver").update({ access_code: token }).eq("id", found.id);
+      await supabaseApi.drivers.update(found.id, { access_code: token });
       localStorage.setItem(SESSION_KEY, found.id);
       localStorage.setItem(SESSION_TOKEN_KEY, token);
       setLoading(false);

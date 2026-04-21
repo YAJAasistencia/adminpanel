@@ -199,7 +199,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '773px' }}>
         <DialogHeader>
           <DialogTitle className="text-lg flex items-center gap-2">
             Asignar conductor

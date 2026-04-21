@@ -2,7 +2,7 @@ import React from "react";
 import { ArrowRight, Smartphone } from "lucide-react";
 import { useLandingConfig } from "@/hooks/useLandingConfig";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 export default function CtaSection() {
   const lc = useLandingConfig();
@@ -10,16 +10,7 @@ export default function CtaSection() {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching AppSettings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
     staleTime: 60000,
   });
   const features = settingsList[0]?.features_enabled || {};

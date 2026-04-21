@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { supabase } from "@/lib/supabase";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { sanitizeFileName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -65,14 +63,8 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   const { data: policies = [] } = useQuery({
     queryKey: ["cancellationPolicies"],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("cancellation_policies").select("*").eq("is_active", true);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching cancellation policies:", err);
-        return [];
-      }
+      const all = await supabaseApi.cancellationPolicies.list();
+      return all.filter((p: any) => p.is_active);
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -80,16 +72,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   // Live chat query so unread badge stays current even when chat is closed
   const { data: chatMessages = [] } = useQuery({
     queryKey: ["chatMessages", ride.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("id", { ascending: true });
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching chat messages:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.chats.list({ ride_id: ride.id }),
     enabled: !!ride.id && isActive,
     refetchInterval: false,
     refetchOnWindowFocus: false,
@@ -154,14 +137,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   const handleProofUpload = async (file) => {
     setUploadingProof(true);
     try {
-      const timestamp = Date.now();
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `proof-${timestamp}-${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("app-uploads").upload(`ride-proofs/${fileName}`, file);
-      if (error) throw error;
-      const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`ride-proofs/${fileName}`);
-      const file_url = publicUrlData.publicUrl;
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
       await supabaseApi.rideRequests.update(ride.id, { proof_photo_url: file_url });
       queryClient.invalidateQueries({ queryKey: ["driverRides"] });
     } catch (err) {
@@ -185,7 +161,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     }
 
     try {
-      await supabase.from("sos_alerts").insert([{
+      await supabaseApi.sosAlerts.create({
         driver_id: driver?.id,
         driver_name: driver?.full_name,
         ride_id: ride.id,
@@ -193,7 +169,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
         status: "active",
         latitude: lat,
         longitude: lon,
-      }]);
+      });
       alert("✅ Alerta SOS enviada. El administrador ha sido notificado.");
     } catch (err) {
       console.error("Error sending SOS:", err);

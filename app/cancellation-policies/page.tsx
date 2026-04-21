@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -37,13 +37,7 @@ export default function CancellationPoliciesPage() {
 
   const { data: policies = [] } = useQuery({
     queryKey: ["policies"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cancellation_policies')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cancellationPolicies.list(),
   });
 
   const handleSave = async () => {
@@ -55,17 +49,10 @@ export default function CancellationPoliciesPage() {
         free_cancellation_minutes: parseInt(editPolicy.free_cancellation_minutes) || 0,
       };
       if (editPolicy.id) {
-        const { error } = await supabase
-          .from('cancellation_policies')
-          .update(data)
-          .eq('id', editPolicy.id);
-        if (error) throw error;
+        await supabaseApi.cancellationPolicies.update(editPolicy.id, data);
         toast.success("Política actualizada");
       } else {
-        const { error } = await supabase
-          .from('cancellation_policies')
-          .insert([data]);
-        if (error) throw error;
+        await supabaseApi.cancellationPolicies.create(data);
         toast.success("Política creada");
       }
       queryClient.invalidateQueries({ queryKey: ["policies"] });
@@ -81,11 +68,7 @@ export default function CancellationPoliciesPage() {
   const handleDelete = async (p: any) => {
     if (!window.confirm(`¿Eliminar la política "${p.name}"?`)) return;
     try {
-      const { error } = await supabase
-        .from('cancellation_policies')
-        .delete()
-        .eq('id', p.id);
-      if (error) throw error;
+      await supabaseApi.cancellationPolicies.delete(p.id);
       queryClient.invalidateQueries({ queryKey: ["policies"] });
       toast.success("Política eliminada");
     } catch (error: any) {

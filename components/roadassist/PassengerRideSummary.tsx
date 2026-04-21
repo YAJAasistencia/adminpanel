@@ -14,6 +14,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Star, AlertCircle, Clock, Loader2, MessageCircle, Copy, CreditCard, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 
 function StarRating({ value, onChange }) {
@@ -127,7 +128,7 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.from("AppSettings").select("*");
+        const data = await supabaseApi.settings.list();
         if (data?.[0]) setSettings(data[0]);
       } catch (err) {
         // silently fail
@@ -171,7 +172,7 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
     // Also poll every 5s as fallback
     pollRef.current = setInterval(async () => {
       try {
-        const { data } = await supabase.from("ride_requests").select("*").eq("id", ride.id);
+        const data = await supabaseApi.rideRequests.list({ id: ride.id });
         if (data?.[0]) setRide(data[0]);
       } catch (_) {}
     }, 5000);
@@ -197,16 +198,16 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
   const handleSubmitRating = async () => {
     if (rating === 0) { onDone(); return; }
     setSaving(true);
-    await supabase.from("ride_requests").update({
+    await supabaseApi.rideRequests.update(ride.id, {
       passenger_rating_for_driver: rating,
-    }).eq("id", ride.id);
+    });
     if (ride.driver_id) {
       try {
-        const { data: allRides } = await supabase.from("ride_requests").select("*").eq("driver_id", ride.driver_id);
-        const rated = (allRides || []).filter(r => r.passenger_rating_for_driver > 0);
+        const allRides = await supabaseApi.rideRequests.list({ driver_id: ride.driver_id });
+        const rated = allRides.filter(r => r.passenger_rating_for_driver > 0);
         if (rated.length > 0) {
           const avg = rated.reduce((s, r) => s + r.passenger_rating_for_driver, 0) / rated.length;
-          await supabase.from("Driver").update({ rating: parseFloat(avg.toFixed(1)) }).eq("id", ride.driver_id);
+          await supabaseApi.drivers.update(ride.driver_id, { rating: parseFloat(avg.toFixed(1)) });
         }
       } catch (_) {}
     }

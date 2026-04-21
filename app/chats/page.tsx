@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,11 +49,7 @@ export default function ChatsPage() {
     queryKey: ["ridesWithMessages"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('ride_requests')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.rideRequests.list();
       } catch (error) {
         console.error("Error fetching rides:", error);
         return [];
@@ -68,13 +65,7 @@ export default function ChatsPage() {
     queryKey: ["allMessages"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from("chat_messages")
-          .select("*")
-          .order("id", { ascending: false })
-          .limit(500);
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.chats.list();
       } catch (error) {
         console.error("Error fetching messages:", error);
         return [];
@@ -114,7 +105,7 @@ export default function ChatsPage() {
     );
     unread.forEach(async (m: any) => {
       try {
-        await supabase.from("chat_messages").update({ read_by_admin: true }).eq("id", m.id);
+        await supabaseApi.chats.update(m.id, { read_by_admin: true });
       } catch (error) {
         console.error("Error marking message as read:", error);
       }
@@ -153,7 +144,7 @@ export default function ChatsPage() {
     }
     setSending(true);
     try {
-      await supabase.from("chat_messages").insert({
+      await supabaseApi.chats.create({
         ride_id: selectedRideId,
         sender_role: "admin",
         sender_name: "Administrador",

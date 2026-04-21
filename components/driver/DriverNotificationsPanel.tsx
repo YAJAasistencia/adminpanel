@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, X, CheckCheck, Megaphone } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery } from "@tanstack/react-query";
 import { formatCDMX } from "@/components/shared/dateUtils";
 
@@ -15,9 +15,8 @@ export default function DriverNotificationsPanel({ driver }) {
   const { data: notifications = [], refetch } = useQuery({
     queryKey: ["driverNotifs", driver?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("driver_notificaciones").select("*").contains("driver_ids", [driver.id]).order("id", { ascending: false }).limit(50);
-      if (error) throw error;
-      return data || [];
+      const all = await supabaseApi.driverNotifications.list();
+      return all.filter(n => !n.driver_ids?.length || n.driver_ids.includes(driver?.id));
     },
     enabled: !!driver?.id,
     refetchInterval: 15000,

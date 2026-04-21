@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { sanitizeFileName } from "@/lib/utils";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,16 +84,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching AppSettings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
   });
   const settings = settingsList[0];
 
@@ -112,29 +102,11 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("City").select("*");
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching cities:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.cities.list(),
   });
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("service_types").select("*");
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching service types:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.serviceTypes.list(),
   });
 
   const activeCities = cities.filter(c => c.is_active !== false);
@@ -161,14 +133,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     if (clean.length < 18) { setCurpStatus(null); return; }
     if (!validateCURPFormat(clean)) { setCurpStatus("invalid_format"); return; }
     setCurpStatus("checking");
-    try {
-      const { data, error } = await supabase.from("Driver").select("*").eq("curp", clean).limit(1);
-      if (error) throw error;
-      setCurpStatus(data && data.length > 0 ? "duplicate" : "valid");
-    } catch (err) {
-      console.error("CURP check error:", err);
-      setCurpStatus("error");
-    }
+    const data = await supabaseApi.drivers.list({ curp: clean });
+    setCurpStatus(data.length > 0 ? "duplicate" : "valid");
   };
 
   const checkEmail = async () => {
@@ -176,8 +142,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setError("");
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("Driver").select("*").eq("email", form.email.trim().toLowerCase()).limit(1);
-      if (error) throw error;
+      const data = await supabaseApi.drivers.list({ email: form.email.trim().toLowerCase() });
       if (data && data.length > 0) {
         setExistingDriver(data[0]);
         setStep("status");
@@ -208,14 +173,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
   const handlePhotoUpload = async (file) => {
     setUploadingPhoto(true);
     try {
-      const timestamp = Date.now();
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `photo-${timestamp}-${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-registration/${fileName}`, file);
-      if (error) throw error;
-      const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/${fileName}`);
-      update("photo_url", publicUrlData.publicUrl);
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+      update("photo_url", file_url);
     } catch (err) {
       console.error("Error uploading photo:", err);
       setError("Error al subir la foto");
@@ -289,14 +248,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     // Subir archivo
     setUploadingPersonalDoc(p => ({ ...p, [docKey]: true }));
     try {
-      const timestamp = Date.now();
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'pdf';
-      const fileName = `personal-doc-${timestamp}-${docKey}-${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-registration/personal/${fileName}`, file);
-      if (error) throw error;
-      const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/personal/${fileName}`);
-      setPersonalDocUploads(p => ({ ...p, [docKey]: publicUrlData.publicUrl }));
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+      setPersonalDocUploads(p => ({ ...p, [docKey]: file_url }));
       setError("");
     } catch (err) {
       console.error("Error uploading personal doc:", err);
@@ -322,14 +275,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     // Subir archivo
     setUploadingVehicleDoc(p => ({ ...p, [docKey]: true }));
     try {
-      const timestamp = Date.now();
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'pdf';
-      const fileName = `vehicle-doc-${timestamp}-${docKey}-${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-registration/vehicle/${fileName}`, file);
-      if (error) throw error;
-      const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-registration/vehicle/${fileName}`);
-      setVehicleDocUploads(p => ({ ...p, [docKey]: publicUrlData.publicUrl }));
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+      setVehicleDocUploads(p => ({ ...p, [docKey]: file_url }));
       setError("");
     } catch (err) {
       console.error("Error uploading vehicle doc:", err);
@@ -365,8 +312,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
 
     setLoading(true);
     try {
-      const { data: curpCheckData, error: curpCheckErr } = await supabase.from("Driver").select("*").eq("curp", form.curp.trim().toUpperCase()).limit(1);
-      if (curpCheckErr) throw curpCheckErr;
+      const curpCheckData = await supabaseApi.drivers.list({ curp: form.curp.trim().toUpperCase() });
       if (curpCheckData && curpCheckData.length > 0) {
         setError("Ya existe una cuenta registrada con ese CURP");
         setLoading(false);
@@ -417,14 +363,13 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
         vehicles: [vehicleObj],
       };
 
-      const { data: createdDriver, error: createErr } = await supabase.from("Driver").insert([driverData]).select().single();
-      if (createErr) throw createErr;
+      const createdDriver = await supabaseApi.drivers.create(driverData);
 
       if (createdDriver) {
         setExistingDriver(createdDriver);
         if (onLogin) {
           const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
-          await supabase.from("Driver").update({ access_code: token }).eq("id", createdDriver.id);
+          await supabaseApi.drivers.update(createdDriver.id, { access_code: token });
           localStorage.setItem(SESSION_KEY, createdDriver.id);
           localStorage.setItem(SESSION_TOKEN_KEY, token);
           const { password: _, ...safeDriver } = createdDriver;

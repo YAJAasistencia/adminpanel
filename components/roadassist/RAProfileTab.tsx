@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { sanitizeFileName } from "@/lib/utils";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Phone, Mail, LogOut, Lock, KeyRound, CheckCircle, X, Trash2, ChevronRight, Star, MessageSquare, AlertCircle, Wallet, Camera } from "lucide-react";
@@ -95,16 +94,8 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     if (!file) return;
     setUploadingPhoto(true);
     try {
-      // Upload to Supabase storage
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'jpg';
-      const filePath = `${user.id}/${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("user-photos").upload(filePath, file);
-      if (error) throw error;
-      // Get public URL
-      const file_url = supabase.storage.from("user-photos").getPublicUrl(filePath).data.publicUrl;
-      // Update user record
-      await supabase.from("road_assist_users").update({ photo_url: file_url }).eq("id", user.id);
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+      await supabaseApi.passengers.update(user.id, { photo_url: file_url });
       onUserUpdate({ ...user, photo_url: file_url });
     } catch (err) {
       console.error("Photo upload error:", err);
@@ -130,9 +121,7 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     setPwError("");
     const code = genToken();
     const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-    await supabase.from("road_assist_users").update({ reset_token: code, reset_token_expires: expires }).eq("id", user.id);
-    // TODO: Implement via Supabase Edge Function for email sending
-    // await supabase.functions.invoke("send-email", { body: { to: user.email, subject, body } });
+    await supabaseApi.passengers.update(user.id, { reset_token: code, reset_token_expires: expires });
     console.warn("Email sending requires Edge Function implementation. Code:", code);
     setPwLoading(false);
     setPwStep("confirm");
@@ -143,15 +132,14 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     if (!token || !newPassword) { setPwError("Ingresa el código y la nueva contraseña"); return; }
     setPwLoading(true);
     setPwError("");
-    const { data: fresh } = await supabase.from("road_assist_users").select("*").eq("email", user.email);
+    const fresh = await supabaseApi.passengers.list({ email: user.email });
     const u = fresh?.[0];
     if (!u) { setPwError("Error al verificar. Intenta de nuevo."); setPwLoading(false); return; }
     if (u.reset_token !== token.trim().toUpperCase()) { setPwError("Código incorrecto"); setPwLoading(false); return; }
     if (new Date() > new Date(u.reset_token_expires)) { setPwError("Código expirado. Solicita uno nuevo."); setPwLoading(false); return; }
 
-    await supabase.from("road_assist_users").update({ password: newPassword, reset_token: null, reset_token_expires: null }).eq("id", user.id);
+    await supabaseApi.passengers.update(user.id, { password: newPassword, reset_token: null, reset_token_expires: null });
     // TODO: Implement via Supabase Edge Function for email sending
-    // await supabase.functions.invoke("send-email", { body: { to, subject, body } });
     console.warn("Email confirmation not implemented yet");
 
     setPwLoading(false);
@@ -164,7 +152,7 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "ELIMINAR") return;
     setDeleting(true);
-    await supabase.from("road_assist_users").delete().eq("id", user.id);
+    await supabaseApi.passengers.delete(user.id);
     if (onDeleteAccount) onDeleteAccount();
     else onLogout();
   };

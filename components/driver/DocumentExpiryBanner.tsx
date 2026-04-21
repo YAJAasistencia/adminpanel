@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { AlertTriangle, X, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 
 const DEFAULT_VEHICLE_DOCS = [
   { key: "licencia", label: "Licencia de conducir", require_expiry: true },
@@ -21,16 +21,7 @@ function getDaysUntil(dateStr) {
 export default function DocumentExpiryBanner({ driver }) {
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching AppSettings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

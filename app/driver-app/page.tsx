@@ -306,17 +306,11 @@ function HomeMap({
   const fetchFlowRides = React.useCallback(async () => {
     try {
       // Fetch ALL recent rides from the platform
-      const { data, error } = await supabase
-        .from("ride_requests")
-        .select("*")
-        .order("requested_at", { ascending: false })
-        .limit(200);
-
-      if (error) throw error;
+      const allData = await supabaseApi.rideRequests.list();
 
       // Only show active/recent rides (not cancelled), last 24h
       const since = Date.now() - 24 * 60 * 60 * 1000;
-      const relevant = (data || []).filter(
+      const relevant = (allData || []).filter(
         (r) =>
           r.status !== "cancelled" &&
           new Date(r.requested_at).getTime() > since
@@ -686,13 +680,7 @@ export default function DriverApp() {
     if (savedId && !driver) {
       (async () => {
         try {
-          const { data, error } = await supabase
-            .from("Driver")
-            .select("*")
-            .eq("id", savedId)
-            .single();
-
-          if (error) throw error;
+          const data = await supabaseApi.drivers.get(savedId);
 
           if (data) {
             const { password: _, ...d } = data as any;
@@ -812,11 +800,7 @@ export default function DriverApp() {
       _lastActivity.t = now;
       setInactivityWarning(false);
     }
-    supabase
-      .from("Driver")
-      .update({ latitude: lat, longitude: lon, last_seen_at: new Date().toISOString() })
-      .eq("id", d.id)
-      .then(() => {});
+    supabaseApi.drivers.update(d.id, { latitude: lat, longitude: lon, last_seen_at: new Date().toISOString() }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -854,8 +838,7 @@ export default function DriverApp() {
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("*").limit(1);
-      if (error) throw error;
+      const data = await supabaseApi.settings.list();
       return data || [];
     },
     refetchOnWindowFocus: false,
@@ -880,12 +863,7 @@ export default function DriverApp() {
     queryKey: ["driverRides", driver?.id],
     queryFn: async () => {
       if (!driver?.id) return [];
-      const { data, error } = await supabase
-        .from("ride_requests")
-        .select("*")
-        .eq("driver_id", driver.id)
-        .order("requested_at", { ascending: false });
-      if (error) throw error;
+      const data = await supabaseApi.rideRequests.list({ driver_id: driver.id });
       return data || [];
     },
     enabled: !!driver?.id,
@@ -913,8 +891,7 @@ export default function DriverApp() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cities").select("*");
-      if (error) throw error;
+      const data = await supabaseApi.cities.list();
       return data || [];
     },
     enabled: !!driver?.id,
@@ -964,15 +941,7 @@ export default function DriverApp() {
     const verifySession = async () => {
       const savedToken = localStorage.getItem(SESSION_TOKEN_KEY);
       if (!savedToken) return;
-      const { data, error } = await supabase
-        .from("Driver")
-        .select("*")
-        .eq("id", driver.id)
-        .single();
-
-      if (error) throw error;
-
-      const current = data as Driver;
+      const current = await supabaseApi.drivers.get(driver.id) as Driver;
       if (current.access_code && current.access_code !== savedToken) {
         localStorage.removeItem(SESSION_KEY);
         localStorage.removeItem(SESSION_TOKEN_KEY);
@@ -1129,10 +1098,7 @@ export default function DriverApp() {
                 const pmConfig = { auto_charge: false, require_driver_confirmation: false };
                 setRideSummary({ ride: data, paymentMethodConfig: pmConfig });
               }
-              supabase
-                .from("Driver")
-                .update({ status: "available" })
-                .eq("id", driverId);
+              supabaseApi.drivers.update(driverId, { status: "available" });
               setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
               return;
             }
@@ -1217,12 +1183,7 @@ export default function DriverApp() {
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("surveys")
-        .select("*")
-        .order("id", { ascending: false })
-        .limit(50);
-      if (error) throw error;
+      const data = await supabaseApi.surveys.list();
       return data || [];
     },
     enabled: !!driver?.id,
@@ -1249,14 +1210,11 @@ export default function DriverApp() {
           Date.now() + (settings?.rating_window_minutes ?? 1440) * 60000
         ).toISOString();
 
-        await supabase
-          .from("Driver")
-          .update({
+        await supabaseApi.drivers.update(driver?.id || "", {
             status: "available",
             total_rides: (driver?.total_rides || 0) + 1,
             total_earnings: (driver?.total_earnings || 0) + driverEarnings,
-          })
-          .eq("id", driver?.id || "");
+          });
 
         setDriver((prev) =>
           prev
@@ -1269,12 +1227,7 @@ export default function DriverApp() {
         );
       }
 
-      const { error } = await supabase
-        .from("ride_requests")
-        .update(updates)
-        .eq("id", ride.id);
-
-      if (error) throw error;
+      await supabaseApi.rideRequests.update(ride.id, updates);
     },
     onMutate: async ({ ride, newStatus }) => {
       await queryClient.cancelQueries({ queryKey: ["driverRides", driver?.id] });
@@ -1315,13 +1268,8 @@ export default function DriverApp() {
           (s) => s.is_active !== false && (s.company_ids || []).includes(ride.company_id)
         );
         if (!survey) {
-          const { data: comps, error } = await supabase
-            .from("companies")
-            .select("*")
-            .eq("id", ride.company_id)
-            .single();
-
-          if (!error && comps?.survey_id) {
+          const comps = await supabaseApi.companies.get(ride.company_id).catch(() => null);
+          if (comps?.survey_id) {
             survey = surveys.find(
               (s) => s.id === comps.survey_id && s.is_active !== false
             );
@@ -1370,34 +1318,21 @@ export default function DriverApp() {
     acceptedRideIdsRef.current.add(ride.id);
 
     if (ride.status === "auction") {
-      const { data: current, error } = await supabase
-        .from("ride_requests")
-        .select("*")
-        .eq("id", ride.id)
-        .single();
+      const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
 
-      if (error || !current || current.status !== "auction") return;
+      if (!current || current.status !== "auction") return;
 
       await Promise.all([
-        supabase
-          .from("ride_requests")
-          .update({
+        supabaseApi.rideRequests.update(ride.id, {
             status: "assigned",
             driver_id: driver?.id,
             driver_name: driver?.full_name,
             assignment_mode: "auction",
-          })
-          .eq("id", ride.id),
-        supabase
-          .from("Driver")
-          .update({ status: "busy" })
-          .eq("id", driver?.id || "")
+          }),
+        supabaseApi.drivers.update(driver?.id || "", { status: "busy" })
       ]);
     } else if (ride.status === "assigned" && ride.driver_id === driver?.id) {
-      await supabase
-        .from("Driver")
-        .update({ status: "busy" })
-        .eq("id", driver?.id || "");
+      await supabaseApi.drivers.update(driver?.id || "", { status: "busy" });
     }
 
     // Update local driver state
@@ -1444,9 +1379,7 @@ export default function DriverApp() {
       ride?.id &&
       ["en_route", "arrived", "in_progress", "assigned", "admin_approved"].includes(ride?.status)
     ) {
-      await supabase
-        .from("ride_requests")
-        .update({
+      await supabaseApi.rideRequests.update(ride.id, {
           status: "cancelled",
           cancelled_by: "driver",
           cancellation_reason: "Cancelado por el conductor",
@@ -1454,15 +1387,11 @@ export default function DriverApp() {
           final_price: 0,
           driver_earnings: 0,
           platform_commission: 0,
-        })
-        .eq("id", ride.id)
+        });
 
       const suspendUntil = Date.now() + 30 * 60 * 1000;
       const suspendUntilISO = new Date(suspendUntil).toISOString();
-      await supabase
-        .from("Driver")
-        .update({ status: "offline", suspended_until: suspendUntilISO })
-        .eq("id", driver?.id || "")
+      await supabaseApi.drivers.update(driver?.id || "", { status: "offline", suspended_until: suspendUntilISO });
 
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
       setSuspendedUntil(suspendUntil);
@@ -1474,10 +1403,7 @@ export default function DriverApp() {
     if (ride?.status === "auction") {
       if (reason === "timeout" || reason === "driver_declined") {
         if (driver?.status !== "available") {
-          await supabase
-            .from("Driver")
-            .update({ status: "available" })
-            .eq("id", driver?.id || "")
+          await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
           setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
         }
       }
@@ -1485,42 +1411,27 @@ export default function DriverApp() {
     }
 
     // Reset ride to pending so it can be reassigned
-    await supabase
-      .from("ride_requests")
-      .update({
+    await supabaseApi.rideRequests.update(ride?.id || "", {
         status: "pending",
         driver_id: null,
         driver_name: null,
-      })
-      .eq("id", ride?.id || "")
+      });
 
     if (isCancelByDriver) {
       const suspendUntil = Date.now() + 30 * 60 * 1000;
       const suspendUntilISO = new Date(suspendUntil).toISOString();
-      await supabase
-        .from("Driver")
-        .update({ status: "offline", suspended_until: suspendUntilISO })
-        .eq("id", driver?.id || "")
+      await supabaseApi.drivers.update(driver?.id || "", { status: "offline", suspended_until: suspendUntilISO });
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
       setSuspendedUntil(suspendUntil);
       localStorage.setItem("driver_suspended_until", String(suspendUntil));
     } else if (reason === "timeout" || reason === "driver_declined") {
-      await supabase
-        .from("Driver")
-        .update({ status: "available" })
-        .eq("id", driver?.id || "")
+      await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
       setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
     } else if (reason && !["timeout", "assigned"].includes(reason)) {
-      await supabase
-        .from("Driver")
-        .update({ status: "available" })
-        .eq("id", driver?.id || "")
+      await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
       setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
     } else {
-      await supabase
-        .from("Driver")
-        .update({ status: "available" })
-        .eq("id", driver?.id || "")
+      await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
     }
     queryClient.invalidateQueries({ queryKey: ["driverRides"] });
   };
@@ -1534,10 +1445,7 @@ export default function DriverApp() {
       vehicle_color: v.color,
       license_plate: v.plates,
     };
-    await supabase
-      .from("Driver")
-      .update({ status: "available", vehicles, ...vf })
-      .eq("id", driver?.id || "");
+    await supabaseApi.drivers.update(driver?.id || "", { status: "available", vehicles, ...vf });
     setDriver((prev) => (prev ? { ...prev, status: "available", vehicles, ...vf } : prev));
     setShowVehicleSelector(false);
   };
@@ -1634,10 +1542,7 @@ export default function DriverApp() {
       }
 
       try {
-        await supabase
-          .from("Driver")
-          .update({ status: "available", online_since: new Date().toISOString(), ...vf })
-          .eq("id", driver?.id || "")
+        await supabaseApi.drivers.update(driver?.id || "", { status: "available", online_since: new Date().toISOString(), ...vf });
         setDriver((prev) => (prev ? { ...prev, status: "available", ...vf } : prev));
       } catch (e) {
         import("sonner").then(({ toast }) =>
@@ -1677,15 +1582,12 @@ export default function DriverApp() {
         }
       }
 
-      await supabase
-        .from("Driver")
-        .update({
+      await supabaseApi.drivers.update(driver?.id || "", {
           status: "offline",
           online_since: null,
           accumulated_work_minutes: resetAccumulated ? 0 : newAccumulated,
           ...(restUntil ? { rest_required_until: restUntil } : {}),
-        })
-        .eq("id", driver?.id || "")
+        });
 
       setDriver((prev) =>
         prev
@@ -1699,10 +1601,7 @@ export default function DriverApp() {
           : prev
       );
     } else {
-      await supabase
-        .from("Driver")
-        .update({ status: "offline" })
-        .eq("id", driver?.id || "")
+      await supabaseApi.drivers.update(driver?.id || "", { status: "offline" });
       setDriver((prev) => (prev ? { ...prev, status: "offline" } : prev));
     }
   };
@@ -1735,10 +1634,7 @@ export default function DriverApp() {
   const handleInactivityDisconnect = useCallback(async () => {
     if (!driver?.id || driver.status !== "available") return;
     const reason = "Desconexión automática por inactividad";
-    await supabase
-      .from("Driver")
-      .update({ status: "offline", last_disconnect_reason: reason })
-      .eq("id", driver.id)
+    await supabaseApi.drivers.update(driver.id, { status: "offline", last_disconnect_reason: reason });
     setDriver((prev) => (prev ? { ...prev, status: "offline", last_disconnect_reason: reason } : prev));
     setInactivityWarning(false);
     stopDriverHeartbeat();
@@ -1790,10 +1686,7 @@ export default function DriverApp() {
       });
       if (expiredPersonal) {
         const reason = `Desconexión automática: "${expiredPersonal.label}" está vencido`;
-        supabase
-          .from("Driver")
-          .update({ status: "offline", last_disconnect_reason: reason })
-          .eq("id", d.id)
+        supabaseApi.drivers.update(d.id, { status: "offline", last_disconnect_reason: reason });
         setDriver((prev) =>
           prev ? { ...prev, status: "offline", last_disconnect_reason: reason } : prev
         );
@@ -1821,10 +1714,7 @@ export default function DriverApp() {
       });
       if (expiredVehicle) {
         const reason = `Desconexión automática: "${expiredVehicle.label}" del vehículo está vencido`;
-        supabase
-          .from("Driver")
-          .update({ status: "offline", last_disconnect_reason: reason })
-          .eq("id", d.id)
+        supabaseApi.drivers.update(d.id, { status: "offline", last_disconnect_reason: reason });
         setDriver((prev) =>
           prev ? { ...prev, status: "offline", last_disconnect_reason: reason } : prev
         );
@@ -1847,10 +1737,7 @@ export default function DriverApp() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_TOKEN_KEY);
     if (driver?.id) {
-      await supabase
-        .from("Driver")
-        .update({ status: "offline" })
-        .eq("id", driver.id)
+      await supabaseApi.drivers.update(driver.id, { status: "offline" });
     }
     setDriver(null);
   };
@@ -1866,18 +1753,14 @@ export default function DriverApp() {
       lat = pos.coords.latitude;
       lon = pos.coords.longitude;
     } catch {}
-    await supabase
-      .from("sos_alerts")
-      .insert([
-        {
+    await supabaseApi.sosAlerts.create({
           driver_id: driver?.id,
           driver_name: driver?.full_name,
           message: "El conductor ha enviado una alerta de emergencia SOS",
           status: "active",
           latitude: lat,
           longitude: lon,
-        },
-      ])
+        });
     alert("✅ Alerta SOS enviada. El administrador fue notificado.");
   };
 
@@ -1930,10 +1813,7 @@ export default function DriverApp() {
         onReady={async () => {
           localStorage.removeItem("driver_suspended_until");
           setSuspendedUntil(null);
-          await supabase
-            .from("Driver")
-            .update({ status: "available", suspended_until: null })
-            .eq("id", driver.id)
+          await supabaseApi.drivers.update(driver.id, { status: "available", suspended_until: null });
           setDriver((prev) =>
             prev ? { ...prev, status: "available", suspended_until: null } : prev
           );

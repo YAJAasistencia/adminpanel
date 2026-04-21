@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,16 +17,7 @@ export default function DriverChat({ driver, ride }) {
 
   const { data: messages = [] } = useQuery({
     queryKey: ["chatMessages", ride.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("id", { ascending: true });
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching chat messages:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.chats.list({ ride_id: ride.id }),
     refetchInterval: false,
     refetchOnWindowFocus: false,
     enabled: !!ride.id,
@@ -67,33 +59,23 @@ export default function DriverChat({ driver, ride }) {
     prevCountRef.current = newNonDriverMessages.length;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     if (isRideActive) {
-      newNonDriverMessages.forEach(async (m) => {
-        try {
-          await supabase.from("chat_messages").update({ read_by_driver: true }).eq("id", m.id);
-        } catch (err) {
-          console.error("Error updating message read status:", err);
-        }
-      });
+      newNonDriverMessages.forEach(m => supabaseApi.chats.update(m.id, { read_by_driver: true }));
     }
   }, [messages, isRideActive]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
     setSending(true);
-    try {
-      await supabase.from("chat_messages").insert([{
-        ride_id: ride.id, 
-        sender_role: "driver", 
-        sender_name: driver.full_name,
-        message: message.trim(), 
-        read_by_admin: false, 
-        read_by_driver: true,
-      }]);
-      setMessage("");
-      queryClient.invalidateQueries({ queryKey: ["chatMessages", ride.id] });
-    } catch (err) {
-      console.error("Error sending message:", err);
-    }
+    await supabaseApi.chats.create({
+      ride_id: ride.id,
+      sender_role: "driver",
+      sender_name: driver.full_name,
+      message: message.trim(),
+      read_by_admin: false,
+      read_by_driver: true,
+    });
+    setMessage("");
+    queryClient.invalidateQueries({ queryKey: ["chatMessages", ride.id] });
     setSending(false);
   };
 

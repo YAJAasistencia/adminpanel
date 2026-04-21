@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
-import { supabase } from "@/lib/supabase";
-import { sanitizeFileName } from "@/lib/utils";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
@@ -125,14 +124,7 @@ export default function DriverSurveyModal({ survey, ride, driver, onComplete, on
       // Upload signature image
       const blob = await (await fetch(signatureDataUrl)).blob();
       const file = new File([blob], "firma.png", { type: "image/png" });
-      const timestamp = Date.now();
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'png';
-      const fileName = `survey-${timestamp}-${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("app-uploads").upload(`surveys/${fileName}`, file);
-      if (error) throw error;
-      const { data: publicUrl } = supabase.storage.from("app-uploads").getPublicUrl(`surveys/${fileName}`);
-      const res = { file_url: publicUrl.publicUrl };
+      const res = await supabaseApi.uploads.uploadFile({ file });
       signature_url = res.file_url;
     }
 
@@ -141,25 +133,21 @@ export default function DriverSurveyModal({ survey, ride, driver, onComplete, on
       answer: answers[q.id] || "",
     }));
 
-    try {
-      await supabase.from("survey_responses").insert([{
-        survey_id: survey.id,
-        survey_title: survey.title,
-        ride_id: ride.id,
-        service_id: ride.service_id || "",
-        company_id: ride.company_id || "",
-        company_name: ride.company_name || "",
-        driver_id: driver.id,
-        driver_name: driver.full_name,
-        passenger_name: ride.passenger_name,
-        answers: answersArr,
-        signature_name: signatureName,
-        signature_url,
-        completed_at: new Date().toISOString(),
-      }]);
-    } catch (err) {
-      console.error("Error submitting survey response:", err);
-    }
+    await supabaseApi.surveyResponses.create({
+      survey_id: survey.id,
+      survey_title: survey.title,
+      ride_id: ride.id,
+      service_id: ride.service_id || "",
+      company_id: ride.company_id || "",
+      company_name: ride.company_name || "",
+      driver_id: driver.id,
+      driver_name: driver.full_name,
+      passenger_name: ride.passenger_name,
+      answers: answersArr,
+      signature_name: signatureName,
+      signature_url,
+      completed_at: new Date().toISOString(),
+    });
 
     setSubmitting(false);
     onComplete();

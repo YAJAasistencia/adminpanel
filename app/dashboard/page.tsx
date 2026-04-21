@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Filter, AlertTriangle, UserCheck, ChevronRight, Wifi, CalendarClock, Calendar, XCircle, ArrowUpDown } from "lucide-react";
@@ -45,11 +46,7 @@ export default function Dashboard() {
     queryKey: ["sosAlerts"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('sos_alerts')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.sosAlerts.list();
       } catch { return []; }
     },
     staleTime: 60 * 1000, // 1 minute - has real-time subscription
@@ -60,11 +57,7 @@ export default function Dashboard() {
     queryKey: ["rides"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('ride_requests')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.rideRequests.list();
       } catch { return []; }
     },
     staleTime: 30 * 1000,
@@ -75,11 +68,7 @@ export default function Dashboard() {
     queryKey: ["drivers"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('Driver')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.drivers.list();
       } catch { return []; }
     },
     staleTime: 30 * 1000, // Increased from 5s to 30s - we have real-time updates via subscription
@@ -91,11 +80,7 @@ export default function Dashboard() {
     queryKey: ["cities"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('cities')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.cities.list();
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
@@ -106,11 +91,7 @@ export default function Dashboard() {
     queryKey: ["geoZones"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('geo_zones')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.geoZones.list();
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
@@ -121,11 +102,7 @@ export default function Dashboard() {
     queryKey: ["serviceTypes"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('service_types')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.serviceTypes.list();
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
@@ -136,11 +113,7 @@ export default function Dashboard() {
     queryKey: ["policies"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('cancellation_policies')
-          .select('*');
-        if (error) throw error;
-        return data || [];
+        return await supabaseApi.cancellationPolicies.list();
       } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
@@ -151,11 +124,7 @@ export default function Dashboard() {
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('*')
-          .limit(1);
-        if (error) throw error;
+        const data = await supabaseApi.settings.list();
         return data?.[0] || {};
       } catch { return {}; }
     },
@@ -283,12 +252,8 @@ export default function Dashboard() {
               if (driver) {
                 setEtaModalData({ ride: fullRide, driver, phase: "assigned" });
               } else {
-                const { data: fetched, error } = await supabase
-                  .from('Driver')
-                  .select('*')
-                  .eq('id', d.driver_id)
-                  .single();
-                if (fetched && !error) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
+                const fetched = await supabaseApi.drivers.get(d.driver_id);
+                if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
               }
             } else {
               setEtaModalData((prev: any) => {
@@ -357,11 +322,7 @@ export default function Dashboard() {
       updates.rating_window_expires_at = new Date(Date.now() + ratingWindowMinutes * 60 * 1000).toISOString();
     }
     try {
-      const { error } = await supabase
-        .from('ride_requests')
-        .update(updates)
-        .eq('id', ride.id);
-      if (error) throw error;
+      await supabaseApi.rideRequests.update(ride.id, updates);
       
       // Update rides cache directly instead of invalidating
       queryClient.setQueryData(["rides"], (old: any = []) =>
@@ -379,11 +340,7 @@ export default function Dashboard() {
             driverUpdates.total_rides = (driver?.total_rides || 0) + 1;
             driverUpdates.total_earnings = (driver?.total_earnings || 0) + (updates.driver_earnings || 0);
           }
-          const { error: driverError } = await supabase
-            .from('Driver')
-            .update(driverUpdates)
-            .eq('id', ride.driver_id);
-          if (driverError) throw driverError;
+          await supabaseApi.drivers.update(ride.driver_id, driverUpdates);
           
           // Update drivers cache directly
           queryClient.setQueryData(["drivers"], (old: any = []) =>
@@ -922,11 +879,7 @@ export default function Dashboard() {
           onDelete={async (ride: any) => {
             if (!window.confirm(`¿Eliminar el viaje de ${ride.passenger_name}? Esta acción no se puede deshacer.`)) return;
             try {
-              const { error } = await supabase
-                .from('ride_requests')
-                .delete()
-                .eq('id', ride.id);
-              if (error) throw error;
+              await supabaseApi.rideRequests.delete(ride.id);
               // Update cache directly
               queryClient.setQueryData(["rides"], (old: any = []) =>
                 old.filter((r: any) => r.id !== ride.id)

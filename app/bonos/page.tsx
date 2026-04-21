@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
@@ -50,78 +49,42 @@ export default function BonosPage() {
 
   const { data: rules = [] } = useQuery({
     queryKey: ["bonusRules"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bonus_rules')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.bonusRules.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: logs = [] } = useQuery({
     queryKey: ["bonusLogs"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bonus_logs')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.bonusLogs.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers_bonus"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('Driver')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.drivers.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ["rides_bonus"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.rideRequests.list(),
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cities.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_types')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.serviceTypes.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
@@ -129,22 +92,9 @@ export default function BonosPage() {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (editingRule) {
-        const { data: result, error } = await supabase
-          .from('bonus_rules')
-          .update(data)
-          .eq('id', editingRule.id)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
+        return supabaseApi.bonusRules.update(editingRule.id, data);
       } else {
-        const { data: result, error } = await supabase
-          .from('bonus_rules')
-          .insert([data])
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
+        return supabaseApi.bonusRules.create(data);
       }
     },
     onSuccess: () => { 
@@ -156,14 +106,7 @@ export default function BonosPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('bonus_rules')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-      return { success: true };
-    },
+    mutationFn: async (id) => supabaseApi.bonusRules.delete(id),
     onSuccess: () => { 
       qc.invalidateQueries({ queryKey: ["bonusRules"] });
       toast.success("Regla eliminada");
@@ -172,28 +115,13 @@ export default function BonosPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, val }: any) => {
-      const { error } = await supabase
-        .from('bonus_rules')
-        .update({ is_active: val })
-        .eq('id', id);
-      if (error) throw error;
-      return { success: true };
-    },
+    mutationFn: async ({ id, val }: any) => supabaseApi.bonusRules.update(id, { is_active: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusRules"] }),
     onError: (error: any) => toast.error(error.message || "Error al actualizar"),
   });
 
   const logMutation = useMutation({
-    mutationFn: async (data) => {
-      const { data: result, error } = await supabase
-        .from('bonus_logs')
-        .insert([data])
-        .select()
-        .single();
-      if (error) throw error;
-      return result;
-    },
+    mutationFn: async (data) => supabaseApi.bonusLogs.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusLogs"] }),
     onError: (error: any) => toast.error(error.message || "Error al crear log"),
   });

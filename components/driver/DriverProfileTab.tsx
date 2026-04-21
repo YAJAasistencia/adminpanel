@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, User, LogOut, Trash2, ChevronRight, Star, X, MessageSquare, Clock, Battery } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
-import { sanitizeFileName } from "@/lib/utils";
+import { supabaseApi } from "@/lib/supabaseApi";
 import DriverVehiclesPanel from "@/components/driver/DriverVehiclesPanel";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,7 +16,7 @@ function formatMinutes(mins) {
 function RatingsHistoryPanel({ rides = [], role, onClose, darkMode = false }) {
   const isDriver = role === "driver";
   const rated = rides.filter(r => isDriver ? r.passenger_rating_for_driver > 0 : r.driver_rating_for_passenger > 0)
-    .sort((a, b) => new Date(b.completed_at || b.requested_at) - new Date(a.completed_at || a.requested_at));
+    .sort((a, b) => new Date(b.completed_at || b.updated_date) - new Date(a.completed_at || a.updated_date));
   const avg = rated.length > 0
     ? (rated.reduce((s, r) => s + (isDriver ? r.passenger_rating_for_driver : r.driver_rating_for_passenger), 0) / rated.length).toFixed(1)
     : null;
@@ -59,7 +58,7 @@ function RatingsHistoryPanel({ rides = [], role, onClose, darkMode = false }) {
             const rating = isDriver ? ride.passenger_rating_for_driver : ride.driver_rating_for_passenger;
             const comment = isDriver ? ride.passenger_rating_comment : ride.driver_rating_comment;
             const raterName = isDriver ? ride.passenger_name : ride.driver_name;
-            const date = new Date(ride.completed_at || ride.requested_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+            const date = new Date(ride.completed_at || ride.updated_date).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
             return (
               <div key={ride.id} className={`${card} rounded-2xl p-4 space-y-2`}>
                 <div className="flex items-start justify-between gap-2">
@@ -105,16 +104,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("AppSettings").select("*").limit(1);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching AppSettings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -135,49 +125,25 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
 
   const { data: driverRides = [] } = useQuery({
     queryKey: ["driverAllRides", driver?.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("ride_requests").select("*").eq("driver_id", driver?.id).order("completed_at", { ascending: false });
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching driver rides:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.rides.list({ driver_id: driver?.id }),
     enabled: !!driver?.id && showRatings,
     staleTime: 60000,
   });
 
   const handlePhotoUpload = async (file) => {
     setUploadingPhoto(true);
-    try {
-      const timestamp = Date.now();
-      const sanitizedName = sanitizeFileName(file.name);
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `driver-photo-${timestamp}-${sanitizedName}.${ext}`;
-      const { data, error } = await supabase.storage.from("app-uploads").upload(`driver-photos/${fileName}`, file);
-      if (error) throw error;
-      const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`driver-photos/${fileName}`);
-      const file_url = publicUrlData.publicUrl;
-      await supabase.from("Driver").update({ photo_url: file_url }).eq("id", driver.id);
-      onPhotoUpdate(file_url);
-    } catch (err) {
-      console.error("Error uploading photo:", err);
-    }
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+    await supabaseApi.drivers.update(driver.id, { photo_url: file_url });
+    onPhotoUpdate(file_url);
     setUploadingPhoto(false);
   };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "ELIMINAR") return;
     setDeleting(true);
-    try {
-      await supabase.from("Driver").delete().eq("id", driver.id);
-      localStorage.removeItem(SESSION_KEY);
-      onDeleteAccount();
-    } catch (err) {
-      console.error("Error deleting account:", err);
-    }
+    await supabaseApi.drivers.delete(driver.id);
+    localStorage.removeItem(SESSION_KEY);
+    onDeleteAccount();
     setDeleting(false);
   };
 

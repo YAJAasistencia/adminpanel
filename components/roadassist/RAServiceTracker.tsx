@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showPassengerNotification, initPassengerPush } from "@/components/shared/usePushNotifications";
 import { Button } from "@/components/ui/button";
@@ -130,8 +131,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     enabled: !!ride?.id,
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data } = await supabase.from("ride_requests").select("*").eq("id", ride.id);
-      return data?.[0] || ride;
+      const list = await supabaseApi.rideRequests.list({ id: ride.id });
+      return list[0] || ride;
     },
   });
 
@@ -154,8 +155,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     enabled: !!currentRide?.driver_id,
     refetchInterval: 15000,
     queryFn: async () => {
-      const { data } = await supabase.from("Driver").select("*").eq("id", currentRide.driver_id);
-      return data?.[0];
+      const list = await supabaseApi.drivers.list();
+      return list.find(d => d.id === currentRide.driver_id);
     },
   });
 
@@ -173,8 +174,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const { data: settings } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
-      const { data } = await supabase.from("AppSettings").select("*");
-      return data?.[0];
+      const list = await supabaseApi.settings.list();
+      return list[0];
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -182,8 +183,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const { data: policies = [] } = useQuery({
     queryKey: ["cancellationPolicies"],
     queryFn: async () => {
-      const { data } = await supabase.from("cancellation_policies").select("*").eq("is_active", true);
-      return data || [];
+      const all = await supabaseApi.cancellationPolicies.list();
+      return all.filter(p => p.is_active);
     },
   });
 
@@ -301,13 +302,13 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     setCancelling(true);
     const fee = calcCancellationFee();
     const cancelledRide = { ...currentRide, status: "cancelled", cancelled_by: "passenger", cancellation_fee: fee, cancellation_reason: "Cancelado por el pasajero" };
-    await supabase.from("ride_requests").update({
+    await supabaseApi.rideRequests.update(currentRide.id, {
       status: "cancelled", cancelled_by: "passenger",
       cancellation_fee: fee, cancellation_reason: "Cancelado por el pasajero",
       payment_status: fee > 0 ? "debt" : "not_required",
-    }).eq("id", currentRide.id);
-    if (currentRide.driver_id) await supabase.from("Driver").update({ status: "available" }).eq("id", currentRide.driver_id);
-    if (fee > 0 && user?.id) await supabase.from("road_assist_users").update({ pending_balance: (user.pending_balance || 0) + fee }).eq("id", user.id);
+    });
+    if (currentRide.driver_id) await supabaseApi.drivers.update(currentRide.driver_id, { status: "available" });
+    if (fee > 0 && user?.id) await supabaseApi.passengers.update(user.id, { pending_balance: (user.pending_balance || 0) + fee });
     setCancelling(false);
     setShowCancelConfirm(false);
     setSummaryRide(cancelledRide);
@@ -325,10 +326,10 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
         cancellation_reason: null,
         manual_assignment_requested_at: new Date().toISOString(),
       };
-      await supabase.from("ride_requests").update({
+      await supabaseApi.rideRequests.update(currentRide.id, {
         status: "pending", assignment_mode: "manual",
         cancellation_reason: null, manual_assignment_requested_at: updatedRide.manual_assignment_requested_at,
-      }).eq("id", currentRide.id);
+      });
       // Update local state immediately so isNoDrivers becomes false right away
       setRideSnapshot(updatedRide);
       queryClient.setQueryData(["ra_live_ride", currentRide.id], updatedRide);
@@ -337,10 +338,10 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   };
 
   const handleCancelNoDrivers = async () => {
-    await supabase.from("ride_requests").update({
+    await supabaseApi.rideRequests.update(currentRide.id, {
       status: "cancelled", cancelled_by: "passenger",
       cancellation_reason: "Sin conductores disponibles — cancelado por pasajero",
-    }).eq("id", currentRide.id);
+    });
     queryClient.invalidateQueries({ queryKey: ["ra_active_rides"] });
     onRideEnded();
   };

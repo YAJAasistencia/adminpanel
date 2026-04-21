@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Star, X, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,10 +22,10 @@ export default function RARatingModal({ ride, driver, onClose }) {
     setSubmitting(true);
     try {
       // Save rating to the ride
-      await supabase.from("RideRequest").update({
+      await supabaseApi.rideRequests.update(ride.id, {
         passenger_rating_for_driver: rating,
         passenger_rating_comment: comment.trim() || undefined,
-      }).eq("id", ride.id);
+      });
 
       // Update driver's aggregate rating
       if (driver?.id) {
@@ -33,10 +33,10 @@ export default function RARatingModal({ ride, driver, onClose }) {
         const newRating = parseFloat(
           (((driver.rating || 5) * (count - 1) + rating) / count).toFixed(2)
         );
-        await supabase.from("Driver").update({
+        await supabaseApi.drivers.update(driver.id, {
           rating: newRating,
           rating_count: count,
-        }).eq("id", driver.id);
+        });
       }
     } catch {}
     setSubmitting(false);

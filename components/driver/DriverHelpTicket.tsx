@@ -42,31 +42,13 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
 
   const { data: tickets = [] } = useQuery({
     queryKey: ["myTickets", driver.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("support_tickets").select("*").eq("driver_id", driver.id).order("id", { ascending: false });
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching support tickets:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.supportTickets.list({ driver_id: driver.id }),
     enabled: !!driver.id,
   });
 
   const { data: driverRides = [] } = useQuery({
     queryKey: ["driverRidesForTicket", driver.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("ride_requests").select("*").eq("driver_id", driver.id).order("requested_at", { ascending: false });
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching driver rides:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.rides.list({ driver_id: driver.id }),
     enabled: !!driver.id && !rideContext,
     select: (data) => data.filter(r => r.status === "completed").slice(0, 30),
   });
@@ -78,28 +60,23 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     }
     setSaving(true);
     const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}`;
-    try {
-      await supabase.from("support_tickets").insert([{
-        ticket_number: ticketNumber,
-        driver_id: driver.id,
-        driver_name: driver.full_name,
-        submitted_by: "driver",
-        category: form.category,
-        subject: form.subject,
-        description: form.description,
-        status: "open",
-        priority: "medium",
-        ride_id: form.ride_id || undefined,
-        service_id: form.service_id || undefined,
-      }]);
-      queryClient.invalidateQueries({ queryKey: ["myTickets", driver.id] });
-      toast.success("Ticket enviado. Te responderemos pronto.");
-      setForm({ category: "otro", subject: "", description: "", ride_id: "", service_id: "" });
-      setView("list");
-    } catch (err) {
-      console.error("Error creating support ticket:", err);
-      toast.error("Error al enviar ticket.");
-    }
+    await supabaseApi.supportTickets.create({
+      ticket_number: ticketNumber,
+      driver_id: driver.id,
+      driver_name: driver.full_name,
+      submitted_by: "driver",
+      category: form.category,
+      subject: form.subject,
+      description: form.description,
+      status: "open",
+      priority: "medium",
+      ride_id: form.ride_id || undefined,
+      service_id: form.service_id || undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ["myTickets", driver.id] });
+    toast.success("Ticket enviado. Te responderemos pronto.");
+    setForm({ category: "otro", subject: "", description: "", ride_id: "", service_id: "" });
+    setView("list");
     setSaving(false);
   };
 

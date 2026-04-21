@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,12 +70,8 @@ export default function CashCutoffPage() {
   const { data: rides = [] } = useQuery({
     queryKey: ["rides"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*')
-        .eq('status', 'completed');
-      if (error) throw error;
-      return data || [];
+      const data = await supabaseApi.rideRequests.list();
+      return data.filter(r => r.status === 'completed');
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -83,26 +79,14 @@ export default function CashCutoffPage() {
 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('Driver')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.drivers.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
   const { data: cutoffs = [] } = useQuery({
     queryKey: ["cashCutoffs"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cash_cutoffs')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.cashCutoffs.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -167,7 +151,7 @@ export default function CashCutoffPage() {
     setSaving(true);
     const totalDriverPayouts = filteredRides.reduce((s, r) => s + (r.driver_earnings || 0), 0);
     const totalCommission = filteredRides.reduce((s, r) => s + (r.platform_commission || 0), 0);
-    await supabase.from("cash_cutoffs").insert([{
+    await supabaseApi.cashCutoffs.create({
       cutoff_date: new Date().toISOString(),
       period_start: new Date(dateFrom).toISOString(),
       period_end: new Date(dateTo).toISOString(),
@@ -177,7 +161,7 @@ export default function CashCutoffPage() {
       driver_payouts: totalDriverPayouts,
       notes: cutoffNotes,
       created_by_name: "Admin",
-    }]);
+    });
     queryClient.invalidateQueries({ queryKey: ["cashCutoffs"] });
     setSaving(false);
     setShowNewCutoff(false);

@@ -4,8 +4,7 @@ import { Car, Plus, Upload, X, CheckCircle2, AlertTriangle, FileText, Bike } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/supabase";
-import { sanitizeFileName } from "@/lib/utils";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { CAR_BRANDS, MOTO_BRANDS, VEHICLE_YEARS } from "@/components/shared/vehicleBrands";
 
 const DEFAULT_VEHICLE_DOCS = [
@@ -38,14 +37,7 @@ function VehicleForm({ vehicle, docs, onSave, onCancel }) {
 
   const uploadDoc = async (docKey, file) => {
     setUploading(p => ({ ...p, [docKey]: true }));
-    const timestamp = Date.now();
-    const sanitizedName = sanitizeFileName(file.name);
-    const ext = file.name.split('.').pop() || 'pdf';
-    const fileName = `vehicle-doc-${timestamp}-${sanitizedName}.${ext}`;
-    const { data, error } = await supabase.storage.from("app-uploads").upload(`vehicle-docs/${fileName}`, file);
-    if (error) throw error;
-    const { data: publicUrlData } = supabase.storage.from("app-uploads").getPublicUrl(`vehicle-docs/${fileName}`);
-    const file_url = publicUrlData.publicUrl;
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
     upd(`doc_${docKey}_url`, file_url);
     setUploading(p => ({ ...p, [docKey]: false }));
   };
@@ -281,7 +273,7 @@ export default function DriverVehiclesPanel({ driver, onDriverUpdate, vehicleDoc
       const updated = [...existing, vehicleData];
       const activeVehicle = updated.find(v => v.is_active);
       const extraFields = activeVehicle ? syncFields(activeVehicle) : {};
-      await supabase.from("Driver").update({ vehicles: updated, ...extraFields }).eq("id", driver.id);
+    await supabaseApi.drivers.update(driver.id, { vehicles: updated, ...extraFields });
       onDriverUpdate({ ...driver, vehicles: updated, ...extraFields });
       setEditing(null);
     } catch (err) {
@@ -295,7 +287,7 @@ export default function DriverVehiclesPanel({ driver, onDriverUpdate, vehicleDoc
       const updated = vehicles.map(v => ({ ...v, is_active: v.id === vehicleId }));
       const activeVehicle = updated.find(v => v.is_active);
       const extraFields = activeVehicle ? syncFields(activeVehicle) : {};
-      await supabase.from("Driver").update({ vehicles: updated, ...extraFields }).eq("id", driver.id);
+      await supabaseApi.drivers.update(driver.id, { vehicles: updated, ...extraFields });
       onDriverUpdate({ ...driver, vehicles: updated, ...extraFields });
     } catch (err) {
       console.error("Error setting active vehicle:", err);

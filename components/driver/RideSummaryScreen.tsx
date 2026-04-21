@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, DollarSign, Star, AlertTriangle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { supabase } from "@/lib/supabase";
 import { showDriverNotification } from "@/components/shared/usePushNotifications";
 
 function StarRating({ value, onChange }) {
@@ -110,12 +109,11 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
       // Add to passenger pending balance if we have user_id
       if (ride.passenger_user_id) {
         try {
-          const { data: users, error } = await supabase.from("road_assist_users").select("*").eq("id", ride.passenger_user_id).limit(1);
-          if (!error && users && users[0]) {
-            const u = users[0];
-            await supabase.from("road_assist_users").update({
+          const u = await supabaseApi.passengers.get(ride.passenger_user_id);
+          if (u) {
+            await supabaseApi.passengers.update(u.id, {
               pending_balance: (u.pending_balance || 0) + price,
-            }).eq("id", u.id);
+            });
           }
         } catch (err) {
           console.error("Error updating passenger balance:", err);
@@ -141,12 +139,11 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
       // Update passenger's aggregate rating on road_assist_users
       if (ride.passenger_user_id) {
         try {
-          const { data: users, error } = await supabase.from("road_assist_users").select("*").eq("id", ride.passenger_user_id).limit(1);
-          if (!error && users && users[0]) {
-            const u = users[0];
+          const u = await supabaseApi.passengers.get(ride.passenger_user_id);
+          if (u) {
             const count = (u.rating_count || 0) + 1;
             const newRating = parseFloat((((u.rating || 5) * (count - 1) + rating) / count).toFixed(2));
-            await supabase.from("road_assist_users").update({ rating: newRating, rating_count: count }).eq("id", u.id);
+            await supabaseApi.passengers.update(u.id, { rating: newRating, rating_count: count });
           }
         } catch (err) {
           console.error("Error updating passenger rating:", err);

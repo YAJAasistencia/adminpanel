@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,18 +122,12 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
 
   const { data: serviceTypes = [] } = useQuery({
     queryKey: ["serviceTypes"],
-    queryFn: async () => {
-      const { data } = await supabase.from("service_types").select("*");
-      return data || [];
-    },
+    queryFn: () => supabaseApi.serviceTypes.list(),
   });
 
   const { data: appSettingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      const { data } = await supabase.from("AppSettings").select("*");
-      return data || [];
-    },
+    queryFn: () => supabaseApi.settings.list(),
   });
   const appSettings = appSettingsList[0];
   // Filter payment methods: active + allowed for this service type
@@ -230,8 +224,8 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers_available"],
     queryFn: async () => {
-      const { data } = await supabase.from("Driver").select("*").eq("status", "available").eq("approval_status", "approved");
-      return data || [];
+      const all = await supabaseApi.drivers.list();
+      return all.filter(d => d.status === "available" && d.approval_status === "approved");
     },
     staleTime: 30 * 1000, // 30s - drivers change status frequently but not every 15s
     gcTime: 10 * 60 * 1000,
@@ -286,11 +280,11 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     setGeneratingTransferRef(true);
     const ref = "REF-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 6).toUpperCase();
     // Save pending ref on user record
-    await supabase.from("road_assist_users").update({
+    await supabaseApi.passengers.update(user.id, {
       wallet_pending_ref: ref,
       wallet_pending_amount: amount,
       wallet_pending_ref_created: new Date().toISOString(),
-    }).eq("id", user.id);
+    });
     setTransferRefGenerated({ ref, amount });
     setGeneratingTransferRef(false);
   };
@@ -382,11 +376,11 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     setGeneratingRef(true);
     const ref = "REF-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2,6).toUpperCase();
     // Store ref on user record
-    await supabase.from("road_assist_users").update({
+    await supabaseApi.passengers.update(user.id, {
       wallet_pending_ref: ref,
       wallet_pending_amount: +walletRechargeAmount,
       wallet_pending_ref_created: new Date().toISOString(),
-    }).eq("id", user.id);
+    });
     setWalletRefGenerated({ ref, amount: +walletRechargeAmount });
     setGeneratingRef(false);
   };
@@ -414,12 +408,12 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       const deduct = Math.min(walletBalance, estimated);
       if (deduct > 0) {
         const newBal = +(walletBalance - deduct).toFixed(2);
-        await supabase.from("road_assist_users").update({ wallet_balance: newBal }).eq("id", user.id);
+        await supabaseApi.passengers.update(user.id, { wallet_balance: newBal });
         walletDeducted = deduct;
       }
     } else if (useWalletPartial && walletAmountNum > 0 && walletBalance >= walletAmountNum) {
       const newBal = +(walletBalance - walletAmountNum).toFixed(2);
-      await supabase.from("road_assist_users").update({ wallet_balance: newBal }).eq("id", user.id);
+      await supabaseApi.passengers.update(user.id, { wallet_balance: newBal });
       walletDeducted = walletAmountNum;
     }
 
@@ -461,7 +455,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       // Store transfer reference if generated
       transfer_reference: (paymentMethod === "transfer" || pmConfig?.generates_reference) && transferRefGenerated ? transferRefGenerated.ref : undefined,
     };
-    await supabase.from("ride_requests").insert([{ ...rideData, requested_at: nowCDMX() }]);
+    await supabaseApi.rideRequests.create({ ...rideData, requested_at: nowCDMX() });
     setSubmitting(false);
     onRequestCreated();
   };

@@ -10,7 +10,6 @@ import { motion } from "framer-motion";
 import useAppSettings from "@/components/shared/useAppSettings";
 import { ADMIN_SESSION_KEY } from "@/components/shared/useAdminSession";
 import * as bcryptjs from 'bcryptjs';
-import { supabase } from '@/lib/supabase';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutos

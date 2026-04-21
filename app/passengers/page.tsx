@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/admin/Layout";
 import { Card } from "@/components/ui/card";
@@ -29,12 +29,8 @@ function PassengerProfileModal({ passenger, onClose }) {
   const { data: rides = [] } = useQuery({
     queryKey: ["passengerRides", passenger.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ride_requests')
-        .select('*')
-        .eq('passenger_user_id', passenger.id);
-      if (error) throw error;
-      return data || [];
+      const all = await supabaseApi.rideRequests.list();
+      return all.filter(r => r.passenger_user_id === passenger.id);
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -240,11 +236,7 @@ function PassengersContent() {
     setSaving(true);
     const updates = { full_name: editForm.full_name.trim(), email: editForm.email.trim().toLowerCase(), phone: editForm.phone.trim() };
     if (editForm.password) updates.password = editForm.password;
-    const { error } = await supabase
-      .from('road_assist_users')
-      .update(updates)
-      .eq('id', editPassenger.id);
-    if (error) throw error;
+    await supabaseApi.passengers.update(editPassenger.id, updates);
     toast.success("Usuario actualizado");
     setSaving(false);
     setEditPassenger(null);
@@ -253,11 +245,7 @@ function PassengersContent() {
 
   const toggleBlock = async (p) => {
     const newActive = p.is_active === false ? true : false;
-    const { error } = await supabase
-      .from('road_assist_users')
-      .update({ is_active: newActive })
-      .eq('id', p.id);
-    if (error) throw error;
+    await supabaseApi.passengers.update(p.id, { is_active: newActive });
     toast.success(newActive ? "Usuario desbloqueado" : "Usuario bloqueado");
     queryClient.invalidateQueries({ queryKey: ["passengers"] });
   };
@@ -266,20 +254,11 @@ function PassengersContent() {
     if (!form.full_name || !form.phone || !form.email) { toast.error("Nombre, teléfono y correo son obligatorios"); return; }
     setSaving(true);
     const emailLow = form.email.trim().toLowerCase();
-    const { data: existingP } = await supabase
-      .from('road_assist_users')
-      .select('id')
-      .eq('email', emailLow);
-    if (existingP && existingP.length > 0) { toast.error("Ya existe un cliente con ese correo"); setSaving(false); return; }
-    const { data: existingD } = await supabase
-      .from('Driver')
-      .select('id')
-      .eq('email', emailLow);
-    if (existingD && existingD.length > 0) { toast.error("Ese correo ya está registrado como conductor"); setSaving(false); return; }
-    const { error } = await supabase
-      .from('road_assist_users')
-      .insert([{ full_name: form.full_name.trim(), email: emailLow, phone: form.phone.trim(), password: form.password, is_active: true }]);
-    if (error) throw error;
+    const existingP = await supabaseApi.passengers.list();
+    if (existingP.some(p => p.email === emailLow)) { toast.error("Ya existe un cliente con ese correo"); setSaving(false); return; }
+    const existingD = await supabaseApi.drivers.list();
+    if (existingD.some(d => d.email === emailLow)) { toast.error("Ese correo ya está registrado como conductor"); setSaving(false); return; }
+    await supabaseApi.passengers.create({ full_name: form.full_name.trim(), email: emailLow, phone: form.phone.trim(), password: form.password, is_active: true });
     toast.success("Usuario creado correctamente");
     setSaving(false);
     setShowAdd(false);
@@ -289,13 +268,7 @@ function PassengersContent() {
 
   const { data: passengers = [], isLoading } = useQuery({
     queryKey: ["passengers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('road_assist_users')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.passengers.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

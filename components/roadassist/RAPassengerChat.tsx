@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle, Send } from "lucide-react";
@@ -12,10 +13,7 @@ export default function RAPassengerChat({ ride, user, onClose }) {
 
   const { data: messages = [] } = useQuery({
     queryKey: ["passengerChat", ride.id],
-    queryFn: async () => {
-      const { data } = await supabase.from("chat_messages").select("*").eq("ride_id", ride.id).order("id", { ascending: true });
-      return data || [];
-    },
+    queryFn: () => supabaseApi.chats.list({ ride_id: ride.id }),
     refetchInterval: false,
     enabled: !!ride.id,
   });
@@ -52,14 +50,14 @@ export default function RAPassengerChat({ ride, user, onClose }) {
       } catch (_) {}
     }
     prevCountRef.current = unread.length;
-    unread.forEach(m => supabase.from("chat_messages").update({ read_by_passenger: true }).eq("id", m.id));
+    unread.forEach(m => supabaseApi.chats.update(m.id, { read_by_passenger: true }));
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
     setSending(true);
-    await supabase.from("chat_messages").insert([{
+    await supabaseApi.chats.create({
       ride_id: ride.id,
       sender_role: "passenger",
       sender_name: user?.full_name || "Pasajero",
@@ -67,7 +65,7 @@ export default function RAPassengerChat({ ride, user, onClose }) {
       read_by_driver: false,
       read_by_admin: false,
       read_by_passenger: true,
-    }]);
+    });
     setMessage("");
     queryClient.invalidateQueries({ queryKey: ["passengerChat", ride.id] });
     setSending(false);

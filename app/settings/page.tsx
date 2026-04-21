@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { supabaseApi } from "@/lib/supabaseApi";
 import { toast } from "sonner";
 import Layout from "@/components/admin/Layout";
 import { Button } from "@/components/ui/button";
@@ -158,14 +159,7 @@ export default function SettingsPage() {
 
   const { data: settingsList = [], isLoading: settingsLoading } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('*')
-        .limit(1);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => supabaseApi.settings.list(),
   });
 
   const settings = settingsList[0];
@@ -271,12 +265,9 @@ export default function SettingsPage() {
       if (!existingId) {
         console.log("[Settings] No tengo ID local, consultando servidor...");
         try {
-          const { data, error } = await supabase
-            .from('app_settings')
-            .select('id')
-            .limit(1);
-          if (!error && data && data.length > 0) {
-            existingId = data[0].id;
+          const list = await supabaseApi.settings.list();
+          if (list && list.length > 0) {
+            existingId = list[0].id;
             console.log("[Settings] ID encontrado en servidor:", existingId);
           }
         } catch { /* si falla, se creará como nuevo */ }
@@ -297,23 +288,10 @@ export default function SettingsPage() {
       // ── Paso 3: Siempre UPDATE si existe, solo INSERT si es la primera vez ──
       let updated;
       if (existingId) {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .update(payload)
-          .eq('id', existingId)
-          .select()
-          .single();
-        if (error) throw error;
-        updated = data;
+        updated = await supabaseApi.settings.update(existingId, payload);
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .insert([payload])
-          .select()
-          .single();
-        if (error) throw error;
-        updated = data;
+        updated = await supabaseApi.settings.create(payload);
         console.log("[Settings] CREATE exitoso (primera configuración):", updated);
       }
       
