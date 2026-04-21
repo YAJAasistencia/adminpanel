@@ -14,9 +14,13 @@ import * as bcryptjs from 'bcryptjs';
 // ─── Helper: Update without .select() to avoid PostgREST schema introspection ───
 async function updateWithFallback(tableName: string, id: string, updates: any) {
   try {
-    console.log(`[supabaseApi] UPDATE ${tableName} id=${id}`, updates);
+    // Strip private/local fields (keys starting with '_') that don't exist in DB
+    const sanitized = Object.fromEntries(
+      Object.entries(updates).filter(([k]) => !k.startsWith('_'))
+    );
+    console.log(`[supabaseApi] UPDATE ${tableName} id=${id}`, sanitized);
     // Realizar update SIN .select() para evitar introspección de schema
-    const { error: updateError } = await supabase.from(tableName).update(updates).eq('id', id);
+    const { error: updateError } = await supabase.from(tableName).update(sanitized).eq('id', id);
     if (updateError) throw updateError;
     console.log(`[supabaseApi] UPDATE SUCCESS (without .select())`);
     
