@@ -1,6 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import * as bcryptjs from 'bcryptjs';
 
+const isProd = process.env.NODE_ENV === 'production';
+const debugLog = (...args: any[]) => {
+  if (!isProd) console.log(...args);
+};
+
 // ─── Supabase API Functions ──────────────────────────────────────────────────
 // Tabla → nombre real en Supabase (verificado contra schema)
 // PascalCase: Driver (única tabla PascalCase)
@@ -18,16 +23,16 @@ async function updateWithFallback(tableName: string, id: string, updates: any) {
     const sanitized = Object.fromEntries(
       Object.entries(updates).filter(([k]) => !k.startsWith('_'))
     );
-    console.log(`[supabaseApi] UPDATE ${tableName} id=${id}`, sanitized);
+    debugLog(`[supabaseApi] UPDATE ${tableName} id=${id}`, sanitized);
     // Realizar update SIN .select() para evitar introspección de schema
     const { error: updateError } = await supabase.from(tableName).update(sanitized).eq('id', id);
     if (updateError) throw updateError;
-    console.log(`[supabaseApi] UPDATE SUCCESS (without .select())`);
+    debugLog(`[supabaseApi] UPDATE SUCCESS (without .select())`);
     
     // Luego hacer GET para obtener los datos actualizados
     const { data, error: getError } = await supabase.from(tableName).select('*').eq('id', id).single();
     if (getError) throw getError;
-    console.log(`[supabaseApi] Data fetched after update:`, data);
+    debugLog(`[supabaseApi] Data fetched after update:`, data);
     return data;
   } catch (fetchError: any) {
     console.error(`[supabaseApi] UPDATE FAILED on ${tableName}:`, fetchError);
@@ -38,11 +43,11 @@ async function updateWithFallback(tableName: string, id: string, updates: any) {
 // ─── Helper: Create without .select() to avoid PostgREST schema introspection ───
 async function createWithFallback(tableName: string, record: any) {
   try {
-    console.log(`[supabaseApi] INSERT ${tableName}`, record);
+    debugLog(`[supabaseApi] INSERT ${tableName}`, record);
     // Realizar insert SIN .select() para evitar introspección de schema
     const { data: insertedData, error: insertError } = await supabase.from(tableName).insert(record);
     if (insertError) throw insertError;
-    console.log(`[supabaseApi] INSERT SUCCESS (without .select())`);
+    debugLog(`[supabaseApi] INSERT SUCCESS (without .select())`);
     
     // Si el insert devolvió datos, usarlos; si no, hacer GET
     if (insertedData && insertedData.length > 0) {
@@ -52,7 +57,7 @@ async function createWithFallback(tableName: string, record: any) {
     // Fallback: obtener el último record insertado (usar 'id' ya que no todas las tablas tienen created_at)
     const { data, error: getError } = await supabase.from(tableName).select('*').order('id', { ascending: false }).limit(1).single();
     if (getError) throw getError;
-    console.log(`[supabaseApi] Data fetched after insert:`, data);
+    debugLog(`[supabaseApi] Data fetched after insert:`, data);
     return data;
   } catch (fetchError: any) {
     console.error(`[supabaseApi] INSERT FAILED on ${tableName}:`, fetchError);

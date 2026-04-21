@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Car, MapPin, Clock, Navigation, X, RefreshCw, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
@@ -13,6 +13,8 @@ function formatETA(minutes) {
   const m = minutes % 60;
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
+
+const debugEta = process.env.NODE_ENV !== "production";
 
 // ─── Searching Phase: compact modal ─────────────────────────────────────────
 function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
@@ -129,13 +131,17 @@ function AssignedPhase({ ride, driver, settings, onClose }) {
     // Always fetch fresh driver coords from DB
     const d = await supabaseApi.drivers.get(driver.id);
 
-    console.log("[ETAModal] refreshETA — driver coords:", d.latitude, d.longitude, "| pickup coords:", ride.pickup_lat, ride.pickup_lon);
+    if (debugEta) {
+      console.log("[ETAModal] refreshETA — driver coords:", d.latitude, d.longitude, "| pickup coords:", ride.pickup_lat, ride.pickup_lon);
+    }
 
     if (d.latitude && d.longitude && ride.pickup_lat && ride.pickup_lon) {
       const mapsProvider = settings?.maps_provider || "osrm";
       const apiKey = settings?.google_maps_api_key;
       const route = await getRoute(d.latitude, d.longitude, ride.pickup_lat, ride.pickup_lon, mapsProvider, apiKey);
-      console.log("[ETAModal] route result:", route);
+      if (debugEta) {
+        console.log("[ETAModal] route result:", route);
+      }
       if (route) {
         setDistKm(route.distKm);
         setEtaMinutes(route.durationMin);
@@ -145,7 +151,9 @@ function AssignedPhase({ ride, driver, settings, onClose }) {
     }
     // Fallback: Haversine estimate
     const km = getHaverDist(d?.latitude, d?.longitude, ride.pickup_lat, ride.pickup_lon);
-    console.log("[ETAModal] haversine fallback km:", km);
+    if (debugEta) {
+      console.log("[ETAModal] haversine fallback km:", km);
+    }
     setDistKm(km);
     setEtaMinutes(km && km !== Infinity ? Math.ceil((km / speedKmh) * 60) : null);
     setLastUpdated(new Date());
@@ -278,6 +286,7 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl dialog-size-2xl`}>
+        <DialogTitle className="sr-only">Estado del servicio y tiempo estimado de llegada</DialogTitle>
         <DialogDescription style={{ display: 'none' }}>Estimación de tiempo de llegada</DialogDescription>
         {isNoDrivers ? (
           <NoDriversPhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />
