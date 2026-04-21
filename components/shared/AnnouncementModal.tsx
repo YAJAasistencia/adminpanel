@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,11 +16,10 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
 
   useEffect(() => {
     const load = async () => {
-      const now = new Date();
-      const res = await fetchWithAuth('/api/announcements');
-      const json = await res.json();
-      const all = json.data || [];
-      const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      try {
+        const now = new Date();
+        const all = await supabaseApi.announcements.list();
+        const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
       const eligible = all.filter(a => {
         if (!a.is_active) return false;
@@ -37,6 +35,9 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
       if (eligible.length > 0) {
         setQueue(eligible);
         setCurrent(eligible[0]);
+      }
+      } catch (err) {
+        console.warn("[AnnouncementModal] Error loading announcements:", err);
       }
     };
     load();
