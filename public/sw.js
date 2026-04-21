@@ -7,7 +7,7 @@ self.addEventListener("activate", (event) => {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
     await self.registration.unregister();
-    await self.clients.claim();
+    // Note: clients.claim() intentionally omitted — unregistered workers cannot claim clients.
   })());
 });
 
