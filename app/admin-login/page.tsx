@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import useAppSettings from "@/components/shared/useAppSettings";
 import { ADMIN_SESSION_KEY } from "@/components/shared/useAdminSession";
 import * as bcryptjs from 'bcryptjs';
+import { supabaseApi } from "@/lib/supabaseApi";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutos
@@ -76,15 +77,10 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      // Buscar usuario en Supabase admin_users
-      const { data: user, error } = await supabase
-        .from('admin_users')
-        .select('id,email,full_name,role,allowed_pages,is_active,password_hash')
-        .eq('email', email.trim().toLowerCase())
-        .limit(1)
-        .single();
-
-      if (error || !user) {
+      // Buscar usuario en admin_users
+      const allUsers = await supabaseApi.adminUsers.list();
+      const user = allUsers.find((u: any) => u.email === email.trim().toLowerCase());
+      if (!user) {
         const a = getAttemptData();
         const newCount = (a.count || 0) + 1;
         saveAttemptData({ count: newCount, lockedUntil: newCount >= MAX_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0 });
