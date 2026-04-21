@@ -174,10 +174,12 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       const updatedRide = {
         driver_id: selectedDriverId,
         driver_name: driver.full_name,
-        status: "assigned",        _excluded_driver_ids: [],        auction_driver_ids: [],
+        status: "assigned",
+        _excluded_driver_ids: [],
+        auction_driver_ids: [],
+        driver_accepted_at: null,
       };
       await supabaseApi.rideRequests.update(ride.id, updatedRide);
-      await supabaseApi.drivers.update(selectedDriverId, { status: "busy" });
       queryClient.invalidateQueries({ queryKey: ["rides"] });
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       toast.success("Conductor asignado");
@@ -280,7 +282,14 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
                 {geoZones.map(zone => {
                   const color = zone.color || "#10B981";
                   if (zone.tipo_zona === "poligono" && Array.isArray(zone.poligono) && zone.poligono.length >= 3) {
-                    const positions = zone.poligono.map(p => [p.lat, p.lng || p.lon]);
+                    const positions = zone.poligono
+                      .map((point) => {
+                        const lat = Number(point?.lat);
+                        const lng = Number(point?.lng ?? point?.lon);
+                        return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+                      })
+                      .filter(Boolean);
+                    if (positions.length < 3) return null;
                     return (
                       <Polygon
                         key={zone.id}

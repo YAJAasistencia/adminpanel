@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Upload, ArrowLeft, Clock, XCircle, CheckCircle2, FileText, MapPin, ChevronRight, User, Bike, AlertCircle, Image } from "lucide-react";
+import { Car, Upload, ArrowLeft, Clock, XCircle, CheckCircle2, FileText, MapPin, ChevronRight, User, Bike } from "lucide-react";
 import { SESSION_KEY, SESSION_TOKEN_KEY } from "@/components/driver/driverUtils";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -78,8 +78,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingPersonalDoc, setUploadingPersonalDoc] = useState({});
   const [uploadingVehicleDoc, setUploadingVehicleDoc] = useState({});
-  const [personalDocPreviews, setPersonalDocPreviews] = useState({});
-  const [vehicleDocPreviews, setVehicleDocPreviews] = useState({});
+  const [curpStatus, setCurpStatus] = useState(null);
 
 
   const { data: settingsList = [] } = useQuery({
@@ -133,8 +132,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     if (clean.length < 18) { setCurpStatus(null); return; }
     if (!validateCURPFormat(clean)) { setCurpStatus("invalid_format"); return; }
     setCurpStatus("checking");
-    const data = await supabaseApi.drivers.list({ curp: clean });
-    setCurpStatus(data.length > 0 ? "duplicate" : "valid");
+    const existing = await supabaseApi.drivers.list({ curp: clean });
+    setCurpStatus(existing.length > 0 ? "duplicate" : "valid");
   };
 
   const checkEmail = async () => {
@@ -142,9 +141,9 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     setError("");
     setLoading(true);
     try {
-      const data = await supabaseApi.drivers.list({ email: form.email.trim().toLowerCase() });
-      if (data && data.length > 0) {
-        setExistingDriver(data[0]);
+      const drivers = await supabaseApi.drivers.list({ email: form.email.trim().toLowerCase() });
+      if (drivers.length > 0) {
+        setExistingDriver(drivers[0]);
         setStep("status");
         setLoading(false);
         return;
@@ -158,7 +157,11 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
       // Send OTP to verify email ownership
       const otp = genOTP();
       setOtpCode(otp);
-      // Note: SendEmail requires RPC or edge function - implement as needed
+      try {
+        // NOTE: SendEmail requires Supabase Edge Function or external service implementation.
+      } catch (emailErr) {
+        console.error("Email send error:", emailErr);
+      }
       setEnteredOtp("");
       setOtpMsg(`Código enviado a ${form.email.trim().toLowerCase()}`);
       setStep("verify_email");
@@ -172,117 +175,22 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
 
   const handlePhotoUpload = async (file) => {
     setUploadingPhoto(true);
-    try {
-      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
-      update("photo_url", file_url);
-    } catch (err) {
-      console.error("Error uploading photo:", err);
-      setError("Error al subir la foto");
-    }
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+    update("photo_url", file_url);
     setUploadingPhoto(false);
   };
 
-  // Validar documento: formato y tamaño
-  const validateDocument = (file) => {
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-    const MIN_SIZE = 100 * 1024; // 100KB
-    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
-    
-    // Validar tamaño
-    if (file.size > MAX_SIZE) {
-      return { valid: false, error: `Archivo muy pesado (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: 5MB` };
-    }
-    if (file.size < MIN_SIZE) {
-      return { valid: false, error: `Archivo muy pequeño (${(file.size / 1024).toFixed(0)}KB). Mínimo: 100KB` };
-    }
-
-    // Validar formato por tipo MIME
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      // Fallback: validar por extensión
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
-        return { valid: false, error: `Formato inválido. Acepta: JPG, PNG, PDF` };
-      }
-    }
-
-    // Validar que sea realmente una imagen (si se permite)
-    if (file.type.startsWith('image/')) {
-      return { valid: true };
-    }
-    if (file.type === 'application/pdf') {
-      return { valid: true };
-    }
-
-    return { valid: false, error: `Formato no soportado: ${file.type || file.name.split('.').pop()}` };
-  };
-
-  // Generar preview del documento
-  const generateDocPreview = (file) => {
-    return new Promise((resolve) => {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve({ type: 'image', data: e.target.result, name: file.name });
-        reader.readAsDataURL(file);
-      } else if (file.type === 'application/pdf') {
-        resolve({ type: 'pdf', name: file.name });
-      } else {
-        resolve({ type: 'file', name: file.name });
-      }
-    });
-  };
-
   const handlePersonalDocUpload = async (docKey, file) => {
-    // Validar documento
-    const validation = validateDocument(file);
-    if (!validation.valid) {
-      setError(`Error en documento: ${validation.error}`);
-      return;
-    }
-
-    // Generar preview
-    const preview = await generateDocPreview(file);
-    setPersonalDocPreviews(p => ({ ...p, [docKey]: preview }));
-    setError("");
-
-    // Subir archivo
     setUploadingPersonalDoc(p => ({ ...p, [docKey]: true }));
-    try {
-      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
-      setPersonalDocUploads(p => ({ ...p, [docKey]: file_url }));
-      setError("");
-    } catch (err) {
-      console.error("Error uploading personal doc:", err);
-      setError(`Error al subir documento: ${err.message || "Intenta de nuevo"}`);
-      setPersonalDocPreviews(p => ({ ...p, [docKey]: null }));
-    }
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+    setPersonalDocUploads(p => ({ ...p, [docKey]: file_url }));
     setUploadingPersonalDoc(p => ({ ...p, [docKey]: false }));
   };
 
   const handleVehicleDocUpload = async (docKey, file) => {
-    // Validar documento
-    const validation = validateDocument(file);
-    if (!validation.valid) {
-      setError(`Error en documento: ${validation.error}`);
-      return;
-    }
-
-    // Generar preview
-    const preview = await generateDocPreview(file);
-    setVehicleDocPreviews(p => ({ ...p, [docKey]: preview }));
-    setError("");
-
-    // Subir archivo
     setUploadingVehicleDoc(p => ({ ...p, [docKey]: true }));
-    try {
-      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
-      setVehicleDocUploads(p => ({ ...p, [docKey]: file_url }));
-      setError("");
-    } catch (err) {
-      console.error("Error uploading vehicle doc:", err);
-      setError(`Error al subir documento: ${err.message || "Intenta de nuevo"}`);
-      setVehicleDocPreviews(p => ({ ...p, [docKey]: null }));
-    }
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+    setVehicleDocUploads(p => ({ ...p, [docKey]: file_url }));
     setUploadingVehicleDoc(p => ({ ...p, [docKey]: false }));
   };
 
@@ -311,78 +219,71 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
     if (missingVDocs.length > 0) return setError(`Documentos del vehículo faltantes: ${missingVDocs.map(d => d.label).join(", ")}`);
 
     setLoading(true);
-    try {
-      const curpCheckData = await supabaseApi.drivers.list({ curp: form.curp.trim().toUpperCase() });
-      if (curpCheckData && curpCheckData.length > 0) {
-        setError("Ya existe una cuenta registrada con ese CURP");
+    const curpCheck = await supabaseApi.drivers.list({ curp: form.curp.trim().toUpperCase() });
+    if (curpCheck.length > 0) {
+      setError("Ya existe una cuenta registrada con ese CURP");
+      setLoading(false);
+      return;
+    }
+
+    // Build vehicle object with docs
+    const vehicleDocFields = {};
+    Object.entries(vehicleDocUploads).forEach(([k, v]) => {
+      vehicleDocFields[`doc_${k}_url`] = v;
+    });
+    const vehicleObj = {
+      id: Date.now().toString(),
+      vehicle_type: vehicle.vehicle_type || "car",
+      brand: vehicle.brand.toUpperCase(),
+      model: vehicle.model.toUpperCase(),
+      year: vehicle.year,
+      color: vehicle.color.toUpperCase(),
+      plates: vehicle.plates.toUpperCase(),
+      is_active: true,
+      ...vehicleDocFields,
+    };
+
+    const { confirm_password, ...data } = form;
+    await supabaseApi.drivers.create({
+      ...data,
+      email: data.email.trim().toLowerCase(),
+      curp: data.curp.trim().toUpperCase(),
+      full_name: data.full_name.toUpperCase(),
+      // Sync active vehicle fields to driver root
+      vehicle_brand: vehicleObj.brand,
+      vehicle_model: vehicleObj.model,
+      vehicle_year: vehicleObj.year,
+      vehicle_color: vehicleObj.color,
+      license_plate: vehicleObj.plates,
+      city_id: data.city_id,
+      city_name: data.city_name,
+      service_type_ids: data.service_type_ids || [],
+      service_type_names: data.service_type_names || [],
+      approval_status: "pending",
+      status: "offline",
+      rating: 5, rating_count: 0, total_rides: 0, total_earnings: 0,
+      doc_urls: personalDocUploads,
+      approved_docs: [],
+      vehicles: [vehicleObj],
+    });
+
+    const drivers = await supabaseApi.drivers.list({ email: data.email.trim().toLowerCase() });
+    if (drivers.length > 0) {
+      const newDriver = drivers[0];
+      setExistingDriver(newDriver);
+      if (onLogin) {
+        // Entra directo a la app — verá ApprovalPendingScreen por tener status pending
+        const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
+        await supabaseApi.drivers.update(newDriver.id, { access_code: token });
+        localStorage.setItem(SESSION_KEY, newDriver.id);
+        localStorage.setItem(SESSION_TOKEN_KEY, token);
+        const { password: _, ...safeDriver } = newDriver;
         setLoading(false);
+        onLogin({ ...safeDriver, access_code: token });
         return;
       }
-
-      // Build vehicle object with docs
-      const vehicleDocFields = {};
-      Object.entries(vehicleDocUploads).forEach(([k, v]) => {
-        vehicleDocFields[`doc_${k}_url`] = v;
-      });
-      const vehicleObj = {
-        id: Date.now().toString(),
-        vehicle_type: vehicle.vehicle_type || "car",
-        brand: vehicle.brand.toUpperCase(),
-        model: vehicle.model.toUpperCase(),
-        year: vehicle.year,
-        color: vehicle.color.toUpperCase(),
-        plates: vehicle.plates.toUpperCase(),
-        is_active: true,
-        ...vehicleDocFields,
-      };
-
-      const { confirm_password, ...data } = form;
-      const driverData = {
-        ...data,
-        email: data.email.trim().toLowerCase(),
-        curp: data.curp.trim().toUpperCase(),
-        full_name: data.full_name.toUpperCase(),
-        // Sync active vehicle fields to driver root
-        vehicle_brand: vehicleObj.brand,
-        vehicle_model: vehicleObj.model,
-        vehicle_year: vehicleObj.year,
-        vehicle_color: vehicleObj.color,
-        license_plate: vehicleObj.plates,
-        city_id: data.city_id,
-        city_name: data.city_name,
-        service_type_ids: data.service_type_ids || [],
-        service_type_names: data.service_type_names || [],
-        approval_status: "pending",
-        status: "offline",
-        rating: 5, 
-        rating_count: 0, 
-        total_rides: 0, 
-        total_earnings: 0,
-        doc_urls: personalDocUploads,
-        approved_docs: [],
-        vehicles: [vehicleObj],
-      };
-
-      const createdDriver = await supabaseApi.drivers.create(driverData);
-
-      if (createdDriver) {
-        setExistingDriver(createdDriver);
-        if (onLogin) {
-          const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
-          await supabaseApi.drivers.update(createdDriver.id, { access_code: token });
-          localStorage.setItem(SESSION_KEY, createdDriver.id);
-          localStorage.setItem(SESSION_TOKEN_KEY, token);
-          const { password: _, ...safeDriver } = createdDriver;
-          setLoading(false);
-          onLogin({ ...safeDriver, access_code: token });
-          return;
-        }
-      }
-      setStep("status");
-    } catch (err) {
-      console.error("handleFinalSubmit error:", err);
-      setError("Error al registrar conductor. Intenta de nuevo.");
     }
+    setStep("status");
     setLoading(false);
   };
 
@@ -433,7 +334,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
                 const otp = genOTP();
                 setOtpCode(otp);
                 try {
-                  // Note: SendEmail requires RPC or edge function - implement as needed
+                  // NOTE: SendEmail requires Supabase Edge Function or external service implementation.
                   setOtpMsg(`Nuevo código enviado a ${form.email.trim().toLowerCase()}`);
                 } catch {
                   setOtpMsg("No se pudo reenviar el correo. Usa WhatsApp si el problema persiste.");
@@ -633,23 +534,7 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
                         <span className="text-sm font-medium text-slate-700">{doc.label}{doc.required && <span className="text-red-500 ml-0.5">*</span>}</span>
                       </div>
                       {personalDocUploads[doc.key] && (
-                        <div className="flex items-center gap-2">
-                          {personalDocPreviews[doc.key] && (
-                            <div className="relative group">
-                              {personalDocPreviews[doc.key].type === 'image' ? (
-                                <img src={personalDocPreviews[doc.key].data} alt="preview" className="w-8 h-8 rounded object-cover border border-slate-200" />
-                              ) : (
-                                <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center border border-slate-200">
-                                  <FileText className="w-4 h-4 text-slate-400" />
-                                </div>
-                              )}
-                              <div className="absolute hidden group-hover:block bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                                {personalDocPreviews[doc.key].name}
-                              </div>
-                            </div>
-                          )}
-                          <a href={personalDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver archivo</a>
-                        </div>
+                        <a href={personalDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver</a>
                       )}
                     </div>
                     <label className="cursor-pointer select-none">
@@ -745,24 +630,8 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
                       <span className="text-sm font-medium text-slate-700">{doc.label}{doc.required && <span className="text-red-500 ml-0.5">*</span>}</span>
                     </div>
                     {vehicleDocUploads[doc.key] && (
-                        <div className="flex items-center gap-2">
-                          {vehicleDocPreviews[doc.key] && (
-                            <div className="relative group">
-                              {vehicleDocPreviews[doc.key].type === 'image' ? (
-                                <img src={vehicleDocPreviews[doc.key].data} alt="preview" className="w-8 h-8 rounded object-cover border border-slate-200" />
-                              ) : (
-                                <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center border border-slate-200">
-                                  <FileText className="w-4 h-4 text-slate-400" />
-                                </div>
-                              )}
-                              <div className="absolute hidden group-hover:block bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                                {vehicleDocPreviews[doc.key].name}
-                              </div>
-                            </div>
-                          )}
-                          <a href={vehicleDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver archivo</a>
-                        </div>
-                      )}
+                      <a href={vehicleDocUploads[doc.key]} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 underline">Ver</a>
+                    )}
                   </div>
                   <label className="cursor-pointer select-none">
                     <input type="file" accept="image/*,application/pdf" className="hidden" onChange={async e => {

@@ -135,7 +135,7 @@ export default function Dashboard() {
   useEffect(() => {
     const channel = supabase.channel("drivers_changes").on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "drivers" },
+      { event: "*", schema: "public", table: "Driver" },
       (payload: any) => {
         queryClient.setQueryData(["drivers"], (old: any = []) => {
           if (payload.eventType === "DELETE") return old.filter((d: any) => d.id !== payload.old.id);
@@ -245,7 +245,7 @@ export default function Dashboard() {
 
           if (d?.status === "assigned" && d?.driver_id) {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
-            const driverAccepted = true;
+            const driverAccepted = !!(d?.driver_accepted_at || d?.en_route_at);
             
             if (driverAccepted) {
               const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
@@ -900,7 +900,15 @@ export default function Dashboard() {
           rides={rides}
           open={!!assignRide}
           onOpenChange={(v) => { if (!v) setAssignRide(null); }}
-          onAssigned={(updatedRide: any, driver: any) => { setAssignRide(null); setEtaModalData({ ride: updatedRide, driver, phase: "assigned" }); }}
+          onAssigned={(updatedRide: any, driver: any) => {
+            setAssignRide(null);
+            const driverAccepted = !!(updatedRide?.driver_accepted_at || updatedRide?.en_route_at);
+            setEtaModalData({
+              ride: updatedRide,
+              driver: driverAccepted ? driver : null,
+              phase: driverAccepted ? "assigned" : "waiting_acceptance",
+            });
+          }}
         />
 
         <ETAModal

@@ -1194,7 +1194,10 @@ export default function DriverApp() {
     mutationFn: async ({ ride, newStatus }: { ride: Ride; newStatus: string }) => {
       const now = new Date().toISOString();
       const updates: any = { status: newStatus };
-      if (newStatus === "en_route") updates.en_route_at = now;
+      if (newStatus === "en_route") {
+        updates.driver_accepted_at = ride.driver_accepted_at || now;
+        updates.en_route_at = now;
+      }
       if (newStatus === "arrived") updates.arrived_at = now;
       if (newStatus === "in_progress") updates.in_progress_at = now;
       if (newStatus === "completed") {
