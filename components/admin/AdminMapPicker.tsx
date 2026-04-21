@@ -107,7 +107,7 @@ export default function AdminMapPicker({ open, onOpenChange, lat, lon, label, is
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-hidden p-0 gap-0">
+      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden gap-0">
         <DialogHeader className="px-5 pt-4 pb-2 border-b border-slate-100">
           <DialogTitle className="flex items-center gap-2 text-base">
             <MapPin className="w-4 h-4 text-slate-500" />
@@ -141,7 +141,7 @@ export default function AdminMapPicker({ open, onOpenChange, lat, lon, label, is
           </div>
         )}
 
-        <div className="flex justificy-end gap-2 px-5 py-3 border-t border-slate-100">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-100">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
             onClick={() => { onConfirm(address, pos[0], pos[1]); onOpenChange(false); }}

@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, DollarSign, AlertCircle, Save, Calendar, Lock } from "lucide-react";
@@ -115,16 +114,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("app_settings").select("*").limit(1);
-        if (error || !data) return [];
-        return data;
-      } catch (err) {
-        console.error("Error fetching AppSettings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
     enabled: open,
   });
   const settings = settingsList[0];

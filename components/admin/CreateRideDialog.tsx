@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import AddressSearch from "./AddressSearch";
@@ -53,30 +52,15 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   const { data: redZones = [] } = useQuery({
     queryKey: ["redZones"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("red_zones").select("*");
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching red zones:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.redZones.list(),
     enabled: open,
   });
 
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("companies").select("*").eq("is_active", true);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching companies:", err);
-        return [];
-      }
+      const all = await supabaseApi.companies.list();
+      return all.filter((c: any) => c.is_active);
     },
     enabled: open,
   });
@@ -86,16 +70,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("app_settings").select("*").limit(1);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching app_settings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
     enabled: open,
   });
   const settings = settingsList[0];
@@ -104,10 +79,10 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const handlePhoneBlur = async (phone) => {
     if (!phone || phone.length < 8) return;
     try {
-      const { data, error } = await supabase.from("road_assist_users").select("*").eq("phone", phone.trim());
-      if (error || !data) return;
-      if (data.length > 0) {
-        const p = data[0];
+      const users = await supabaseApi.roadAssistUsers.list();
+      const found = users.filter(u => u.phone === phone.trim());
+      if (found.length > 0) {
+        const p = found[0];
         setForm(prev => ({ ...prev, passenger_name: p.full_name || prev.passenger_name }));
       }
     } catch (err) {

@@ -174,8 +174,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       const updatedRide = {
         driver_id: selectedDriverId,
         driver_name: driver.full_name,
-        status: "assigned",
-        auction_driver_ids: [],
+        status: "assigned",        _excluded_driver_ids: [],        auction_driver_ids: [],
       };
       await supabaseApi.rideRequests.update(ride.id, updatedRide);
       await supabaseApi.drivers.update(selectedDriverId, { status: "busy" });
@@ -200,18 +199,17 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg flex items-center gap-1">
+          <DialogTitle className="text-lg flex items-center gap-2">
             Asignar conductor
-            <span className="text-xs font-normal text-slate-400">— {availableDrivers.length} disponible{availableDrivers.length !== 1 ? "s" : ""}</span>
+            <span className="text-sm font-normal text-slate-400">— {availableDrivers.length} disponible{availableDrivers.length !== 1 ? "s" : ""}</span>
           </DialogTitle>
-          <DialogDescription style={{ display: 'none' }}>Asignar un conductor disponible al viaje</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-0.5 py-0.5">
+        <div className="space-y-4 py-2">
           {/* Ride info */}
-          <div className="bg-slate-50 rounded-lg p-2 border border-slate-100">
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
             <p className="text-xs font-semibold text-slate-900">{ride?.passenger_name}</p>
             <p className="text-xs text-slate-500 mt-0.5">
               {ride?.pickup_address}{ride?.dropoff_address ? ` → ${ride.dropoff_address}` : " (destino no definido)"}
@@ -223,7 +221,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
           {/* Nearest driver info */}
           {nearest && hasPickup && (
-            <div className="bg-blue-50 rounded-lg p-2 flex items-center gap-1 text-xs text-blue-700 border border-blue-100">
+            <div className="bg-blue-50 rounded-xl p-3 flex items-center gap-2 text-xs text-blue-700 border border-blue-100">
               <Navigation className="w-4 h-4 flex-shrink-0" />
               {osrmRoutes[nearest.id] ? (
                 <span>Más cercano: <strong>{nearest.full_name}</strong> · {osrmRoutes[nearest.id].distKm.toFixed(1)} km por ruta · ~{osrmRoutes[nearest.id].durationMin} min</span>
@@ -235,16 +233,16 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
           {/* Toggle list/map */}
           {hasPickup && (
-            <div className="flex rounded-lg overflow-hidden border border-slate-200">
+            <div className="flex rounded-xl overflow-hidden border border-slate-200">
               <button
                 onClick={() => setViewMode("list")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-0.5 text-xs font-medium transition-colors ${viewMode === "list" ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${viewMode === "list" ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
               >
                 <List className="w-3.5 h-3.5" /> Lista
               </button>
               <button
                 onClick={() => setViewMode("map")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-0.5 text-xs font-medium transition-colors ${viewMode === "map" ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${viewMode === "map" ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
               >
                 <MapIcon className="w-3.5 h-3.5" /> Mapa con radios
               </button>
@@ -253,7 +251,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
           {/* MAP VIEW */}
           {viewMode === "map" && hasPickup && (
-            <div style={{ height: 340 }} className="rounded-lg overflow-hidden border border-slate-200">
+            <div style={{ height: 340 }} className="rounded-xl overflow-hidden border border-slate-200">
               <MapContainer
                 center={[ride.pickup_lat, ride.pickup_lon]}
                 zoom={12}
@@ -278,8 +276,8 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
                 {/* GeoZone polygons / circles */}
                 {geoZones.map(zone => {
                   const color = zone.color || "#10B981";
-                  if (Array.isArray(zone.coordinates) && zone.coordinates.length >= 3) {
-                    const positions = zone.coordinates.map(p => [p.lat, p.lng || p.lon]);
+                  if (zone.tipo_zona === "poligono" && Array.isArray(zone.poligono) && zone.poligono.length >= 3) {
+                    const positions = zone.poligono.map(p => [p.lat, p.lng || p.lon]);
                     return (
                       <Polygon
                         key={zone.id}
@@ -350,7 +348,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
                             onClick={() => setSelectedDriverId(d.id)}
                             className={`mt-1 w-full text-xs py-1 rounded font-semibold ${isSelected ? "bg-emerald-500 text-white" : "bg-blue-500 text-white"}`}
                           >
-                            {isSelected ? "[OK] Seleccionado" : "Seleccionar"}
+                            {isSelected ? "✓ Seleccionado" : "Seleccionar"}
                           </button>
                         </div>
                       </Popup>
@@ -363,7 +361,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
           {/* Map legend */}
           {viewMode === "map" && hasPickup && (
-            <div className="flex items-center gap-1 text-xs text-slate-500 flex-wrap">
+            <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
               <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 border-t-2 border-blue-400 border-dashed" /> Radio {primaryRadius} km (primario)</span>
               <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 border-t-2 border-amber-400 border-dashed" /> Radio {secondaryRadius} km (secundario)</span>
               <span className="flex items-center gap-1"><span className="text-amber-500">★</span> Seleccionado</span>
@@ -376,10 +374,10 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
           {/* LIST VIEW */}
           {viewMode === "list" && (
             <div>
-              <label className="text-xs font-medium text-slate-700 mb-2 block">Conductores disponibles</label>
-              <div className="space-y-1 max-h-72 overflow-y-auto">
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Conductores disponibles</label>
+              <div className="space-y-2 max-h-72 overflow-y-auto">
                 {availableDrivers.length === 0 && (
-                  <div className="p-2 text-xs text-slate-500 text-center flex flex-col items-center gap-1">
+                  <div className="p-4 text-sm text-slate-500 text-center flex flex-col items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-slate-300" />
                     <span>No hay conductores disponibles</span>
                     <span className="text-xs text-slate-400">
@@ -396,16 +394,16 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
                     <button
                       key={driver.id}
                       onClick={() => setSelectedDriverId(driver.id)}
-                      className={`w-full p-2 rounded-lg border text-left transition-all ${isSelected ? "border-blue-500 bg-blue-50 shadow-sm" : "border-slate-200 hover:border-slate-300"}`}
+                      className={`w-full p-3 rounded-xl border text-left transition-all ${isSelected ? "border-blue-500 bg-blue-50 shadow-sm" : "border-slate-200 hover:border-slate-300"}`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {index === 0 && hasPickup && (
                             <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">Más cercano</span>
                           )}
-                          <span className="text-xs font-semibold text-slate-800">{driver.full_name}</span>
+                          <span className="text-sm font-semibold text-slate-800">{driver.full_name}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-slate-400">
+                        <div className="flex items-center gap-2 text-xs text-slate-400">
                           <span className="flex items-center gap-0.5">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{driver.rating || 5}
                           </span>
@@ -437,11 +435,11 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
             const route = osrmRoutes[selectedDriverId];
             const haverDist = sel && hasPickup ? getHaverDist(ride.pickup_lat, ride.pickup_lon, sel.latitude, sel.longitude) : null;
             return (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 space-y-1">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-emerald-800 font-semibold">✓ Seleccionado: <strong>{sel?.full_name}</strong></span>
                   {route ? (
-                    <div className="flex items-center gap-1 text-xs">
+                    <div className="flex items-center gap-3 text-xs">
                       <span className="text-slate-600">🛣 {route.distKm.toFixed(1)} km</span>
                       <span className="bg-blue-600 text-white font-bold px-2.5 py-1 rounded-lg">⏱ ~{route.durationMin} min</span>
                     </div>

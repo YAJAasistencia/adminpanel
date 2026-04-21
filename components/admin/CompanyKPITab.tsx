@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,25 +38,16 @@ export default function CompanyKPITab({ company, rides }) {
 
   const { data: surveyResponses = [] } = useQuery({
     queryKey: ["surveyResponses", company.id],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from("survey_responses").select("*").eq("company_id", company.id);
-        if (error) throw error;
-        return data || [];
-      } catch (err) {
-        console.error("Error fetching survey responses:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.surveyResponses.filter({ company_id: company.id }),
   });
 
   const filtered = useMemo(() => rides.filter(r => {
-    const d = moment(r.requested_at);
+    const d = moment(r.requested_at || r.created_date);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
   }), [rides, dateFrom, dateTo]);
 
   const filteredSurveys = useMemo(() => surveyResponses.filter(sr => {
-    const d = moment(sr.completed_at);
+    const d = moment(sr.completed_at || sr.created_date);
     return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
   }), [surveyResponses, dateFrom, dateTo]);
 
@@ -71,7 +61,7 @@ export default function CompanyKPITab({ company, rides }) {
   const tableRows = useMemo(() => filtered.map(r => {
     const requestedAtCorrected = r.requested_at
       ? new Date(new Date(r.requested_at).getTime() + 6 * 3600 * 1000).toISOString()
-      : r.requested_at;
+      : r.created_date;
     return {
       ...r,
       tAsignacion: diffMin(requestedAtCorrected, r.en_route_at),

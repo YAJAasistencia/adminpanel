@@ -29,7 +29,7 @@ export function pointInPolygon(point, coordinates) {
 export function detectZone(lat, lng, zones) {
   if (!lat || !lng || !zones?.length) return null;
   const matching = zones
-    .filter(z => z && z.is_active && z.coordinates && Array.isArray(z.coordinates) && pointInPolygon({ lat, lng }, z.coordinates))
+    .filter(z => z && z.is_active && z.tipo_zona === "poligono" && z.poligono && Array.isArray(z.poligono) && pointInPolygon({ lat, lng }, z.poligono))
     .sort((a, b) => (b?.prioridad ?? 0) - (a?.prioridad ?? 0));
   return matching[0] || null;
 }
@@ -39,7 +39,7 @@ export function detectZone(lat, lng, zones) {
  */
 export function detectRedZone(lat, lng, redZones) {
   if (!lat || !lng || !redZones?.length) return null;
-  return redZones.find(z => z && z.is_active && z.coordinates && Array.isArray(z.coordinates) && pointInPolygon({ lat, lng }, z.coordinates)) || null;
+  return redZones.find(z => z && z.is_active && z.tipo_zona === "poligono" && z.poligono && Array.isArray(z.poligono) && pointInPolygon({ lat, lng }, z.poligono)) || null;
 }
 
 /**

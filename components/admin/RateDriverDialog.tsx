@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -47,14 +47,13 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Calificar conductor</DialogTitle>
-          <DialogDescription style={{ display: 'none' }}>Calificar el desempeño del conductor</DialogDescription>
         </DialogHeader>
-        <div className="space-y-0.5 py-1">
+        <div className="space-y-4 py-2">
           <div className="text-center">
-            <p className="text-xs text-slate-500 mb-1">Viaje de <span className="font-medium text-slate-800">{ride?.passenger_name}</span></p>
+            <p className="text-sm text-slate-500 mb-1">Viaje de <span className="font-medium text-slate-800">{ride?.passenger_name}</span></p>
             <p className="text-xs text-slate-400">Conductor: {ride?.driver_name}</p>
           </div>
           <div className="flex items-center justify-center gap-1">
@@ -66,11 +65,11 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
                 onClick={() => setRating(n)}
                 className="p-1 transition-transform hover:scale-110"
               >
-                <Star className={`w-6 h-6 transition-colors ${n <= (hover || rating) ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />
+                <Star className={`w-8 h-8 transition-colors ${n <= (hover || rating) ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />
               </button>
             ))}
           </div>
-          <p className="text-center text-xs font-medium text-slate-700">
+          <p className="text-center text-sm font-medium text-slate-700">
             {rating === 1 ? "Muy malo" : rating === 2 ? "Malo" : rating === 3 ? "Regular" : rating === 4 ? "Bueno" : "Excelente"}
           </p>
           <div>
@@ -79,8 +78,8 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
           </div>
         </div>
         <DialogFooter>
-          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-amber-500 hover:bg-amber-600 text-sm">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-amber-500 hover:bg-amber-600">
             {saving ? "Guardando..." : "Guardar calificación"}
           </Button>
         </DialogFooter>

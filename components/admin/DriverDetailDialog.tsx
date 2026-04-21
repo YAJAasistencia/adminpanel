@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star, Car, MapPin, DollarSign, CreditCard, FileText, CheckCircle, Clock, Upload, X, TimerOff, ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
@@ -50,26 +49,7 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
   const uploadDoc = async (docKey, file) => {
     setUploading(p => ({ ...p, [docKey]: true }));
     try {
-      // Upload file to Supabase storage
-      const sanitizedName = sanitizeFileName(file.name || 'upload');
-      const ext = file.name?.split('.').pop() || 'pdf';
-      const filename = `${Date.now()}-${sanitizedName}.${ext}`;
-      const path = `drivers/${filename}`;
-      
-      const { error: uploadError } = await supabase
-        .storage
-        .from('uploads')
-        .upload(path, file, { upsert: true });
-      
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data } = supabase
-        .storage
-        .from('uploads')
-        .getPublicUrl(path);
-      
-      const file_url = data.publicUrl;
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
       setDocFiles(p => ({ ...p, [docKey]: file_url }));
       toast.success("Documento cargado");
     } catch (err) {
@@ -217,20 +197,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
   // Fetch current settings to get dynamic docs list
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: async () => {
-      try {
-        const { data: settings, error } = await supabase
-          .from("app_settings")
-          .select("*")
-          .limit(1);
-        
-        if (error || !settings) return [];
-        return settings;
-      } catch (err) {
-        console.error("Error fetching AppSettings:", err);
-        return [];
-      }
-    },
+    queryFn: () => supabaseApi.settings.list(),
   });
   const settings = settingsList[0];
   const configuredDocs = settings?.driver_required_docs || [];
@@ -315,24 +282,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
   const handleDocUpload = async (docKey, file) => {
     setUploadingDoc(docKey);
     try {
-      // Upload file to Supabase storage
-      const filename = `${Date.now()}-${file.name || 'upload'}`;
-      const path = `drivers/${filename}`;
-      
-      const { error: uploadError } = await supabase
-        .storage
-        .from('uploads')
-        .upload(path, file, { upsert: true });
-      
-      if (uploadError) throw uploadError;
-      
-      const { data } = supabase
-        .storage
-        .from('uploads')
-        .getPublicUrl(path);
-      
-      const file_url = data.publicUrl;
-      
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
       // Update local state FIRST so subsequent saves include this URL
       setEditDriver(prev => {
         const newUrls = { ...(prev.doc_urls || {}), [docKey]: file_url };
@@ -785,24 +735,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                                   const f = e.target.files?.[0]; if (!f) return;
                                   try {
                                     setUploadingDoc(doc.key + "_" + i);
-                                    // Upload file to Supabase storage
-                                    const filename = `${Date.now()}-${f.name || 'upload'}`;
-                                    const path = `drivers/${filename}`;
-                                    
-                                    const { error: uploadError } = await supabase
-                                      .storage
-                                      .from('uploads')
-                                      .upload(path, f, { upsert: true });
-                                    
-                                    if (uploadError) throw uploadError;
-                                    
-                                    const { data } = supabase
-                                      .storage
-                                      .from('uploads')
-                                      .getPublicUrl(path);
-                                    
-                                    const file_url = data.publicUrl;
-                                    
+                                    const { file_url } = await supabaseApi.uploads.uploadFile({ file: f });
                                     setEditDriver(prev => {
                                       const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [urlKey]: file_url } : x);
                                       supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles }).catch(err => console.error("Error updating vehicles:", err));

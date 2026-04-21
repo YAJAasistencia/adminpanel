@@ -8,7 +8,6 @@ import StatusBadge from "@/components/shared/StatusBadge";
 import { MapPin, User, Car, CreditCard, Clock, DollarSign, Phone, Building2, Layers, FileText, Star, ChevronDown, ChevronUp, UserCheck } from "lucide-react";
 import { formatCDMX } from "@/components/shared/dateUtils";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import RideLiveMap from "@/components/admin/RideLiveMap";
@@ -64,7 +63,7 @@ async function generateTicketPDF(ride, type, companyOverridePrice) {
   doc.text(title, 105, y, { align: "center" }); nl(7);
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
   doc.text(`Folio: ${ride.service_id || ride.id?.slice(-8).toUpperCase()}`, 105, y, { align: "center" }); nl(6);
-  const fechaStr = formatCDMX(ride.requested_at, "datetime");
+  const fechaStr = formatCDMX(ride.requested_at || ride.created_date, "datetime");
   doc.text(`Fecha: ${fechaStr}`, 105, y, { align: "center" }); nl(4);
   line();
 
@@ -227,7 +226,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             <StatusBadge status={ride.status} />
             <div className="text-right">
               <span className="text-xs text-slate-400 block">
-                {formatCDMX(ride.requested_at, "datetime")}
+                {formatCDMX(ride.requested_at || ride.created_date, "datetime")}
               </span>
               {ride.service_id && (
                 <span className="text-[10px] text-slate-300 font-mono">{ride.service_id}</span>
@@ -355,7 +354,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           {/* Proceso del servicio */}
           {(() => {
             // Hora de solicitud: requested_at es guardado como hora local (no UTC real), usar formatCDMX directo
-            const solicitudTs = ride.requested_at;
+            const solicitudTs = ride.requested_at || ride.created_date;
             // Los demás timestamps (en_route_at, in_progress_at, completed_at) son UTC reales → formatCDMX correcto
             const steps = [
               { label: "Solicitud", ts: solicitudTs, icon: "📨" },
