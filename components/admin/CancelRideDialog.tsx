@@ -92,6 +92,9 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="w-5 h-5" /> Cancelar viaje
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Confirma la cancelacion del viaje y, si aplica, el cargo por cancelacion.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="bg-red-50 rounded-xl p-4 text-sm space-y-3">

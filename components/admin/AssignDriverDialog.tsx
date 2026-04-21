@@ -205,6 +205,9 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
             Asignar conductor
             <span className="text-sm font-normal text-slate-400">— {availableDrivers.length} disponible{availableDrivers.length !== 1 ? "s" : ""}</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Selecciona un conductor disponible para asignar este viaje manualmente.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

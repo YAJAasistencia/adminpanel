@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,9 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Calificar conductor</DialogTitle>
+          <DialogDescription className="sr-only">
+            Califica el desempeno del conductor para este viaje.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="text-center">
