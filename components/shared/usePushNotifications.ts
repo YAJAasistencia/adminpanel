@@ -41,27 +41,8 @@ export async function registerDriverSW() {
   }
 }
 
-async function waitForActiveWorker(swReg: ServiceWorkerRegistration): Promise<ServiceWorker | null> {
-  if (swReg.active) return swReg.active;
-  const worker = swReg.installing || swReg.waiting;
-  if (!worker) return null;
-  return new Promise((resolve) => {
-    worker.addEventListener("statechange", function handler() {
-      if (worker.state === "activated") {
-        worker.removeEventListener("statechange", handler);
-        resolve(worker);
-      } else if (worker.state === "redundant") {
-        worker.removeEventListener("statechange", handler);
-        resolve(null);
-      }
-    });
-    setTimeout(() => resolve(null), 8000);
-  });
-}
-
 async function getOrCreateSubscription(swReg: ServiceWorkerRegistration) {
   try {
-    await waitForActiveWorker(swReg);
     let subscription = await swReg.pushManager.getSubscription();
     if (!subscription) {
       subscription = await swReg.pushManager.subscribe({
@@ -184,7 +165,7 @@ export async function showDriverNotification({ title, body, rideId, tag, url }: 
     body,
     tag: tag || (rideId ? `ride-${rideId}` : `notif-${Date.now()}`),
     ride: { id: rideId },
-    url: url || "/driver-app",
+    url: url || "/DriverApp",
   };
 
   if (swReg?.active) {

@@ -16,10 +16,9 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const now = new Date();
-        const all = await supabaseApi.announcements.list();
-        const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      const now = new Date();
+      const all = await supabaseApi.announcements.list();
+      const shown = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
       const eligible = all.filter(a => {
         if (!a.is_active) return false;
@@ -35,9 +34,6 @@ export default function AnnouncementModal({ audience, cityId, serviceTypeId, sto
       if (eligible.length > 0) {
         setQueue(eligible);
         setCurrent(eligible[0]);
-      }
-      } catch (err) {
-        console.warn("[AnnouncementModal] Error loading announcements:", err);
       }
     };
     load();

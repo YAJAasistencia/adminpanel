@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -150,7 +148,6 @@ export function setNotificationSettings({ interval_seconds, volume, sound_type }
   if (interval_seconds != null) alarmIntervalMs = Math.max(1, interval_seconds) * 1000;
   if (volume != null) alarmVolume = Math.min(1, Math.max(0, volume));
   if (sound_type != null) soundType = sound_type;
-  void alarmIntervalMs;
 }
 
 const ALL_SOUND_SETS: Record<string, Record<SoundKind, Note[]>> = {
@@ -394,7 +391,6 @@ export function useAdminNotifications() {
 
     return () => {
       supabase.removeChannel(channel);
-      stopAllAlarms();
     };
   }, []);
 }

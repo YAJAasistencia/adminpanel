@@ -1,10 +1,6 @@
-"use client"
-
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
-import type { AppSettings } from "./useAppSettings";
 
 interface City {
   id: string;
@@ -155,7 +151,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       if (ride.pickup_lat && ride.pickup_lon) {
         const driverCity = localCities.find((city) => city.id === driver.city_id);
         if (driverCity?.center_lat && (driverCity.geofence_radius_km || driverCity.radius_km)) {
-          const dist = getHaverDist(ride.pickup_lat, ride.pickup_lon, driverCity.center_lat, driverCity.center_lon || driverCity.longitude);
+          const dist = getHaverDist(ride.pickup_lat, ride.pickup_lon, driverCity.center_lat, driverCity.center_lon);
           if (dist > (driverCity.geofence_radius_km || driverCity.radius_km || 0)) return false;
         }
 
@@ -483,7 +479,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           const timer = setTimeout(async () => {
             delete assignedRideTimersRef.current[ride.id];
             const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
-            if (!current || current.status !== "assigned" || current.en_route_at) return;
+            if (!current || current.status !== "assigned" || current.en_route_at || current.driver_accepted_at) return;
 
             const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
             const excludedIds = uniqueIds([...prevExcluded, current.driver_id]);

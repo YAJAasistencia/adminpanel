@@ -1,7 +1,7 @@
 // Comprehensive list of car brands available in the market (updated 2026)
 export const CAR_BRANDS: string[] = [
   "Acura", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "Bugatti",
-  "Buick", "BYD", "Cadillac", "Chevrolet", "Chrysler", "Citroen", "Cupra",
+  "Buick", "BYD", "Cadillac", "Chevrolet", "Chrysler", "Citroën", "Cupra",
   "Dacia", "Dodge", "DS Automobiles", "Ferrari", "Fiat", "Ford", "Genesis",
   "GMC", "Honda", "Hummer", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep",
   "Kia", "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lotus", "Maserati",

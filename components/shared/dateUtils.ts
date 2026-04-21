@@ -1,44 +1,13 @@
 type DateFormatKind = "datetime" | "date" | "time" | "short" | "shortdatetime" | "daymonth" | "relative";
 
-let cachedTimezone = "America/Mexico_City";
+let _cachedTZ = "America/Mexico_City";
 
-export function setSystemTimezone(timezone: string) {
-  if (timezone) {
-    cachedTimezone = timezone;
-  }
-
-  if (typeof window !== "undefined" && timezone) {
-    localStorage.setItem("system-timezone", timezone);
-  }
-}
-
-export function getSystemTimezone(): string {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("system-timezone") || cachedTimezone;
-  }
-
-  return cachedTimezone;
+export function setSystemTimezone(tz: string) {
+  if (tz) _cachedTZ = tz;
 }
 
 function getTZ() {
-  return getSystemTimezone();
-}
-
-export function formatDateWithTimezone(date: Date | string, timezone?: string): string {
-  if (!date) return "";
-
-  const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) return "";
-
-  return parsedDate.toLocaleString("es-MX", {
-    timeZone: timezone || getTZ(),
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  return _cachedTZ;
 }
 
 export function formatCDMX(date: Date | string, format: DateFormatKind = "datetime", tz?: string): string {
@@ -159,4 +128,24 @@ function getTimezoneOffsetMs(timezone: string, referenceDate: Date) {
 export function isInDayCDMX(date: Date | string, dateStr: string) {
   const parsedDate = new Date(date);
   return parsedDate >= startOfDayCDMX(dateStr) && parsedDate <= endOfDayCDMX(dateStr);
+}
+
+/**
+ * Helper: returns UTC offset string like "-06:00" for a given timezone and reference date
+ */
+function getTimezoneOffsetStr(tz: string, refDate: Date) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, timeZoneName: "shortOffset"
+    }).formatToParts(refDate);
+    const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "GMT-6";
+    const match = tzPart.match(/GMT([+-]\d+)(?::(\d+))?/);
+    if (!match) return "-06:00";
+    const h = parseInt(match[1]);
+    const m = parseInt(match[2] || "0");
+    const sign = h >= 0 ? "+" : "-";
+    return `${sign}${String(Math.abs(h)).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  } catch {
+    return "-06:00";
+  }
 }
