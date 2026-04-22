@@ -51,6 +51,7 @@ interface LayoutProps {
 
 export default function Layout({ children, currentPageName }: LayoutProps) {
   const { settings } = useAppSettings();
+  const backendAutoAssignEnabled = process.env.NEXT_PUBLIC_BACKEND_AUTO_ASSIGN_ENABLED === "true";
   usePWAManifest(currentPageName, settings?.company_name);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ Finanzas: false, "Configuración": true });
@@ -67,7 +68,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   });
 
   // ── Global auto-assign: runs on every panel page, not just Dashboard ─────
-  useRideAutoAssign(settings, cities);
+  useRideAutoAssign(settings, cities, !backendAutoAssignEnabled);
 
   // Apply timezone globally whenever settings change
   useEffect(() => {

@@ -87,7 +87,7 @@ function getHaverDist(lat1?: number, lon1?: number, lat2?: number, lon2?: number
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export default function useRideAutoAssign(settings: AppSettings | undefined, cities: City[]) {
+export default function useRideAutoAssign(settings: AppSettings | undefined, cities: City[], enabled = true) {
   const queryClient = useQueryClient();
   const ridesRef = useRef<Ride[]>([]);
   const driversRef = useRef<Driver[]>([]);
@@ -104,6 +104,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
   }, [cities]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     ridesRef.current = (queryClient.getQueryData(["rides"]) as Ride[]) ?? [];
     driversRef.current = (queryClient.getQueryData(["drivers"]) as Driver[]) ?? [];
 
@@ -133,7 +135,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     });
 
     return unsub;
-  }, [queryClient]);
+  }, [queryClient, enabled]);
 
   const getAvailableCandidates = (
     ride: Ride,
@@ -329,6 +331,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
   };
 
   useEffect(() => {
+    if (!enabled) return;
+
     const channel = supabase
       .channel("autoassign_ride_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "ride_requests" }, async (payload: any) => {
@@ -388,9 +392,11 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     const processingRideIds = new Set<string>();
 
     const checkScheduledAndPending = async () => {
@@ -486,12 +492,14 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     const interval = setInterval(checkScheduledAndPending, 10000);
     checkScheduledAndPending();
     return () => clearInterval(interval);
-  }, [queryClient]);
+  }, [queryClient, enabled]);
 
   const assignedRideTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const processedAuctionsRef = useRef(new Set<string>());
 
   useEffect(() => {
+    if (!enabled) return;
+
     const unsub = queryClient.getQueryCache().subscribe(() => {
       const rides = (queryClient.getQueryData(["rides"]) as Ride[]) ?? [];
       const s = settingsRef.current;
@@ -613,7 +621,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       assignTimeoutsRef.current.forEach(clearTimeout);
       assignTimeoutsRef.current = [];
     };
-  }, [queryClient]);
+  }, [queryClient, enabled]);
 
   return null;
 }
