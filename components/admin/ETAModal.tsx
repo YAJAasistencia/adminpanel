@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Car, MapPin, Clock, Navigation, X, RefreshCw, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
@@ -278,6 +278,10 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl ${isAssigned ? "sm:max-w-md" : "sm:max-w-sm"}`}>
+        <DialogTitle className="sr-only">Estado de asignacion de conductor</DialogTitle>
+        <DialogDescription className="sr-only">
+          Muestra el estado actual de la busqueda o asignacion de conductor para el viaje.
+        </DialogDescription>
         {isNoDrivers ? (
           <NoDriversPhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />
         ) : isAssigned ? (

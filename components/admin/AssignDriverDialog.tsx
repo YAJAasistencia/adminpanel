@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -195,6 +195,9 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
             Asignar conductor
             <span className="text-sm font-normal text-slate-400">— {availableDrivers.length} disponible{availableDrivers.length !== 1 ? "s" : ""}</span>
           </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
+            Selecciona un conductor disponible para este viaje.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

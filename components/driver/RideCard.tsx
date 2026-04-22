@@ -59,6 +59,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [waitTime, setWaitTime] = useState(0); // Timer for pickup wait time in seconds
   const queryClient = useQueryClient();
+  const isActive = !["completed", "cancelled"].includes(ride.status);
 
   const { data: policies = [] } = useQuery({
     queryKey: ["cancellationPolicies"],
@@ -132,7 +133,6 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   const action = statusFlow[ride.status];
   const waitingAdminApproval = ride.status === "arrived" && requireAdminApproval;
   const allowCancel = settings?.allow_driver_cancel ?? true;
-  const isActive = !["completed", "cancelled"].includes(ride.status);
 
   const handleProofUpload = async (file) => {
     setUploadingProof(true);
