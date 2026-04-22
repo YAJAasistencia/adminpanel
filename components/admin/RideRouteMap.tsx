@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -58,7 +56,7 @@ function buildEventLog(ride) {
   add(ride.completed_at, "Viaje completado", "completed", "emerald");
 
   if (ride.status === "cancelled") {
-    const cTs = ride.requested_at;
+    const cTs = ride.updated_date || ride.created_date;
     add(cTs, `Cancelado por ${ride.cancelled_by || "—"}${ride.cancellation_reason ? `: ${ride.cancellation_reason}` : ""}`, "cancelled", "red");
   }
 
@@ -108,13 +106,9 @@ export default function RideRouteMap({ ride }) {
       .then(r => r.json())
       .then(data => {
         const coords = data?.routes?.[0]?.geometry?.coordinates;
-        if (Array.isArray(coords) && coords.length > 0) {
-          setRoute(coords.map(([lng, lat]) => [lat, lng]));
-        } else {
-          setRoute(null);
-        }
+        if (coords) setRoute(coords.map(([lng, lat]) => [lat, lng]));
       })
-      .catch(() => { setRoute(null); });
+      .catch(() => {});
   }, [ride?.pickup_lat, ride?.pickup_lon, ride?.dropoff_lat, ride?.dropoff_lon]);
 
   if (!ride) return null;
@@ -152,7 +146,7 @@ export default function RideRouteMap({ ride }) {
                   <Popup><span className="text-xs font-medium">🏁 Destino<br />{ride.dropoff_address}</span></Popup>
                 </Marker>
               )}
-              {Array.isArray(route) && route.length > 0 && <Polyline positions={route} color="#6366F1" weight={4} opacity={0.8} />}
+              {route && <Polyline positions={route} color="#6366F1" weight={4} opacity={0.8} />}
             </MapContainer>
           </div>
         </>

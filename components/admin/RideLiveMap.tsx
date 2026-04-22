@@ -16,7 +16,14 @@ L.Icon.Default.mergeOptions({
 
 // Car icon (SVG) for driver
 const carIconSvg = (color = "#3B82F6") => L.divIcon({
-  html: '<div style="background:' + color + ';width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">\n    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">\n      <path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-4h12l2 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/>\n      <circle cx="7.5" cy="17.5" r="1.5"/>\n      <circle cx="16.5" cy="17.5" r="1.5"/>\n      <path d="M5 9h14"/>\n    </svg>\n  </div>',
+  html: `<div style="background:${color};width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">
+      <path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-4h12l2 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/>
+      <circle cx="7.5" cy="17.5" r="1.5"/>
+      <circle cx="16.5" cy="17.5" r="1.5"/>
+      <path d="M5 9h14"/>
+    </svg>
+  </div>`,
   className: "",
   iconSize: [36, 36],
   iconAnchor: [18, 18],
@@ -25,7 +32,12 @@ const carIconSvg = (color = "#3B82F6") => L.divIcon({
 
 // Person icon (SVG) for passenger pickup
 const personIconSvg = (color = "#10B981") => L.divIcon({
-  html: '<div style="background:' + color + ';width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">\n    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">\n      <circle cx="12" cy="7" r="4"/>\n      <path d="M20 21a8 8 0 1 0-16 0"/>\n    </svg>\n  </div>',
+  html: `<div style="background:${color};width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">
+      <circle cx="12" cy="7" r="4"/>
+      <path d="M20 21a8 8 0 1 0-16 0"/>
+    </svg>
+  </div>`,
   className: "",
   iconSize: [36, 36],
   iconAnchor: [18, 18],
@@ -34,7 +46,12 @@ const personIconSvg = (color = "#10B981") => L.divIcon({
 
 // Destination flag icon
 const destIconSvg = () => L.divIcon({
-  html: '<div style="background:#EF4444;width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">\n    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">\n      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>\n      <line x1="4" y1="22" x2="4" y2="15"/>\n    </svg>\n  </div>',
+  html: `<div style="background:#EF4444;width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+      <line x1="4" y1="22" x2="4" y2="15"/>
+    </svg>
+  </div>`,
   className: "",
   iconSize: [36, 36],
   iconAnchor: [18, 18],
@@ -71,12 +88,14 @@ export default function RideLiveMap({ ride, settings }) {
   const refetchInterval = (settings?.driver_location_update_interval_seconds ?? 20) * 1000;
   const isActive = ride && !["completed", "cancelled"].includes(ride.status);
 
-  const { data: driver } = useQuery({
+  const { data: driverArr } = useQuery({
     queryKey: ["driverLive", ride?.driver_id],
-    queryFn: () => supabaseApi.drivers.get(ride.driver_id),
+    queryFn: () => supabaseApi.drivers.list({ id: ride.driver_id }),
     enabled: !!ride?.driver_id && isActive,
     refetchInterval,
   });
+
+  const driver = driverArr?.[0];
   const hasDriverLoc = driver?.latitude && driver?.longitude;
   const hasPickup = ride?.pickup_lat && ride?.pickup_lon;
   const hasDropoff = ride?.dropoff_lat && ride?.dropoff_lon;
@@ -167,7 +186,7 @@ export default function RideLiveMap({ ride, settings }) {
               <Popup>🏁 Destino: {ride.dropoff_address}</Popup>
             </Marker>
           )}
-          {Array.isArray(route) && route.length > 0 && <Polyline positions={route} color={carColor} weight={4} opacity={0.85} dashArray={ride.status === "assigned" ? "8,5" : undefined} />}
+          {route && route.length > 1 && <Polyline positions={route} color={carColor} weight={4} opacity={0.85} dashArray={ride.status === "assigned" ? "8,5" : undefined} />}
         </MapContainer>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { CAR_BRANDS, MOTO_BRANDS, VEHICLE_YEARS } from "@/components/shared/vehicleBrands";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { Card } from "@/components/ui/card";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star, Car, MapPin, DollarSign, CreditCard, FileText, CheckCircle, Clock, Upload, X, TimerOff, ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
-import { sanitizeFileName } from "@/lib/utils";
 import DriverSmsNotifier from "@/components/admin/DriverSmsNotifier";
 import { toast } from "sonner";
 
@@ -48,16 +47,9 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
 
   const uploadDoc = async (docKey, file) => {
     setUploading(p => ({ ...p, [docKey]: true }));
-    try {
-      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
-      setDocFiles(p => ({ ...p, [docKey]: file_url }));
-      toast.success("Documento cargado");
-    } catch (err) {
-      console.error("Upload error:", err);
-      toast.error("Error al cargar documento");
-    } finally {
-      setUploading(p => ({ ...p, [docKey]: false }));
-    }
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+    setDocFiles(p => ({ ...p, [docKey]: file_url }));
+    setUploading(p => ({ ...p, [docKey]: false }));
   };
 
   const handleAdd = () => {
@@ -87,36 +79,36 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
   };
 
   return (
-    <div className="border-2 border-blue-200 bg-blue-50/30 rounded-lg p-2 space-y-1">
+    <div className="border-2 border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-slate-800 text-xs">{isEdit ? "Editar vehículo" : "Nuevo vehículo"}</p>
+        <p className="font-semibold text-slate-800 text-sm">{isEdit ? "Editar vehículo" : "Nuevo vehículo"}</p>
         {onCancel && <button onClick={onCancel} className="p-1 rounded-lg hover:bg-slate-100"><X className="w-4 h-4 text-slate-400" /></button>}
       </div>
       {/* Vehicle type selector */}
       <div>
         <Label className="text-xs">Tipo de vehículo *</Label>
-        <div className="grid grid-cols-2 gap-1 mt-1">
+        <div className="grid grid-cols-2 gap-2 mt-1">
           {[{ value: "car", label: "🚗 Carro" }, { value: "moto", label: "🏍️ Moto" }].map(t => (
             <button key={t.value} type="button"
               onClick={() => { upd("vehicle_type", t.value); upd("brand", ""); setUseCustomBrand(false); }}
-              className={`py-0.5 rounded-lg border-2 text-xs font-semibold transition-all ${form.vehicle_type === t.value ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+              className={`py-2 rounded-xl border-2 text-sm font-semibold transition-all ${form.vehicle_type === t.value ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
               {t.label}
             </button>
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-1">
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">Marca *</Label>
           {useCustomBrand ? (
             <div className="flex gap-1 mt-1">
-              <Input value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Ej: ITALIKA" className="h-8 text-xs" />
+              <Input value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Ej: ITALIKA" className="h-9 text-sm" />
               <button onClick={() => { setUseCustomBrand(false); setCustomBrand(""); }} className="text-xs text-slate-400 hover:text-red-400 px-1">✕</button>
             </div>
           ) : (
             <div>
               <Select value={form.brand} onValueChange={v => upd("brand", v)}>
-                <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
                   {brands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
@@ -127,29 +119,29 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
         </div>
         <div>
           <Label className="text-xs">Modelo *</Label>
-          <Input value={form.model} onChange={e => upd("model", e.target.value.toUpperCase())} placeholder="COROLLA" className="mt-1 h-8 text-xs" />
+          <Input value={form.model} onChange={e => upd("model", e.target.value.toUpperCase())} placeholder="COROLLA" className="mt-1 h-9 text-sm" />
         </div>
         <div>
           <Label className="text-xs">Año</Label>
           <Select value={form.year} onValueChange={v => upd("year", v)}>
-            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="Año" /></SelectTrigger>
+            <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue placeholder="Año" /></SelectTrigger>
             <SelectContent>{VEHICLE_YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div>
           <Label className="text-xs">Color</Label>
-          <Input value={form.color} onChange={e => upd("color", e.target.value.toUpperCase())} placeholder="BLANCO" className="mt-1 h-8 text-xs" />
+          <Input value={form.color} onChange={e => upd("color", e.target.value.toUpperCase())} placeholder="BLANCO" className="mt-1 h-9 text-sm" />
         </div>
         <div className="col-span-2">
           <Label className="text-xs">Placa *</Label>
-          <Input value={form.plates} onChange={e => upd("plates", e.target.value.toUpperCase())} placeholder="ABC-123" className="mt-1 h-8 text-xs font-mono" />
+          <Input value={form.plates} onChange={e => upd("plates", e.target.value.toUpperCase())} placeholder="ABC-123" className="mt-1 h-9 text-sm font-mono" />
         </div>
       </div>
 
       {vehicleDocs.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Documentos del vehículo</p>
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-3 gap-2">
             {vehicleDocs.map(doc => (
               <div key={doc.key} className="border border-slate-200 rounded-lg p-2 space-y-1 bg-white">
                 <p className="text-[10px] font-semibold text-slate-700 truncate">{doc.label}</p>
@@ -173,10 +165,10 @@ function AdminAddVehicleForm({ onAdd, vehicleDocs, editingVehicle, onCancel }) {
         </div>
       )}
 
-      <div className="flex gap-1 pt-1">
-        <Button variant="outline" size="sm" onClick={onCancel || (() => {})} className="flex-1 rounded-lg text-xs">Cancelar</Button>
+      <div className="flex gap-2 pt-1">
+        <Button variant="outline" size="sm" onClick={onCancel || (() => {})} className="flex-1 rounded-xl text-sm">Cancelar</Button>
         <Button size="sm" onClick={handleAdd} disabled={(!form.brand && !customBrand) || !form.plates || !form.model}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs">
+          className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm">
           {isEdit ? "Guardar cambios" : "Agregar vehículo"}
         </Button>
       </div>
@@ -232,103 +224,55 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   const handleSave = async () => {
     setSaving(true);
-    try {
-      const syncedNames = (editDriver.service_type_ids || []).map(id => {
-        const found = serviceTypes.find(s => s.id === id);
-        return found ? found.name : null;
-      }).filter(Boolean);
-      const dataToSave = {
-        ...editDriver,
-        service_type_names: syncedNames,
-        approved_docs: Object.keys(docApproved).filter(k => docApproved[k]),
-        rejected_docs: Object.keys(docRejected).filter(k => docRejected[k]),
-        doc_expiries: docExpiries,
-      };
-      
-      // If this is a new driver (no ID yet), CREATE instead of UPDATE
-      if (!driver?.id || driver?._isNewDriver) {
-        console.log('[DriverDetailDialog] Creating new driver:', dataToSave);
-        // Remove the temporary flag before saving
-        const { _isNewDriver, ...cleanData } = dataToSave;
-        // Generate access code for new driver
-        const code = "DRV" + String(Math.floor(Math.random() * 99999)).padStart(5, "0");
-        const result = await supabaseApi.drivers.create({
-          ...cleanData,
-          access_code: code,
-        });
-        console.log('[DriverDetailDialog] Create result:', result);
-        queryClient.invalidateQueries({ queryKey: ["drivers"] });
-        toast.success("Conductor creado");
-      } else {
-        // Update existing driver
-        console.log('[DriverDetailDialog] Saving driver:', { driverId: driver.id, dataToSave });
-        const result = await supabaseApi.drivers.update(driver.id, dataToSave);
-        console.log('[DriverDetailDialog] Update result:', result);
-        queryClient.setQueryData(["drivers"], (old = []) =>
-          old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
-        );
-        queryClient.invalidateQueries({ queryKey: ["drivers"] });
-        toast.success("Conductor actualizado");
-      }
-      setSaving(false);
-      onOpenChange(false);
-    } catch (err: any) {
-      console.error("[DriverDetailDialog] Error saving driver:", err);
-      toast.error(`Error al guardar: ${err?.message || JSON.stringify(err)}`);
-      setSaving(false);
-    }
+    const syncedNames = (editDriver.service_type_ids || []).map(id => {
+      const found = serviceTypes.find(s => s.id === id);
+      return found ? found.name : null;
+    }).filter(Boolean);
+    const dataToSave = {
+      ...editDriver,
+      service_type_names: syncedNames,
+      approved_docs: Object.keys(docApproved).filter(k => docApproved[k]),
+      rejected_docs: Object.keys(docRejected).filter(k => docRejected[k]),
+      doc_expiries: docExpiries,
+    };
+    await supabaseApi.drivers.update(driver.id, dataToSave);
+    queryClient.setQueryData(["drivers"], (old = []) =>
+      old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
+    );
+    toast.success("Conductor actualizado");
+    setSaving(false);
+    onOpenChange(false);
   };
 
   const handleDocUpload = async (docKey, file) => {
     setUploadingDoc(docKey);
-    try {
-      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
-      // Update local state FIRST so subsequent saves include this URL
-      setEditDriver(prev => {
-        const newUrls = { ...(prev.doc_urls || {}), [docKey]: file_url };
-        const updated = { ...prev, doc_urls: newUrls };
-        // Only persist immediately if this is an existing driver (has ID)
-        if (driver?.id && !driver?._isNewDriver) {
-          supabaseApi.drivers.update(driver.id, { doc_urls: newUrls }).catch(err => {
-            console.error("Error updating driver doc URLs:", err);
-          });
-          queryClient.setQueryData(["drivers"], (old = []) =>
-            old.map(d => d.id === driver.id ? { ...d, doc_urls: newUrls } : d)
-          );
-        }
-        return updated;
-      });
-      toast.success("Documento cargado");
-    } catch (err) {
-      console.error("Document upload error:", err);
-      toast.error("Error al cargar documento");
-    } finally {
-      setUploadingDoc(null);
-    }
+    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+    // Update local state FIRST so subsequent saves include this URL
+    setEditDriver(prev => {
+      const newUrls = { ...(prev.doc_urls || {}), [docKey]: file_url };
+      const updated = { ...prev, doc_urls: newUrls };
+      // Persist immediately (fire and forget, handleSave will also save it)
+      supabaseApi.drivers.update(driver.id, { doc_urls: newUrls });
+      queryClient.setQueryData(["drivers"], (old = []) =>
+        old.map(d => d.id === driver.id ? { ...d, doc_urls: newUrls } : d)
+      );
+      return updated;
+    });
+    setUploadingDoc(null);
+    toast.success("Documento cargado");
   };
 
   const saveDocStatus = async (newApproved, newRejected) => {
-    try {
-      // For new drivers, just update local state - don't persist to DB yet
-      if (!driver?.id || driver?._isNewDriver) {
-        setDocApproved(newApproved);
-        setDocRejected(newRejected);
-        return;
-      }
-      const approvedList = Object.keys(newApproved).filter(k => newApproved[k]);
-      const rejectedList = Object.keys(newRejected).filter(k => newRejected[k]);
-      await supabaseApi.drivers.update(driver.id, {
-        approved_docs: approvedList,
-        rejected_docs: rejectedList,
-      });
-      // Update cache directly so the re-render doesn't reset local state
-      queryClient.setQueryData(["drivers"], (old = []) =>
-        old.map(d => d.id === driver.id ? { ...d, approved_docs: approvedList, rejected_docs: rejectedList } : d)
-      );
-    } catch (err) {
-      console.error("Error saving doc status:", err);
-      toast.error("Error al guardar estado del documento");
-    }
+    const approvedList = Object.keys(newApproved).filter(k => newApproved[k]);
+    const rejectedList = Object.keys(newRejected).filter(k => newRejected[k]);
+    await supabaseApi.drivers.update(driver.id, {
+      approved_docs: approvedList,
+      rejected_docs: rejectedList,
+    });
+    // Update cache directly so the re-render doesn't reset local state
+    queryClient.setQueryData(["drivers"], (old = []) =>
+      old.map(d => d.id === driver.id ? { ...d, approved_docs: approvedList, rejected_docs: rejectedList } : d)
+    );
   };
 
   const approveDoc = async (docKey) => {
@@ -394,20 +338,11 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   // Per-vehicle doc approve/reject helpers (stored in vehicle object itself)
   const saveVehicles = async (updated) => {
-    try {
-      update("vehicles", updated);
-      // For new drivers, just update local state - don't persist to DB yet
-      if (!driver?.id || driver?._isNewDriver) {
-        return;
-      }
-      await supabaseApi.drivers.update(driver.id, { vehicles: updated });
-      queryClient.setQueryData(["drivers"], (old = []) =>
-        old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
-      );
-    } catch (err) {
-      console.error("Error saving vehicles:", err);
-      toast.error("Error al guardar vehículos");
-    }
+    update("vehicles", updated);
+    await supabaseApi.drivers.update(driver.id, { vehicles: updated });
+    queryClient.setQueryData(["drivers"], (old = []) =>
+      old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
+    );
   };
 
   const approveVehicleDoc = async (vehicleIdx, docKey) => {
@@ -444,18 +379,17 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1000px' }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-1 flex-wrap">
-            <div className="flex items-center gap-1">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
+          <DialogTitle className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
                 {driver.full_name?.charAt(0)}
               </div>
-              <span className="text-base">{driver.full_name}</span>
+              <span>{driver.full_name}</span>
             </div>
             <DriverSmsNotifier driver={driver} />
           </DialogTitle>
-          <DialogDescription className="sr-only">Editar información del conductor</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="info">
@@ -465,26 +399,42 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             <TabsTrigger value="services">Servicios</TabsTrigger>
             <TabsTrigger value="banking">Bancario</TabsTrigger>
             <TabsTrigger value="docs">Docs</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
             <TabsTrigger value="ratings">Califs.</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="info" className="space-y-0.5 mt-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label className="text-sm">Nombre completo *</Label><Input size="sm" value={editDriver.full_name || ""} onChange={e => update("full_name", e.target.value)} className="h-7 text-sm" /></div>
-              <div><Label className="text-sm">Teléfono</Label><Input size="sm" value={editDriver.phone || ""} onChange={e => update("phone", e.target.value)} placeholder="Opcional" className="h-7 text-sm" /></div>
+          <TabsContent value="info" className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Nombre completo *</Label><Input value={editDriver.full_name || ""} onChange={e => update("full_name", e.target.value)} /></div>
+              <div><Label>Teléfono</Label><Input value={editDriver.phone || ""} onChange={e => update("phone", e.target.value)} placeholder="Opcional" /></div>
             </div>
-            <div><Label className="text-sm">Email (acceso)</Label><Input size="sm" type="email" value={editDriver.email || ""} onChange={e => update("email", e.target.value)} placeholder="correo@ejemplo.com" className="h-7 text-sm" /></div>
-            <div><Label className="text-sm">Contraseña de acceso</Label><Input size="sm" type="text" value={editDriver.password || ""} onChange={e => update("password", e.target.value)} placeholder="Contraseña para la app" className="h-7 text-sm" /></div>
-            <div className="bg-slate-50 rounded-lg p-2 text-xs text-slate-500 flex items-center gap-1">
+            <div><Label>Email (acceso)</Label><Input type="email" value={editDriver.email || ""} onChange={e => update("email", e.target.value)} placeholder="correo@ejemplo.com" /></div>
+            <div><Label>Contraseña de acceso</Label><Input type="text" value={editDriver.password || ""} onChange={e => update("password", e.target.value)} placeholder="Contraseña para la app" /></div>
+            <div>
+              <Label>Ciudad</Label>
+              <Select value={editDriver.city_id || ""} onValueChange={v => {
+                const city = cities.find(c => c.id === v);
+                update("city_id", v);
+                update("city_name", city?.name || "");
+              }}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Seleccionar ciudad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(cities || []).filter(c => c.is_active !== false).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}{c.state ? `, ${c.state}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 flex items-center gap-2">
               <Car className="w-4 h-4 text-slate-400" />
               Los datos del vehículo se sincronizan desde la pestaña <strong>Vehículos</strong>. Vehículo activo: <span className="font-mono font-bold text-slate-700">{editDriver.vehicle_brand} {editDriver.vehicle_model} · {editDriver.license_plate}</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm">Estado</Label>
+                <Label>Estado</Label>
                 <Select value={editDriver.status || "offline"} onValueChange={v => update("status", v)}>
-                  <SelectTrigger className="h-7 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="available">Disponible</SelectItem>
                     <SelectItem value="busy">Ocupado</SelectItem>
@@ -495,9 +445,9 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 </Select>
               </div>
               <div>
-                <Label className="text-sm">Aprobación</Label>
+                <Label>Aprobación</Label>
                 <Select value={editDriver.approval_status || "pending"} onValueChange={v => update("approval_status", v)}>
-                  <SelectTrigger className="h-7 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pendiente</SelectItem>
                     <SelectItem value="approved">Aprobado</SelectItem>
@@ -506,39 +456,10 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 </Select>
               </div>
             </div>
-
-            {/* City selection */}
-            <div>
-              <Label className="text-sm flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" />
-                Ciudad
-              </Label>
-              <Select value={editDriver.city_id || ""} onValueChange={v => {
-                const selectedCity = cities.find(c => c.id === v);
-                update("city_id", v);
-                if (selectedCity) update("city_name", selectedCity.name);
-              }}>
-                <SelectTrigger className="h-7 text-sm"><SelectValue placeholder="Seleccionar ciudad" /></SelectTrigger>
-                <SelectContent>
-                  {cities.map(city => (
-                    <SelectItem key={city.id} value={city.id}>
-                      {city.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {editDriver.city_name && (
-                <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  Ciudad asignada: <span className="font-semibold text-slate-700">{editDriver.city_name}</span>
-                </p>
-              )}
-            </div>
-
             {/* Suspension reason — shown when status is suspended or blocked */}
             {(editDriver.status === "suspended" || editDriver.status === "blocked") && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 space-y-1">
-                <p className="text-xs font-semibold text-orange-800">📋 Motivo de suspensión (visible para el conductor)</p>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-orange-800">📋 Motivo de suspensión (visible para el conductor)</p>
                 <Textarea
                   value={editDriver.suspension_reason || ""}
                   onChange={e => update("suspension_reason", e.target.value)}
@@ -552,12 +473,12 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
 
             {/* Suspension block */}
             {driver.suspended_until && new Date(driver.suspended_until) > new Date() && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 space-y-1">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1 min-w-0">
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
                     <TimerOff className="w-5 h-5 text-orange-500 flex-shrink-0" />
                     <div>
-                      <p className="text-xs font-semibold text-orange-800">Suspendido automáticamente</p>
+                      <p className="text-sm font-semibold text-orange-800">Suspendido automáticamente</p>
                       <p className="text-xs text-orange-600">Hasta: {new Date(driver.suspended_until).toLocaleString("es-MX")}</p>
                     </div>
                   </div>
@@ -579,13 +500,13 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           </TabsContent>
 
           {/* ── VEHICLES TAB ── */}
-          <TabsContent value="vehicles" className="mt-3 space-y-1">
+          <TabsContent value="vehicles" className="mt-4 space-y-3">
             {!editingVehicleId && (
               <AdminAddVehicleForm
                 onAdd={(newVehicle) => {
                   setEditDriver(prev => {
                     const updated = [...(prev.vehicles || []), newVehicle];
-                    supabaseApi.drivers.update(driver.id, { vehicles: updated }).catch(err => console.error("Error updating vehicles:", err));
+                    supabaseApi.drivers.update(driver.id, { vehicles: updated });
                     queryClient.setQueryData(["drivers"], (old = []) =>
                       old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                     );
@@ -625,7 +546,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                     onAdd={(updatedVehicle) => {
                       setEditDriver(prev => {
                         const updated = (prev.vehicles || []).map(x => x.id === updatedVehicle.id ? updatedVehicle : x);
-                        supabaseApi.drivers.update(driver.id, { vehicles: updated }).catch(err => console.error("Error updating vehicles:", err));
+                        supabaseApi.drivers.update(driver.id, { vehicles: updated });
                         queryClient.setQueryData(["drivers"], (old = []) =>
                           old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                         );
@@ -643,7 +564,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 const newDisabled = !v.admin_disabled;
                 setEditDriver(prev => {
                   const updated = (prev.vehicles || []).map((x, j) => j === i ? { ...x, admin_disabled: newDisabled } : x);
-                  supabaseApi.drivers.update(driver.id, { vehicles: updated }).catch(err => console.error("Error updating vehicles:", err));
+                  supabaseApi.drivers.update(driver.id, { vehicles: updated });
                   queryClient.setQueryData(["drivers"], (old = []) =>
                     old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                   );
@@ -653,28 +574,28 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               };
 
               return (
-                <div key={v.id || i} className={`border-2 rounded-lg p-2 space-y-1 ${isDisabled ? "border-red-200 bg-red-50/30 opacity-80" : v.is_active ? "border-blue-300 bg-blue-50/40" : "border-slate-200"}`}>
+                <div key={v.id || i} className={`border-2 rounded-xl p-4 space-y-3 ${isDisabled ? "border-red-200 bg-red-50/30 opacity-80" : v.is_active ? "border-blue-300 bg-blue-50/40" : "border-slate-200"}`}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Car className={`w-4 h-4 ${isDisabled ? "text-red-400" : "text-slate-500"}`} />
                       <span className="font-semibold text-slate-800">{v.brand} {v.model}</span>
-                      <span className="text-xs text-slate-500">{v.year} · {v.color}</span>
-                      <span className="text-xs font-mono font-bold text-slate-700">{v.plates}</span>
+                      <span className="text-sm text-slate-500">{v.year} · {v.color}</span>
+                      <span className="text-sm font-mono font-bold text-slate-700">{v.plates}</span>
                       {v.is_active && !isDisabled && <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Activo</span>}
                       {hasExpiredDoc && <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">Doc vencido</span>}
                       {v.admin_disabled && !hasExpiredDoc && <span className="text-[10px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full">Deshabilitado</span>}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => setEditingVehicleId(v.id || i)}
-                        className="text-xs px-2.5 py-0.5 rounded-lg font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex-shrink-0"
+                        className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex-shrink-0"
                       >
                         Editar
                       </button>
                       <button
                         onClick={toggleDisabled}
                         disabled={hasExpiredDoc && !v.admin_disabled}
-                        className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold transition-all flex-shrink-0 ${
+                        className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all flex-shrink-0 ${
                           isDisabled ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"
                         } disabled:opacity-40 disabled:cursor-not-allowed`}
                       >
@@ -684,7 +605,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   </div>
 
                   {/* Vehicle docs — one per row with approve/reject */}
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {docsForVehicle.map(doc => {
                       const urlKey = `doc_${doc.key}_url`;
                       const expiryKey = `doc_${doc.key}_expiry`;
@@ -696,14 +617,14 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                       const requireExpiry = doc.require_expiry !== false;
 
                       return (
-                        <div key={doc.key} className={`p-2 rounded-lg border-2 transition-all ${isVDocApproved ? "border-emerald-300 bg-emerald-50" : isVDocRejected ? "border-red-200 bg-red-50" : url ? (days !== null && days < 0 ? "border-red-300 bg-red-50" : "border-amber-200 bg-amber-50") : "border-slate-100 bg-white"}`}>
-                          <div className="flex items-center justify-between gap-1 flex-wrap">
-                            <div className="flex items-center gap-1 min-w-0">
+                        <div key={doc.key} className={`p-3 rounded-xl border-2 transition-all ${isVDocApproved ? "border-emerald-300 bg-emerald-50" : isVDocRejected ? "border-red-200 bg-red-50" : url ? (days !== null && days < 0 ? "border-red-300 bg-red-50" : "border-amber-200 bg-amber-50") : "border-slate-100 bg-white"}`}>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 min-w-0">
                               {isVDocApproved ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                                 : isVDocRejected ? <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                                 : url ? <Clock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                                 : <X className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />}
-                              <span className="text-xs font-medium text-slate-700 truncate">{doc.label}</span>
+                              <span className="text-sm font-medium text-slate-700 truncate">{doc.label}</span>
                               {doc.required && <span className="text-[10px] text-red-500">*</span>}
                               {isVDocApproved && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full">✓ Aprobado</span>}
                               {isVDocRejected && <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full">✗ Rechazado</span>}
@@ -733,24 +654,17 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                               <label className="cursor-pointer">
                                 <input type="file" accept="image/*,.pdf" className="hidden" onChange={async e => {
                                   const f = e.target.files?.[0]; if (!f) return;
-                                  try {
-                                    setUploadingDoc(doc.key + "_" + i);
-                                    const { file_url } = await supabaseApi.uploads.uploadFile({ file: f });
-                                    setEditDriver(prev => {
-                                      const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [urlKey]: file_url } : x);
-                                      supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles }).catch(err => console.error("Error updating vehicles:", err));
-                                      queryClient.setQueryData(["drivers"], (old = []) =>
-                                        old.map(d => d.id === driver.id ? { ...d, vehicles: updatedVehicles } : d)
-                                      );
-                                      return { ...prev, vehicles: updatedVehicles };
-                                    });
-                                    toast.success("Documento cargado");
-                                  } catch (err) {
-                                    console.error("Upload error:", err);
-                                    toast.error("Error al cargar documento");
-                                  } finally {
-                                    setUploadingDoc(null);
-                                  }
+                                  setUploadingDoc(doc.key + "_" + i);
+                                  const { file_url } = await supabaseApi.uploads.uploadFile({ file: f });
+                                  setEditDriver(prev => {
+                                    const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [urlKey]: file_url } : x);
+                                    supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles });
+                                    queryClient.setQueryData(["drivers"], (old = []) =>
+                                      old.map(d => d.id === driver.id ? { ...d, vehicles: updatedVehicles } : d)
+                                    );
+                                    return { ...prev, vehicles: updatedVehicles };
+                                  });
+                                  setUploadingDoc(null);
                                 }} />
                                 <span className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 text-slate-600 cursor-pointer">
                                   {uploadingDoc === doc.key + "_" + i ? "..." : <><Upload className="w-3 h-3" /> Subir</>}
@@ -786,22 +700,23 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             })}
           </TabsContent>
 
-          <TabsContent value="services" className="mt-3 space-y-0.5">
+          <TabsContent value="services" className="mt-4 space-y-4">
             <div>
-              <Label className="text-xs text-slate-700 mb-3 block">Tipos de servicio asignados</Label>
-              <div className="space-y-1">
+              <Label className="text-sm text-slate-700 mb-3 block">Tipos de servicio asignados</Label>
+              <div className="space-y-2">
                 {serviceTypes.map(svc => {
                   const active = (editDriver.service_type_ids || []).includes(svc.id);
                   return (
-                    <div key={svc.id} className={`flex items-center justify-between p-2 rounded-lg border transition-all ${active ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white"}`}>
+                    <div key={svc.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${active ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white"}`}>
                       <div>
-                        <p className={`text-xs font-medium ${active ? "text-blue-800" : "text-slate-700"}`}>{svc.name}</p>
+                        <p className={`text-sm font-medium ${active ? "text-blue-800" : "text-slate-700"}`}>{svc.name}</p>
                         {svc.category && <p className="text-[10px] text-slate-400">{svc.category}</p>}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => { if (!active) toggleServiceType(svc.id, svc.name); }}
-                          className={`px-2.5 py-0.5 rounded-lg text-xs font-bold transition-all ${active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600"}`}>
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600"}`}
+                        >
                           Sí
                         </button>
                         <button
@@ -814,39 +729,22 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   );
                 })}
                 {serviceTypes.length === 0 && (
-                  <p className="text-xs text-slate-400 col-span-2">No hay tipos de servicio creados aún.</p>
+                  <p className="text-sm text-slate-400 col-span-2">No hay tipos de servicio creados aún.</p>
                 )}
               </div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-2">
+            <div className="bg-slate-50 rounded-xl p-4">
               <p className="text-xs text-slate-500 font-medium mb-2">RESUMEN DEL CONDUCTOR</p>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="text-center"><p className="text-lg font-bold text-slate-900">{driver.total_rides || 0}</p><p className="text-xs text-slate-400">Viajes</p></div>
                 <div className="text-center"><p className="text-lg font-bold text-emerald-600">${totalEarnings.toFixed(0)}</p><p className="text-xs text-slate-400">Ganancias</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-amber-600">{driver.rating || 5} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /></p><p className="text-xs text-slate-400">Calificación</p></div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <p className={`text-lg font-bold ${
-                      (driver.acceptance_rate || 100) >= 80 ? "text-emerald-600" :
-                      (driver.acceptance_rate || 100) >= 60 ? "text-amber-600" :
-                      "text-red-600"
-                    }`}>
-                      {driver.acceptance_rate || 100}%
-                    </p>
-                  </div>
-                  <p className="text-xs text-slate-400">Aceptación</p>
-                </div>
+                <div className="text-center"><p className="text-lg font-bold text-amber-600">{driver.rating || 5} <Star className="w-3 h-3 inline fill-amber-400 text-amber-400" /></p><p className="text-xs text-slate-400">Calificación</p></div>
               </div>
-              {(driver.rejection_count || 0) > 0 && (
-                <p className="text-[10px] text-slate-500 mt-1.5">
-                  📊 Rechazos: {driver.rejection_count || 0} · Aceptados: {driver.accepted_offers_count || 0}
-                </p>
-              )}
             </div>
           </TabsContent>
 
-          <TabsContent value="banking" className="mt-4 space-y-0.5">
-            <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-700 mb-2">
+          <TabsContent value="banking" className="mt-4 space-y-4">
+            <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-700 mb-2">
               Datos para transferencias de pago al conductor.
             </div>
             <div><Label>Titular de la cuenta</Label><Input value={editDriver.bank_holder || ""} onChange={e => update("bank_holder", e.target.value)} placeholder="Nombre completo del titular" /></div>
@@ -855,10 +753,10 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             <div><Label>CLABE interbancaria</Label><Input value={editDriver.bank_clabe || ""} onChange={e => update("bank_clabe", e.target.value)} placeholder="18 dígitos" maxLength={18} /></div>
           </TabsContent>
 
-          <TabsContent value="docs" className="mt-4 space-y-1">
-            <p className="text-xs text-slate-500 bg-blue-50 rounded-lg px-2.5 py-0.5.5">Documentos personales del conductor. Los documentos de cada vehículo están en la pestaña <strong>Vehículos</strong>.</p>
+          <TabsContent value="docs" className="mt-4 space-y-3">
+            <p className="text-xs text-slate-500 bg-blue-50 rounded-xl px-4 py-2.5">Documentos personales del conductor. Los documentos de cada vehículo están en la pestaña <strong>Vehículos</strong>.</p>
             {/* Summary bar */}
-            <div className="flex items-center gap-1 bg-slate-50 rounded-lg px-2.5 py-0.5.5 text-xs text-slate-600">
+            <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2.5 text-xs text-slate-600">
               <span className="text-emerald-600 font-semibold">✓ {Object.values(docApproved).filter(Boolean).length} aprobados</span>
               <span>·</span>
               <span className="text-red-500 font-semibold">✗ {Object.values(docRejected).filter(Boolean).length} rechazados</span>
@@ -867,7 +765,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             </div>
 
             {!canApproveDriver && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-700">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
                 ⚠️ Aprueba todos los documentos requeridos antes de aprobar al conductor.
               </div>
             )}
@@ -878,14 +776,14 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               const expiry = docExpiries[doc.key] || "";
               const expiryDays = expiry ? Math.ceil((new Date(expiry) - new Date()) / 86400000) : null;
               return (
-                <div key={doc.key} className={`p-2 rounded-lg border-2 transition-all ${isApproved ? "border-emerald-300 bg-emerald-50" : isRejected ? "border-red-200 bg-red-50" : docUrl ? "border-amber-200 bg-amber-50" : "border-slate-100"}`}>
-                  <div className="flex items-center justify-between gap-1 flex-wrap">
-                    <div className="flex items-center gap-1 flex-wrap">
+                <div key={doc.key} className={`p-3 rounded-xl border-2 transition-all ${isApproved ? "border-emerald-300 bg-emerald-50" : isRejected ? "border-red-200 bg-red-50" : docUrl ? "border-amber-200 bg-amber-50" : "border-slate-100"}`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {isApproved ? <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                         : isRejected ? <X className="w-4 h-4 text-red-500 flex-shrink-0" />
                         : docUrl ? <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
                         : <X className="w-4 h-4 text-slate-300 flex-shrink-0" />}
-                      <span className="text-xs font-medium text-slate-700">{doc.label}</span>
+                      <span className="text-sm font-medium text-slate-700">{doc.label}</span>
                       {doc.required && <span className="text-[10px] text-red-500">*</span>}
                       {isApproved && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Aprobado</span>}
                       {isRejected && <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">Rechazado</span>}
@@ -939,67 +837,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
             )}
           </TabsContent>
 
-          <TabsContent value="history" className="mt-4 space-y-1">
-            {(() => {
-              const driverRides = rides.filter(r => r.driver_id === driver?.id).sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at)).slice(0, 20);
-              return (
-                <>
-                  <div className="bg-blue-50 rounded-lg px-2.5 py-1 text-xs text-blue-700 mb-2">
-                    📋 Últimos {driverRides.length} viajes del conductor
-                  </div>
-                  {driverRides.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-6">Sin historial de viajes</p>
-                  )}
-                  <div className="space-y-1 max-h-96 overflow-y-auto">
-                    {driverRides.map(r => (
-                      <div key={r.id} className="border border-slate-100 rounded-lg p-2 space-y-1">
-                        <div className="flex items-center justify-between flex-wrap gap-1">
-                          <div>
-                            <span className="font-mono text-xs text-slate-600 font-bold">#{r.service_id || r.id?.slice(-6)}</span>
-                            <span className="text-xs text-slate-500 ml-2">{r.passenger_name || "Anónimo"}</span>
-                          </div>
-                          <Badge className={`text-xs py-0.5 ${
-                            r.status === "completed" ? "bg-emerald-100 text-emerald-800" :
-                            r.status === "cancelled" ? "bg-red-100 text-red-800" :
-                            r.status === "in_progress" ? "bg-blue-100 text-blue-800" :
-                            "bg-amber-100 text-amber-800"
-                          }`}>
-                            {r.status === "completed" ? "✓ Completado" :
-                             r.status === "cancelled" ? "✗ Cancelado" :
-                             r.status === "in_progress" ? "→ En progreso" :
-                             "○ Asignado"}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-slate-600 space-y-0.5">
-                          {r.pickup_address && (
-                            <p>📍 <span className="text-slate-500">{r.pickup_address.substring(0, 50)}</span></p>
-                          )}
-                          {r.dropoff_address && (
-                            <p>📍 <span className="text-slate-500">{r.dropoff_address.substring(0, 50)}</span></p>
-                          )}
-                          <div className="flex gap-2 flex-wrap text-slate-500">
-                            {r.distance_km && <span>📏 {r.distance_km.toFixed(1)} km</span>}
-                            {r.service_type_name && <span>🚗 {r.service_type_name}</span>}
-                            {r.final_price && <span>💰 ${r.final_price}</span>}
-                          </div>
-                          <div className="text-xs text-slate-400 flex gap-2">
-                            {r.requested_at && <span>📅 {new Date(r.requested_at).toLocaleDateString("es-MX")}</span>}
-                            {r.passenger_rating_for_driver > 0 && (
-                              <span className="text-violet-600 flex items-center gap-0.5">
-                                ⭐ {r.passenger_rating_for_driver}/5 {r.passenger_rating_comment && `"${r.passenger_rating_comment.substring(0, 30)}..."`}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
-          </TabsContent>
-
-          <TabsContent value="ratings" className="mt-4 space-y-0.5">
+          <TabsContent value="ratings" className="mt-4 space-y-4">
             {(() => {
               const ratedRides = rides.filter(r => r.driver_id === driver?.id && (r.admin_rating > 0 || r.passenger_rating_for_driver > 0));
               const avgAdmin = ratedRides.filter(r => r.admin_rating > 0).length > 0
@@ -1010,30 +848,30 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 : null;
               return (
                 <>
-                  <div className="grid grid-cols-3 gap-1">
-                    <div className="bg-slate-50 rounded-lg p-2 text-center">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
                       <p className="text-lg font-bold text-amber-600 flex items-center justify-center gap-1">{driver.rating || 5} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /></p>
                       <p className="text-xs text-slate-400">Calif. general</p>
                     </div>
-                    <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
                       <p className="text-lg font-bold text-blue-600">{avgAdmin || "—"}</p>
                       <p className="text-xs text-slate-400">Por admin</p>
                     </div>
-                    <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
                       <p className="text-lg font-bold text-violet-600">{avgPass || "—"}</p>
                       <p className="text-xs text-slate-400">Por pasajero</p>
                     </div>
                   </div>
-                  <div className="space-y-1 max-h-80 overflow-y-auto">
-                    {ratedRides.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Sin calificaciones aún</p>}
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {ratedRides.length === 0 && <p className="text-sm text-slate-400 text-center py-6">Sin calificaciones aún</p>}
                     {ratedRides.map(r => (
-                      <div key={r.id} className="border border-slate-100 rounded-lg p-2 space-y-1">
+                      <div key={r.id} className="border border-slate-100 rounded-xl p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs text-slate-400">#{r.service_id || r.id?.slice(-6)}</span>
                           <span className="text-xs text-slate-400">{r.passenger_name}</span>
                         </div>
                         {r.admin_rating > 0 && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <span className="text-[10px] text-slate-400 w-16">Admin:</span>
                             <div className="flex items-center gap-0.5">
                               {[1,2,3,4,5].map(n => <Star key={n} className={`w-3.5 h-3.5 ${n <= r.admin_rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />)}
@@ -1042,7 +880,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                           </div>
                         )}
                         {r.passenger_rating_for_driver > 0 && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <span className="text-[10px] text-slate-400 w-16">Pasajero:</span>
                             <div className="flex items-center gap-0.5">
                               {[1,2,3,4,5].map(n => <Star key={n} className={`w-3.5 h-3.5 ${n <= r.passenger_rating_for_driver ? "fill-violet-400 text-violet-400" : "text-slate-200"}`} />)}
@@ -1059,9 +897,9 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-sm">
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800">
             {saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>

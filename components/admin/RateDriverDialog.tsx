@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -17,32 +17,26 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
 
   const handleSave = async () => {
     setSaving(true);
-    try {
-      await supabaseApi.rideRequests.update(ride.id, {
-        admin_rating: rating,
-        admin_rating_comment: comment,
-      });
-      // Update driver average rating ONLY — do not change driver status
-      if (ride.driver_id) {
-        const driverRides = await supabaseApi.rideRequests.list({ driver_id: ride.driver_id });
-        // Include current rating in the calculation (it was just saved to the ride)
-        const allRated = [...driverRides.filter(r => r.admin_rating && r.id !== ride.id), { admin_rating: rating }];
-        const avg = allRated.reduce((s, r) => s + r.admin_rating, 0) / allRated.length;
-        // Only update rating field — never touch status, suspension, or any other driver field
-        await supabaseApi.drivers.update(ride.driver_id, { rating: parseFloat(avg.toFixed(1)) });
-      }
-      queryClient.invalidateQueries({ queryKey: ["rides"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.success("Calificación guardada");
-      setSaving(false);
-      onOpenChange(false);
-      setComment("");
-      setRating(5);
-    } catch (err) {
-      console.error("Error saving rating:", err);
-      toast.error("Error al guardar calificación");
-      setSaving(false);
+    await supabaseApi.rideRequests.update(ride.id, {
+      admin_rating: rating,
+      admin_rating_comment: comment,
+    });
+    // Update driver average rating ONLY — do not change driver status
+    if (ride.driver_id) {
+      const driverRides = await supabaseApi.rideRequests.list({ driver_id: ride.driver_id });
+      // Include current rating in the calculation (it was just saved to the ride)
+      const allRated = [...driverRides.filter(r => r.admin_rating && r.id !== ride.id), { admin_rating: rating }];
+      const avg = allRated.reduce((s, r) => s + r.admin_rating, 0) / allRated.length;
+      // Only update rating field — never touch status, suspension, or any other driver field
+      await supabaseApi.drivers.update(ride.driver_id, { rating: parseFloat(avg.toFixed(1)) });
     }
+    queryClient.invalidateQueries({ queryKey: ["rides"] });
+    queryClient.invalidateQueries({ queryKey: ["drivers"] });
+    toast.success("Calificación guardada");
+    setSaving(false);
+    onOpenChange(false);
+    setComment("");
+    setRating(5);
   };
 
   return (
@@ -50,9 +44,6 @@ export default function RateDriverDialog({ ride, open, onOpenChange }) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Calificar conductor</DialogTitle>
-          <DialogDescription className="sr-only">
-            Califica el desempeno del conductor para este viaje.
-          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="text-center">

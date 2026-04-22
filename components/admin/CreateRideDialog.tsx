@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import AddressSearch from "./AddressSearch";
 import MapPreview from "./MapPreview";
 import AdminMapPicker from "./AdminMapPicker";
@@ -41,7 +40,6 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     // Corporate: company_price = what company pays, driver sees only driver_estimated_price
     company_price: "",
     driver_estimated_price: "",
-    gasoline_liters: "",
   });
 
   const { data: zones = [] } = useQuery({
@@ -58,10 +56,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
-    queryFn: async () => {
-      const all = await supabaseApi.companies.list();
-      return all.filter((c: any) => c.is_active);
-    },
+    queryFn: () => supabaseApi.companies.list({ is_active: true }),
     enabled: open,
   });
 
@@ -78,15 +73,10 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   // Auto-fill passenger data from phone number
   const handlePhoneBlur = async (phone) => {
     if (!phone || phone.length < 8) return;
-    try {
-      const users = await supabaseApi.roadAssistUsers.list();
-      const found = users.filter(u => u.phone === phone.trim());
-      if (found.length > 0) {
-        const p = found[0];
-        setForm(prev => ({ ...prev, passenger_name: p.full_name || prev.passenger_name }));
-      }
-    } catch (err) {
-      console.error("Error fetching road_assist_users:", err);
+    const found = await supabaseApi.roadAssistUsers.list({ phone: phone.trim() });
+    if (found.length > 0) {
+      const p = found[0];
+      setForm(prev => ({ ...prev, passenger_name: p.full_name || prev.passenger_name }));
     }
   };
 
@@ -95,7 +85,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   // Build category list from active serviceTypes
   const categoryList = useMemo(() => {
-    const cats = new Set<string>();
+    const cats = new Set();
     (serviceTypes || []).filter(s => s.is_active).forEach(s => cats.add(s.category?.trim() || "Servicios"));
     return Array.from(cats).sort();
   }, [serviceTypes]);
@@ -136,39 +126,17 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const fetchRoute = async (pickup, dropoff) => {
     if (!pickup || !dropoff) return;
     setRouteLoading(true);
-    try {
-      const pLon = pickup.lon || pickup.lng;
-      const dLon = dropoff.lon || dropoff.lng;
-      
-      // Validate coordinates are valid numbers
-      if (typeof pickup.lat !== 'number' || typeof pLon !== 'number' || 
-          typeof dropoff.lat !== 'number' || typeof dLon !== 'number') {
-        console.warn("[CreateRideDialog] Invalid coordinates:", { pickup, dropoff });
-        setRouteLoading(false);
-        return;
-      }
-      
-      const url = `https://router.project-osrm.org/route/v1/driving/${pLon},${pickup.lat};${dLon},${dropoff.lat}?overview=full&geometries=geojson`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.error("[CreateRideDialog] OSRM request failed:", res.status);
-        setRouteLoading(false);
-        return;
-      }
-      
-      const data = await res.json();
-      if (data.routes?.[0]?.geometry?.coordinates) {
-        const km = (data.routes[0].distance / 1000).toFixed(1);
-        const mins = Math.round(data.routes[0].duration / 60);
-        const coords = data.routes[0].geometry.coordinates;
-        
-        // Validate coordinates are arrays
-        if (Array.isArray(coords) && coords.length > 0) {
-          setRoutePoints(coords.map(([lng, lat]) => [lat, lng]));
-        } else {
-          console.warn("[CreateRideDialog] Invalid coordinates from OSRM:", coords);
-          setRoutePoints(null);
-        }
+    const pLon = pickup.lon || pickup.lng;
+    const dLon = dropoff.lon || dropoff.lng;
+    const url = `https://router.project-osrm.org/route/v1/driving/${pLon},${pickup.lat};${dLon},${dropoff.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.routes?.[0]) {
+      const km = (data.routes[0].distance / 1000).toFixed(1);
+      const mins = Math.round(data.routes[0].duration / 60);
+      // Extract polyline points from GeoJSON
+      const coords = data.routes[0].geometry?.coordinates;
+      if (coords) setRoutePoints(coords.map(([lng, lat]) => [lat, lng]));
       setForm(prev => {
         const zone = detectZone(pickup.lat, pickup.lng || pickup.lon, zones);
         setDetectedZone(zone || null);
@@ -207,16 +175,8 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
         }
         return { ...prev, distance_km: km, duration_minutes: String(mins), estimated_price: price };
       });
-      } else {
-        console.warn("[CreateRideDialog] No valid route from OSRM");
-        setRoutePoints(null);
-      }
-    } catch (err) {
-      console.error("[CreateRideDialog] Error fetching route:", err);
-      setRoutePoints(null);
-    } finally {
-      setRouteLoading(false);
     }
+    setRouteLoading(false);
   };
 
   const handlePickupChange = (addr, coords) => {
@@ -307,183 +267,87 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const isGasolineService = /gasolina/i.test(form.service_type_name || "") || /gasolina/i.test(form.notes || "");
 
   const handleCreate = async () => {
-    console.log('[CreateRideDialog] handleCreate called');
-    
-    // Validaciones previas
-    if (!form.passenger_name?.trim()) {
-      console.log('[CreateRideDialog] Validation: Missing passenger name');
-      toast.error("Ingresa el nombre del pasajero");
-      return;
-    }
-    if (!form.pickup_address?.trim()) {
-      console.log('[CreateRideDialog] Validation: Missing pickup address');
-      toast.error("Ingresa la dirección de recogida");
-      return;
-    }
-    if (!pickupCoords) {
-      console.log('[CreateRideDialog] Validation: Missing pickup coordinates');
-      toast.error("Selecciona un punto de recogida en el mapa");
-      return;
-    }
-    if (!form.service_type_name) {
-      console.log('[CreateRideDialog] Validation: Missing service type');
-      toast.error("Selecciona un tipo de servicio");
-      return;
-    }
-    if (!form.payment_method) {
-      console.log('[CreateRideDialog] Validation: Missing payment method');
-      toast.error("Selecciona un método de pago");
-      return;
-    }
-    if (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) {
-      console.log('[CreateRideDialog] Validation: Missing scheduled date/time');
-      toast.error("Ingresa fecha y hora para el viaje programado");
-      return;
-    }
-    if (destinationRequired && !form.dropoff_address?.trim()) {
-      console.log('[CreateRideDialog] Validation: Destination required but missing');
-      toast.error("La dirección de destino es obligatoria para este servicio");
-      return;
-    }
-    if (form.dropoff_address && !dropoffCoords && !isVial) {
-      console.log('[CreateRideDialog] Validation: Dropoff address without coordinates');
-      toast.error("Selecciona un punto de destino válido en el mapa");
-      return;
-    }
-
     if (detectedRedZone) {
-      console.log('[CreateRideDialog] Validation: Red zone detected');
-      toast.error(`❌ No se puede crear el servicio: ZONA ROJA - ${detectedRedZone.name}`);
+      alert(`No se puede crear el servicio: ZONA ROJA - ${detectedRedZone.name}`);
       return;
     }
-    
-    console.log('[CreateRideDialog] All validations passed, proceeding with ride creation');
-
     setSaving(true);
     try {
-      const company = form.company_id ? companies.find(c => c.id === form.company_id) : null;
-      const isAuction = form.assignment_mode === "auction";
-      const auctionExpiresAt = isAuction
-        ? new Date(Date.now() + (settings?.auction_timeout_seconds || 30) * 1000).toISOString()
-        : undefined;
+    const company = form.company_id ? companies.find(c => c.id === form.company_id) : null;
+    const isAuction = form.assignment_mode === "auction";
+    const auctionExpiresAt = isAuction
+      ? new Date(Date.now() + (settings?.auction_timeout_seconds || 30) * 1000).toISOString()
+      : undefined;
 
-      // Corporate vs normal pricing
-      const isCorporate = !!form.company_id;
-      const basePrice = form.estimated_price ? parseFloat(form.estimated_price) : 0;
-      const extraCost = form.extra_company_cost ? parseFloat(form.extra_company_cost) : 0;
-      const totalPrice = basePrice + extraCost;
-      const driverEstimated = isCorporate
-        ? calcDriverPayFromCompanyPrice(basePrice, form.service_type_name)
-        : undefined;
-      const companyPrice = isCorporate ? totalPrice : undefined;
+    // Corporate vs normal pricing
+    const isCorporate = !!form.company_id;
+    const basePrice = form.estimated_price ? parseFloat(form.estimated_price) : 0;
+    const extraCost = form.extra_company_cost ? parseFloat(form.extra_company_cost) : 0;
+    const totalPrice = basePrice + extraCost;
 
-      // Build explicit data object without spreading form to avoid unknown fields
-      const data = {
-        passenger_name: form.passenger_name,
-        passenger_phone: form.passenger_phone,
-        pickup_address: form.pickup_address,
-        dropoff_address: form.dropoff_address || undefined,
-        service_type_name: form.service_type_name,
-        service_type_id: form.service_type_id,
-        payment_method: form.payment_method,
-        notes: form.notes || undefined,
-        service_id: generateServiceId(),
-        requested_at: nowCDMX(),
-        estimated_price: isCorporate ? driverEstimated : (totalPrice > 0 ? totalPrice : undefined),
-        company_price: companyPrice > 0 ? companyPrice : undefined,
-        distance_km: form.distance_km ? parseFloat(form.distance_km) : undefined,
-        duration_minutes: form.duration_minutes ? parseFloat(form.duration_minutes) : undefined,
-        status: form.is_scheduled ? "scheduled" : isAuction ? "auction" : "pending",
-        assignment_mode: form.assignment_mode,
-        auction_expires_at: auctionExpiresAt,
-        company_id: form.company_id || undefined,
-        company_name: company?.razon_social || undefined,
-        ride_type: form.company_id ? "corporativo" : "normal",
-        geo_zone_id: detectedZone?.id || undefined,
-        geo_zone_name: detectedZone?.name || undefined,
-        proof_photo_required: form.require_proof_photo,
-        require_admin_approval: form.require_admin_approval || false,
-        show_phone_to_driver: form.show_phone_to_driver,
-        pickup_lat: pickupCoords?.lat || undefined,
-        pickup_lon: pickupCoords?.lon || pickupCoords?.lng || undefined,
-        dropoff_lat: dropoffCoords?.lat || undefined,
-        dropoff_lon: dropoffCoords?.lon || dropoffCoords?.lng || undefined,
-        scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
-          ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
-          : undefined,
-        questionnaire_answers: isGrua && Object.keys(questionnaireAnswers).length > 0
-          ? Object.entries(questionnaireAnswers).map(([i, v]) => ({
-              question: selectedServiceType?.questionnaire?.[i]?.question || "",
-              answer: v
-            }))
-          : undefined,
-        custom_field_answers: selectedServiceType?.custom_fields?.length > 0
-          ? selectedServiceType.custom_fields.map(f => ({
-              key: f.key,
-              label: f.label,
-              answer: customFieldAnswers[f.key] || ""
-            })).filter(f => f.answer)
-          : undefined,
-        is_gasoline: isGasolineService,
-        gasoline_liters: isGasolineService ? (form.gasoline_liters || undefined) : undefined,
-        is_red_zone_blocked: !!detectedRedZone,
-      };
+    // For corporate: company_price = what company pays, driver_estimated_price = what driver receives
+    const companyPrice = isCorporate ? (form.company_price ? parseFloat(form.company_price) + extraCost : totalPrice) : undefined;
+    const driverEstimated = isCorporate
+      ? (form.driver_estimated_price ? parseFloat(form.driver_estimated_price) : calcDriverPayFromCompanyPrice(basePrice, form.service_type_name))
+      : undefined;
 
-      console.log("[CreateRideDialog] Creando viaje con datos:", {
-        passenger_name: data.passenger_name,
-        pickup_address: data.pickup_address,
-        service_type: data.service_type_name,
-        status: data.status,
-        assignment_mode: data.assignment_mode,
-        estimated_price: data.estimated_price,
-        company_price: data.company_price,
-      });
-      console.log("[CreateRideDialog] Datos completos:", JSON.stringify(Object.keys(data).sort()));
-
-      const result = await supabaseApi.rideRequests.create(data);
-      console.log("[CreateRideDialog] Viaje creado exitosamente:", result);
-      
-      // La asignación se manejará en realtime desde Supabase, no por API
-      
-      toast.success("✅ Viaje creado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["rides"] });
-      onOpenChange(false);
-      
-      // Reset form
-      setForm({ 
-        passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", 
-        service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", 
-        duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", 
-        assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, 
-        is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", 
-        show_phone_to_driver: true,
-        company_price: "",
-        driver_estimated_price: "",
-        gasoline_liters: ""
-      });
-      setSelectedCategory("");
-      setQuestionnaireAnswers({});
-      setCustomFieldAnswers({});
-      setFolioAnswers({});
-      setPickupCoords(null);
-      setDropoffCoords(null);
-      setDetectedZone(null);
-    } catch (error) {
-      console.error("[CreateRideDialog] Error al crear viaje:", error);
-      
-      // Determinar el mensaje de error apropiado
-      let errorMsg = "Error al crear el viaje";
-      if (error?.message?.includes("RLS")) {
-        errorMsg = "❌ Permiso denegado: revisa la configuración de seguridad en la base de datos";
-      } else if (error?.message?.includes("violates")) {
-        errorMsg = `❌ Datos inválidos: ${error.message}`;
-      } else if (error?.message?.includes("not-null constraint")) {
-        errorMsg = "❌ Faltan campos obligatorios en los datos";
-      } else if (error?.message) {
-        errorMsg = `❌ ${error.message}`;
-      }
-      
-      toast.error(errorMsg);
+    const data = {
+      ...form,
+      service_id: generateServiceId(),
+      requested_at: nowCDMX(),
+      // estimated_price: for normal = total; for corporate = driver's amount (driver-visible)
+      estimated_price: isCorporate ? (driverEstimated || undefined) : (totalPrice > 0 ? totalPrice : undefined),
+      company_price: companyPrice > 0 ? companyPrice : undefined,
+      extra_company_cost: extraCost > 0 ? extraCost : undefined,
+      distance_km: form.distance_km ? parseFloat(form.distance_km) : undefined,
+      duration_minutes: form.duration_minutes ? parseFloat(form.duration_minutes) : undefined,
+      status: form.is_scheduled ? "scheduled" : isAuction ? "auction" : "pending",
+      assignment_mode: form.assignment_mode,
+      auction_expires_at: auctionExpiresAt,
+      geo_zone_id: detectedZone?.id || undefined,
+      geo_zone_name: detectedZone?.name || undefined,
+      company_name: company?.razon_social || undefined,
+      ride_type: form.company_id ? "corporativo" : "normal",
+      proof_photo_required: form.require_proof_photo,
+      require_admin_approval: form.require_admin_approval || false,
+      show_phone_to_driver: form.show_phone_to_driver,
+      // ── Coordenadas de recogida y destino (necesarias para ETA y auto-asignación) ──
+      pickup_lat: pickupCoords?.lat || undefined,
+      pickup_lon: pickupCoords?.lon || pickupCoords?.lng || undefined,
+      dropoff_lat: dropoffCoords?.lat || undefined,
+      dropoff_lon: dropoffCoords?.lon || dropoffCoords?.lng || undefined,
+      scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
+        ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
+        : undefined,
+      questionnaire_answers: isGrua && Object.keys(questionnaireAnswers).length > 0
+        ? Object.entries(questionnaireAnswers).map(([i, v]) => ({
+            question: selectedServiceType?.questionnaire?.[i]?.question || "",
+            answer: v
+          }))
+        : undefined,
+      custom_field_answers: selectedServiceType?.custom_fields?.length > 0
+        ? selectedServiceType.custom_fields.map(f => ({
+            key: f.key,
+            label: f.label,
+            answer: customFieldAnswers[f.key] || ""
+          })).filter(f => f.answer)
+        : undefined,
+      folio_data: company && (company.folio_fields || []).length > 0 ? folioAnswers : undefined,
+      is_gasoline: isGasolineService,
+      gasoline_liters: isGasolineService ? (form.gasoline_liters || undefined) : undefined,
+      is_red_zone_blocked: !!detectedRedZone,
+    };
+    await supabaseApi.rideRequests.create(data);
+    queryClient.invalidateQueries({ queryKey: ["rides"] });
+    onOpenChange(false);
+    setForm({ passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", show_phone_to_driver: true });
+    setSelectedCategory("");
+    setQuestionnaireAnswers({});
+    setCustomFieldAnswers({});
+    setFolioAnswers({});
+    setPickupCoords(null);
+    setDropoffCoords(null);
+    setDetectedZone(null);
     } finally {
       setSaving(false);
     }
@@ -504,16 +368,15 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1000px' }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuevo viaje</DialogTitle>
-          <DialogDescription>Formulario para crear un nuevo viaje</DialogDescription>
         </DialogHeader>
-        <div className="space-y-1.5 py-1">
+        <div className="space-y-4 py-2">
 
           {/* PASO 1: Categoría */}
           <div>
-            <Label className="text-xs text-xs">Categoría *</Label>
+            <Label>Categoría *</Label>
             <Select value={selectedCategory} onValueChange={(v) => {
               setSelectedCategory(v);
               // Reset service if it doesn't belong to new category
@@ -532,7 +395,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           {/* PASO 2: Tipo de servicio (subcategoría) */}
           <div>
-            <Label className="text-xs text-xs">Tipo de servicio *</Label>
+            <Label>Tipo de servicio *</Label>
             <Select
               value={form.service_type_name}
               onValueChange={handleServiceChange}
@@ -557,7 +420,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               </p>
               {selectedServiceType.questionnaire.map((q, i) => (
                 <div key={i}>
-                  <Label className="text-xs text-amber-800">{q.question}{q.required && " *"}</Label>
+                  <Label className="text-amber-800">{q.question}{q.required && " *"}</Label>
                   <Select
                     value={questionnaireAnswers[i] || ""}
                     onValueChange={v => setQuestionnaireAnswers(prev => ({ ...prev, [i]: v }))}
@@ -584,7 +447,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               </p>
               {selectedServiceType.custom_fields.map(field => (
                 <div key={field.key}>
-                  <Label className="text-xs text-violet-800">{field.label}{field.required && " *"}</Label>
+                  <Label className="text-violet-800">{field.label}{field.required && " *"}</Label>
                   {field.type === "select" ? (
                     <Select
                       value={customFieldAnswers[field.key] || ""}
@@ -615,11 +478,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs text-xs">Nombre del pasajero *</Label>
+              <Label>Nombre del pasajero *</Label>
               <Input value={form.passenger_name} onChange={e => update("passenger_name", e.target.value)} placeholder="Nombre completo" />
             </div>
             <div>
-              <Label className="text-xs text-xs">Teléfono</Label>
+              <Label>Teléfono</Label>
               <Input
                 value={form.passenger_phone}
                 onChange={e => update("passenger_phone", e.target.value)}
@@ -631,7 +494,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           {/* Assignment mode */}
           <div>
-            <Label className="text-xs text-xs">Modo de asignación</Label>
+            <Label>Modo de asignación</Label>
             <div className="flex gap-2 mt-1">
               <button
                 onClick={() => update("assignment_mode", "auto")}
@@ -660,12 +523,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           </div>
 
           <div>
-            <Label className="text-xs text-xs">Dirección de recogida *</Label>
+            <Label>Dirección de recogida *</Label>
             <AddressSearch
               value={form.pickup_address}
               onChange={handlePickupChange}
               placeholder="¿Dónde recogemos?"
-              label="Dirección de recogida"
             />
             {detectedRedZone && (
               <div className="mt-1.5 flex items-center gap-2 bg-red-50 border border-red-300 rounded-xl px-3 py-2">
@@ -685,7 +547,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           </div>
           {!isVial && (
             <div>
-              <Label className="text-xs text-xs">Dirección de destino {destinationRequired ? <span className="text-red-500 font-medium">*</span> : <span className="text-slate-400 font-normal">(opcional)</span>}</Label>
+              <Label>Dirección de destino {destinationRequired ? <span className="text-red-500 font-medium">*</span> : <span className="text-slate-400 font-normal">(opcional)</span>}</Label>
               <AddressSearch
                 value={form.dropoff_address}
                 onChange={(addr, coords) => {
@@ -698,7 +560,6 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   if (pickupCoords) fetchRoute(pickupCoords, coords);
                 }}
                 placeholder={destinationRequired ? "¿A dónde va? (obligatorio)" : "¿A dónde va? (opcional)"}
-                label="Dirección de destino"
               />
             </div>
           )}
@@ -722,7 +583,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           />
 
           <div>
-            <Label className="text-xs text-xs">Método de pago *</Label>
+            <Label>Método de pago *</Label>
             <Select value={form.payment_method} onValueChange={v => update("payment_method", v)}>
               <SelectTrigger className={!form.payment_method ? "border-red-300" : ""}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent>
@@ -735,14 +596,14 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           {/* Gasoline special field */}
           {isGasolineService && (
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-3">
-              <Label className="text-xs text-amber-800 font-semibold">⛽ Litros de gasolina</Label>
+              <Label className="text-amber-800 font-semibold">⛽ Litros de gasolina</Label>
               <div className="flex gap-2 mt-2">
                 {[5, 10].map(liters => (
                   <button
                     key={liters}
                     type="button"
-                    onClick={() => update("gasoline_liters", String(liters))}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${parseFloat(form.gasoline_liters) === liters ? "bg-amber-600 border-amber-600 text-white" : "bg-white border-amber-200 text-amber-700"}`}
+                    onClick={() => update("gasoline_liters", liters)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${form.gasoline_liters === liters ? "bg-amber-600 border-amber-600 text-white" : "bg-white border-amber-200 text-amber-700"}`}
                   >
                     {liters} litros
                   </button>
@@ -757,7 +618,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               <p className="text-xs font-semibold text-blue-800">💼 Costos corporativos</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-blue-800">Costo empresa <span className="text-red-500">*</span></Label>
+                  <Label className="text-blue-800">Costo empresa <span className="text-red-500">*</span></Label>
                   <p className="text-[10px] text-slate-400 mb-1">Lo que se factura a la empresa</p>
                   <Input
                     type="number"
@@ -772,7 +633,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-emerald-700">Pago al conductor</Label>
+                  <Label className="text-emerald-700">Pago al conductor</Label>
                   <p className="text-[10px] text-slate-400 mb-1">Solo el conductor ve este monto</p>
                   <Input
                     type="number"
@@ -790,16 +651,16 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-xs">Distancia (km)</Label>
+                  <Label>Distancia (km)</Label>
                   <Input type="number" value={form.distance_km} onChange={e => handleDistanceChange(e.target.value)} placeholder="0" />
                 </div>
                 <div>
-                  <Label className="text-xs text-xs">Duración (min)</Label>
+                  <Label>Duración (min)</Label>
                   <Input type="number" value={form.duration_minutes} onChange={e => update("duration_minutes", e.target.value)} placeholder="0" />
                 </div>
               </div>
               <div>
-                <Label className="text-xs text-xs">Costo extra empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
+                <Label>Costo extra empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
                 <Input type="number" value={form.extra_company_cost} onChange={e => update("extra_company_cost", e.target.value)} placeholder="$0" className="mt-1" />
               </div>
             </div>
@@ -807,24 +668,24 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
             <>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label className="text-xs text-xs">Precio estimado</Label>
+                  <Label>Precio estimado</Label>
                   <Input type="number" value={form.estimated_price} onChange={e => update("estimated_price", e.target.value)} placeholder="$0" />
                 </div>
                 <div>
-                  <Label className="text-xs text-xs">Distancia (km)</Label>
+                  <Label>Distancia (km)</Label>
                   <Input type="number" value={form.distance_km} onChange={e => handleDistanceChange(e.target.value)} placeholder="0" />
                 </div>
                 <div>
-                  <Label className="text-xs text-xs">Duración (min)</Label>
+                  <Label>Duración (min)</Label>
                   <Input type="number" value={form.duration_minutes} onChange={e => update("duration_minutes", e.target.value)} placeholder="0" />
                 </div>
               </div>
               <div>
-                <Label className="text-xs text-xs">Costo extra para empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
+                <Label>Costo extra para empresa <span className="text-slate-400 font-normal">(opcional)</span></Label>
                 <Input type="number" value={form.extra_company_cost} onChange={e => update("extra_company_cost", e.target.value)} placeholder="$0" className="mt-1" />
                 {form.extra_company_cost && parseFloat(form.extra_company_cost) > 0 && (
                   <p className="text-xs text-blue-600 mt-1">
-                    Total con extra: ${(parseFloat(form.estimated_price || "0") + parseFloat(form.extra_company_cost || "0")).toFixed(0)}
+                    Total con extra: ${(parseFloat(form.estimated_price || 0) + parseFloat(form.extra_company_cost)).toFixed(0)}
                   </p>
                 )}
               </div>
@@ -849,7 +710,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
           {/* Corporate */}
           <div>
-            <Label className="text-xs text-xs">Empresa (corporativo)</Label>
+            <Label>Empresa (corporativo)</Label>
             <Select value={form.company_id || "__none__"} onValueChange={handleCompanyChange}>
               <SelectTrigger className="mt-1"><SelectValue placeholder="Normal (sin empresa)" /></SelectTrigger>
               <SelectContent>
@@ -864,7 +725,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               <p className="text-xs font-semibold text-indigo-800">📋 Campos de folio requeridos</p>
               {(selectedCompany.folio_fields || []).map((field, idx) => (
                 <div key={idx}>
-                  <Label className="text-xs text-indigo-800">{field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}</Label>
+                  <Label className="text-indigo-800">{field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}</Label>
                   <Input
                     value={folioAnswers[field.key] || ""}
                     onChange={e => setFolioAnswers(prev => ({ ...prev, [field.key]: e.target.value }))}
@@ -956,7 +817,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
             {form.is_scheduled && (
               <div className="mt-2 grid grid-cols-2 gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                 <div>
-                  <Label className="text-xs text-blue-800">Fecha *</Label>
+                  <Label className="text-blue-800">Fecha *</Label>
                   <Input
                     type="date"
                     value={form.scheduled_date}
@@ -966,7 +827,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-800">Hora *</Label>
+                  <Label className="text-blue-800">Hora *</Label>
                   <Input
                     type="time"
                     value={form.scheduled_time}
@@ -984,45 +845,23 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           </div>
 
           <div>
-            <Label className="text-xs text-xs">Notas</Label>
+            <Label>Notas</Label>
             <Textarea value={form.notes} onChange={e => update("notes", e.target.value)} placeholder="Instrucciones especiales..." rows={2} />
           </div>
         </div>
-        <DialogFooter className="flex flex-col gap-3">
-          {/* Validation messages */}
-          {(() => {
-            const issues = [];
-            if (!form.passenger_name?.trim()) issues.push("Ingresa el nombre del pasajero");
-            if (!form.pickup_address?.trim()) issues.push("Ingresa la dirección de recogida");
-            if (!pickupCoords) issues.push("Selecciona la dirección de recogida del listado de sugerencias");
-            if (!form.service_type_name) issues.push("Selecciona un tipo de servicio");
-            if (!form.payment_method) issues.push("Selecciona un método de pago");
-            if (!isVial && (destinationRequired || form.dropoff_address) && !dropoffCoords) 
-              issues.push("Selecciona la dirección de destino del listado de sugerencias");
-            if (form.is_scheduled && !form.scheduled_date) issues.push("Ingresa la fecha del viaje programado");
-            if (form.is_scheduled && !form.scheduled_time) issues.push("Ingresa la hora del viaje programado");
-
-            return issues.length > 0 ? (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1">
-                <p className="text-xs font-semibold text-red-800 flex items-center gap-1">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Completa los campos requeridos:
-                </p>
-                {issues.map((issue, idx) => (
-                  <p key={idx} className="text-xs text-red-700">• {issue}</p>
-                ))}
-              </div>
-            ) : null;
-          })()}
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={() => {
-              console.log('[CreateRideDialog] Button clicked! Saving:', saving);
-              console.log('[CreateRideDialog] Form state:', { passenger: form.passenger_name, pickup: form.pickup_address, service: form.service_type_name, payment: form.payment_method, coords: !!pickupCoords });
-              handleCreate();
-            }} disabled={saving}>
-              {saving ? "Creando..." : "Crear viaje"}
-            </Button>
-          </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleCreate} disabled={
+            !form.passenger_name || !form.pickup_address || !form.service_type_name || !form.payment_method ||
+            !pickupCoords ||
+            (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) ||
+            ((destinationRequired || (form.dropoff_address && !dropoffCoords)) && !isVial && !dropoffCoords) ||
+            (selectedCompany && (selectedCompany.folio_fields || []).some(f => f.required && !folioAnswers[f.key])) ||
+            (selectedServiceType?.custom_fields || []).some(f => f.required && !customFieldAnswers[f.key]) ||
+            saving
+          }>
+            {saving ? "Creando..." : "Crear viaje"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

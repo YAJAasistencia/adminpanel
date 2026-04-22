@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import { Star, Car, AlertCircle, MapPin, Navigation, List, Map as MapIcon } from
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { toast } from "sonner";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -157,41 +156,30 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
   const handleAssign = async () => {
     if (!selectedDriverId) return;
     setSaving(true);
-    try {
-      const driver = drivers.find(d => d.id === selectedDriverId);
-      if (!driver) { 
-        toast.error("Conductor no encontrado");
-        setSaving(false); 
-        return; 
-      }
+    const driver = drivers.find(d => d.id === selectedDriverId);
+    if (!driver) { setSaving(false); return; }
 
-      // If ride was previously assigned to a different driver, release them first
-      const previousDriverId = ride?.driver_id;
-      if (previousDriverId && previousDriverId !== selectedDriverId) {
-        await supabaseApi.drivers.update(previousDriverId, { status: "available" });
-      }
-
-      const updatedRide = {
-        driver_id: selectedDriverId,
-        driver_name: driver.full_name,
-        status: "assigned",
-        _excluded_driver_ids: [],
-        auction_driver_ids: [],
-        driver_accepted_at: null,
-      };
-      await supabaseApi.rideRequests.update(ride.id, updatedRide);
-      queryClient.invalidateQueries({ queryKey: ["rides"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.success("Conductor asignado");
-      setSaving(false);
-      if (onAssigned) onAssigned({ ...ride, ...updatedRide }, driver);
-      onOpenChange(false);
-      setSelectedDriverId("");
-    } catch (err) {
-      console.error("Error assigning driver:", err);
-      toast.error("Error al asignar conductor");
-      setSaving(false);
+    // If ride was previously assigned to a different driver, release them first
+    const previousDriverId = ride?.driver_id;
+    if (previousDriverId && previousDriverId !== selectedDriverId) {
+      await supabaseApi.drivers.update(previousDriverId, { status: "available" });
     }
+
+    const updatedRide = {
+      driver_id: selectedDriverId,
+      driver_name: driver.full_name,
+      status: "assigned",
+      _excluded_driver_ids: [],
+      auction_driver_ids: [],
+    };
+    await supabaseApi.rideRequests.update(ride.id, updatedRide);
+    await supabaseApi.drivers.update(selectedDriverId, { status: "busy" });
+    queryClient.invalidateQueries({ queryKey: ["rides"] });
+    queryClient.invalidateQueries({ queryKey: ["drivers"] });
+    setSaving(false);
+    if (onAssigned) onAssigned({ ...ride, ...updatedRide }, driver);
+    onOpenChange(false);
+    setSelectedDriverId("");
   };
 
   const nearest = availableDrivers[0];
@@ -201,21 +189,18 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '773px' }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg flex items-center gap-2">
             Asignar conductor
             <span className="text-sm font-normal text-slate-400">— {availableDrivers.length} disponible{availableDrivers.length !== 1 ? "s" : ""}</span>
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            Selecciona un conductor disponible para asignar este viaje manualmente.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Ride info */}
           <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-            <p className="text-xs font-semibold text-slate-900">{ride?.passenger_name}</p>
+            <p className="text-sm font-semibold text-slate-900">{ride?.passenger_name}</p>
             <p className="text-xs text-slate-500 mt-0.5">
               {ride?.pickup_address}{ride?.dropoff_address ? ` → ${ride.dropoff_address}` : " (destino no definido)"}
             </p>
@@ -282,14 +267,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
                 {geoZones.map(zone => {
                   const color = zone.color || "#10B981";
                   if (zone.tipo_zona === "poligono" && Array.isArray(zone.poligono) && zone.poligono.length >= 3) {
-                    const positions = zone.poligono
-                      .map((point) => {
-                        const lat = Number(point?.lat);
-                        const lng = Number(point?.lng ?? point?.lon);
-                        return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
-                      })
-                      .filter(Boolean);
-                    if (positions.length < 3) return null;
+                    const positions = zone.poligono.map(p => [p.lat, p.lng || p.lon]);
                     return (
                       <Polygon
                         key={zone.id}
@@ -465,8 +443,8 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
         </div>
 
         <DialogFooter>
-          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Cancelar</Button>
-          <Button size="sm" onClick={handleAssign} disabled={!selectedDriverId || saving} className="bg-slate-900 hover:bg-slate-800 text-sm">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleAssign} disabled={!selectedDriverId || saving} className="bg-slate-900 hover:bg-slate-800">
             {saving ? "Asignando..." : "Asignar conductor"}
           </Button>
         </DialogFooter>

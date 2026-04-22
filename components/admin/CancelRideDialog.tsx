@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 export default function CancelRideDialog({ ride, policies, open, onOpenChange }) {
   const [reason, setReason] = useState("");
@@ -39,50 +38,41 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
 
   const handleCancel = async () => {
     setSaving(true);
-    try {
-      const updates = {
-        status: "cancelled",
-        cancelled_by: "admin",
-        cancellation_reason: reason,
-        cancellation_fee: effectiveFee,
-      };
+    const updates = {
+      status: "cancelled",
+      cancelled_by: "admin",
+      cancellation_reason: reason,
+      cancellation_fee: effectiveFee,
+    };
 
-      if (effectiveFee > 0 && ride.driver_id) {
-        // Find driver to get commission rate
-        let commissionRate = 20;
-        try {
-          const driver = await supabaseApi.drivers.get(ride.driver_id);
-          commissionRate = driver?.commission_rate ?? 20;
-        } catch (err) {
-          console.error("Error fetching driver:", err);
-        }
-        const platformCommission = parseFloat((effectiveFee * commissionRate / 100).toFixed(2));
-        const driverEarnings = parseFloat((effectiveFee - platformCommission).toFixed(2));
-        updates.final_price = effectiveFee;
-        updates.driver_earnings = driverEarnings;
-        updates.platform_commission = platformCommission;
-      } else {
-        // No cost cancellation
-        updates.final_price = 0;
-        updates.driver_earnings = 0;
-        updates.platform_commission = 0;
-      }
-
-      await supabaseApi.rideRequests.update(ride.id, updates);
-      if (ride.driver_id) {
-        await supabaseApi.drivers.update(ride.driver_id, { status: "available" });
-      }
-      queryClient.invalidateQueries({ queryKey: ["rides"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      toast.success("Viaje cancelado");
-      setSaving(false);
-      onOpenChange(false);
-      setReason("");
-    } catch (err) {
-      console.error("Error cancelling ride:", err);
-      toast.error("Error al cancelar viaje");
-      setSaving(false);
+    if (effectiveFee > 0 && ride.driver_id) {
+      // Find driver to get commission rate
+      let commissionRate = 20;
+      try {
+        const drivers = await supabaseApi.drivers.list({ id: ride.driver_id });
+        commissionRate = drivers[0]?.commission_rate ?? 20;
+      } catch {}
+      const platformCommission = parseFloat((effectiveFee * commissionRate / 100).toFixed(2));
+      const driverEarnings = parseFloat((effectiveFee - platformCommission).toFixed(2));
+      updates.final_price = effectiveFee;
+      updates.driver_earnings = driverEarnings;
+      updates.platform_commission = platformCommission;
+    } else {
+      // No cost cancellation
+      updates.final_price = 0;
+      updates.driver_earnings = 0;
+      updates.platform_commission = 0;
     }
+
+    await supabaseApi.rideRequests.update(ride.id, updates);
+    if (ride.driver_id) {
+      await supabaseApi.drivers.update(ride.driver_id, { status: "available" });
+    }
+    queryClient.invalidateQueries({ queryKey: ["rides"] });
+    queryClient.invalidateQueries({ queryKey: ["drivers"] });
+    setSaving(false);
+    onOpenChange(false);
+    setReason("");
   };
 
   return (
@@ -92,9 +82,6 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="w-5 h-5" /> Cancelar viaje
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            Confirma la cancelacion del viaje y, si aplica, el cargo por cancelacion.
-          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="bg-red-50 rounded-xl p-4 text-sm space-y-3">
@@ -138,8 +125,8 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
           </div>
         </div>
         <DialogFooter>
-          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="text-sm">Volver</Button>
-          <Button size="sm" variant="destructive" onClick={handleCancel} disabled={saving} className="text-sm">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Volver</Button>
+          <Button variant="destructive" onClick={handleCancel} disabled={saving}>
             {saving ? "Cancelando..." : "Confirmar cancelación"}
           </Button>
         </DialogFooter>

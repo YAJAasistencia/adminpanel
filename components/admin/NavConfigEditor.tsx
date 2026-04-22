@@ -42,8 +42,6 @@ export default function NavConfigEditor({ value, onChange }) {
   };
 
   const deleteGroup = (idx) => {
-    const removed = config[idx];
-    // Move pages from deleted group to "none" (just remove)
     const newConfig = config.filter((_, i) => i !== idx);
     onChange(newConfig);
   };

@@ -26,79 +26,22 @@ const statusActions = {
 const rowBgColors = {
   pending:       "bg-red-50 border-l-red-400",
   auction:       "bg-red-50 border-l-orange-400",
-  no_drivers:    "bg-red-100 border-l-red-600",
+  no_drivers:    "bg-red-100 border-l-red-600",     // sin conductores → rojo intenso
   assigned:      "bg-green-50 border-l-green-400",
   admin_approved:"bg-green-50 border-l-indigo-400",
   en_route:      "bg-green-50 border-l-violet-400",
   arrived:       "bg-green-50 border-l-cyan-400",
   in_progress:   "bg-green-50 border-l-emerald-500",
-  completed:     "bg-slate-50 border-l-slate-200 opacity-75",
-  cancelled:     "bg-slate-50 border-l-slate-200 opacity-70",
+  completed:     "bg-white border-l-slate-300",
+  cancelled:     "bg-white border-l-red-200",
   scheduled:     "bg-blue-50 border-l-blue-400",
 };
-
-// Helper: Get display price based on ride status
-function getDisplayPrice(ride) {
-  // For cancelled rides: show cancellation fee (usually 0)
-  if (ride.status === "cancelled") {
-    return {
-      amount: ride.cancellation_fee || 0,
-      label: ride.cancellation_fee ? "Tarifa cancelación" : "Cancelado sin costo",
-      color: "text-red-600 bg-red-50",
-    };
-  }
-
-  // For completed rides: show final_price (what was actually charged)
-  if (ride.status === "completed") {
-    return {
-      amount: ride.final_price ?? ride.estimated_price ?? 0,
-      label: ride.final_price ? "Costo final" : "Estimado",
-      color: "text-emerald-600 bg-emerald-50",
-    };
-  }
-
-  // For active rides: show estimated_price
-  return {
-    amount: ride.estimated_price ?? 0,
-    label: "Estimado",
-    color: "text-blue-600 bg-blue-50",
-  };
-}
-
-// Skeleton Loader for ride cards
-function RideSkeleton() {
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 animate-pulse">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-40 bg-slate-200 rounded" />
-            <div className="h-5 w-16 bg-slate-200 rounded" />
-          </div>
-          <div className="space-y-1">
-            <div className="h-3 w-full bg-slate-200 rounded" />
-            <div className="h-3 w-3/4 bg-slate-200 rounded" />
-          </div>
-          <div className="flex gap-2 flex-wrap pt-2">
-            <div className="h-6 w-24 bg-slate-200 rounded-full" />
-            <div className="h-6 w-20 bg-slate-200 rounded-full" />
-            <div className="h-6 w-16 bg-slate-200 rounded-full" />
-          </div>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <div className="h-8 w-16 bg-slate-200 rounded-lg" />
-          <div className="h-8 w-16 bg-slate-200 rounded-lg" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, onDelete, canEdit = true, canDelete = true, drivers = [], settings }) {
   const [rateRide, setRateRide] = useState(null);
   const [detailRide, setDetailRide] = useState(null);
   const [editRide, setEditRide] = useState(null);
-  const [localOverrides, setLocalOverrides] = useState({});
+  const [localOverrides, setLocalOverrides] = useState({}); // rideId -> updatedRide
 
   // Merge parent rides with local optimistic edits
   const displayRides = rides.map(r => localOverrides[r.id] ? { ...r, ...localOverrides[r.id] } : r);
@@ -109,11 +52,11 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
 
   const exportCSV = () => {
     const csv = ["Pasajero,Conductor,Recogida,Destino,Servicio,Estado,Precio estimado,Precio final,KM,Pago,Fecha",
-      ...displayRides.map(r => [
+      ...rides.map(r => [
         r.passenger_name||"",r.driver_name||"",r.pickup_address||"",r.dropoff_address||"",
         r.service_type_name||"",r.status||"",r.estimated_price||"",r.final_price||"",
         r.distance_km||"",r.payment_method||"",
-        r.requested_at ? formatStoredLocal(r.requested_at, "datetime") : ""
+        r.created_date ? formatStoredLocal(r.created_date, "datetime") : ""
       ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","))
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -141,8 +84,6 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
         {displayRides.map(ride => {
           const action = statusActions[ride.status];
           const rowBg = rowBgColors[ride.status] || "bg-white border-l-slate-200";
-          const isHistorical = ["completed", "cancelled"].includes(ride.status);
-          const textOpacity = isHistorical ? "text-slate-400" : "text-slate-900";
 
           return (
             <div
@@ -154,7 +95,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                    <p className={`font-semibold ${textOpacity} text-sm`}>{ride.passenger_name || "Pasajero desconocido"}</p>
+                    <p className="font-semibold text-slate-900 text-sm">{ride.passenger_name}</p>
                     <StatusBadge status={ride.status} />
                     {ride.service_type_name && (
                       <span className="text-[11px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">{ride.service_type_name}</span>
@@ -181,7 +122,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                   <div className="space-y-0.5">
                     <div className="flex items-start gap-1.5 text-xs text-slate-500">
                       <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-emerald-500" />
-                      <span className="truncate">{ride.pickup_address || "Ubicación no especificada"}</span>
+                      <span className="truncate">{ride.pickup_address}</span>
                     </div>
                     {ride.dropoff_address && (
                       <div className="flex items-start gap-1.5 text-xs text-slate-400">
@@ -192,23 +133,12 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                   </div>
 
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    {ride.driver_name ? (() => {
-                      // P5: Driver occupancy indicator
-                      const activeRides = displayRides.filter(r => 
-                        r.driver_id === ride.driver_id && 
-                        !["completed", "cancelled"].includes(r.status)
-                      ).length;
-                      const occupancyColor = activeRides > 2 ? "bg-red-100 text-red-700" : 
-                                            activeRides > 1 ? "bg-amber-100 text-amber-700" : 
-                                            "bg-slate-50 text-slate-600";
-                      return (
-                        <span className={`flex items-center gap-1 text-xs ${occupancyColor} px-2 py-0.5 rounded-full border border-current border-opacity-20`}>
-                          <span className="w-1.5 h-1.5 bg-current rounded-full" />
-                          {ride.driver_name}
-                          {activeRides > 0 && <span className="ml-1 font-semibold">({activeRides})</span>}
-                        </span>
-                      );
-                    })() : (
+                    {ride.driver_name ? (
+                      <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                        {ride.driver_name}
+                      </span>
+                    ) : (
                       <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Sin conductor</span>
                     )}
 
@@ -216,14 +146,11 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                       <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                         💼 ${ride.company_price}
                       </span>
-                    ) : (() => {
-                      const price = getDisplayPrice(ride);
-                      return (
-                        <span className={`text-xs font-semibold ${price.color} px-2 py-0.5 rounded-full`}>
-                          ${price.amount.toFixed(2)} <span className="text-[10px] opacity-70">({price.label})</span>
-                        </span>
-                      );
-                    })()}
+                    ) : ride.estimated_price ? (
+                      <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        ${ride.estimated_price}
+                      </span>
+                    ) : null}
                     {ride.city_name && (
                       <span className="text-xs text-slate-400">{ride.city_name}</span>
                     )}
@@ -236,7 +163,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                         👤 {ride.created_by.split("@")[0]}
                       </span>
                     ) : null}
-                    <span className="text-xs text-slate-300">{formatCDMX(ride.requested_at, "shortdatetime")}</span>
+                    <span className="text-xs text-slate-300">{formatCDMX(ride.requested_at || ride.created_date, "shortdatetime")}</span>
                   </div>
                   {ride.cancellation_reason && (
                     <p className="text-xs text-red-500 mt-1.5 bg-red-50 px-2 py-1 rounded-lg">❌ {ride.cancellation_reason}</p>
@@ -245,7 +172,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  {!["completed", "cancelled"].includes(ride.status) && (
+                  {! ["completed", "cancelled"].includes(ride.status) && (
                     <Button size="sm" className="h-8 text-xs bg-slate-800 hover:bg-slate-700 rounded-xl" onClick={() => onAssign(ride)}>
                       <UserCheck className="w-3.5 h-3.5 mr-1" /> {ride.driver_id ? "Reasignar" : "Asignar"}
                     </Button>
@@ -266,7 +193,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                       <Star className="w-3.5 h-3.5 mr-1" /> Calificar
                     </Button>
                   )}
-                  {!["completed", "cancelled"].includes(ride.status) && (
+                  {! ["completed", "cancelled"].includes(ride.status) && (
                     <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl text-red-500 border-red-200 hover:bg-red-50" onClick={() => onCancel(ride)}>
                       <XCircle className="w-3.5 h-3.5 mr-1" /> Cancelar
                     </Button>

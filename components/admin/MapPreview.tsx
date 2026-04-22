@@ -28,14 +28,8 @@ function FitBounds({ pickup, dropoff }) {
   const map = useMap();
   useEffect(() => {
     const points = [];
-    const pickupLon = pickup?.lon || pickup?.lng;
-    const dropoffLon = dropoff?.lon || dropoff?.lng;
-    if (pickup?.lat && pickupLon !== undefined && pickupLon !== null) {
-      points.push([pickup.lat, pickupLon]);
-    }
-    if (dropoff?.lat && dropoffLon !== undefined && dropoffLon !== null) {
-      points.push([dropoff.lat, dropoffLon]);
-    }
+    if (pickup?.lat) points.push([pickup.lat, pickup.lon || pickup.lng]);
+    if (dropoff?.lat) points.push([dropoff.lat, dropoff.lon || dropoff.lng]);
     if (points.length === 2) {
       map.fitBounds(points, { padding: [40, 40], maxZoom: 15 });
     } else if (points.length === 1) {
@@ -56,8 +50,8 @@ function FitBounds({ pickup, dropoff }) {
  */
 export default function MapPreview({ pickup, dropoff, routePoints, height = 220, onAdjustPickup, onAdjustDropoff }) {
   const [visible, setVisible] = useState(true);
-  const hasPickup = pickup?.lat && (pickup?.lon !== undefined || pickup?.lng !== undefined);
-  const hasDropoff = dropoff?.lat && (dropoff?.lon !== undefined || dropoff?.lng !== undefined);
+  const hasPickup = pickup?.lat && (pickup?.lon || pickup?.lng);
+  const hasDropoff = dropoff?.lat && (dropoff?.lon || dropoff?.lng);
 
   const pickupLon = pickup?.lon || pickup?.lng;
   const dropoffLon = dropoff?.lon || dropoff?.lng;
@@ -71,15 +65,6 @@ export default function MapPreview({ pickup, dropoff, routePoints, height = 220,
   }
 
   const center = hasPickup ? [pickup.lat, pickupLon] : [dropoff.lat, dropoffLon];
-  
-  // Safety check: ensure center is valid
-  if (!Array.isArray(center) || center[0] === undefined || center[0] === null || center[1] === undefined || center[1] === null) {
-    return (
-      <div className="bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 text-sm" style={{ height: 60 }}>
-        <Map className="w-4 h-4 mr-2" /> Coordenadas inválidas
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-1">
@@ -131,7 +116,7 @@ export default function MapPreview({ pickup, dropoff, routePoints, height = 220,
                   <Popup>🏁 Destino</Popup>
                 </Marker>
               )}
-              {Array.isArray(routePoints) && routePoints.length > 1 && (
+              {routePoints && routePoints.length > 1 && (
                 <Polyline positions={routePoints} pathOptions={{ color: "#3B82F6", weight: 4, opacity: 0.7 }} />
               )}
             </MapContainer>
