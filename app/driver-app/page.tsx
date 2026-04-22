@@ -1345,7 +1345,6 @@ export default function DriverApp() {
             driver_name: driver?.full_name,
             assignment_mode: "auction",
             driver_accepted_at: acceptedAt,
-            driver_accepted: true,
           }),
         supabaseApi.drivers.update(driver?.id || "", { status: "busy" })
       ]);
@@ -1353,7 +1352,6 @@ export default function DriverApp() {
       await Promise.all([
         supabaseApi.rideRequests.update(ride.id, {
           driver_accepted_at: acceptedAt,
-          driver_accepted: true,
         }),
         supabaseApi.drivers.update(driver?.id || "", { status: "busy" })
       ]);
