@@ -1333,6 +1333,22 @@ export default function DriverApp() {
 
     acceptedRideIdsRef.current.add(ride.id);
 
+    // Optimistic update to avoid the banner reopening with stale data.
+    queryClient.setQueryData(["driverRides", driver?.id], (old: Ride[] = []) =>
+      old.map((r) =>
+        r.id === ride.id
+          ? {
+              ...r,
+              status: ride.status === "auction" ? "assigned" : r.status,
+              driver_id: driver?.id,
+              driver_name: driver?.full_name,
+              assignment_mode: ride.status === "auction" ? "auction" : r.assignment_mode,
+              driver_accepted_at: acceptedAt,
+            }
+          : r
+      )
+    );
+
     if (ride.status === "auction") {
       const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
 
@@ -1794,7 +1810,8 @@ export default function DriverApp() {
       .filter((r) =>
         r.driver_id === driver.id &&
         r.status === "assigned" &&
-        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at)
+        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at) &&
+        !acceptedRideIdsRef.current.has(r.id)
       )
       .sort((a, b) => {
         const aTs = new Date(a.updated_at || a.requested_at || 0).getTime();

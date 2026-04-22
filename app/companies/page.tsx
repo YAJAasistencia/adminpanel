@@ -286,7 +286,7 @@ function InvoiceTable({ rides, company }) {
 function CompanyDetailDialog({ company, rides, onClose }) {
   return (
     <Dialog open={!!company} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto" style={{ width: '90vw', maxWidth: '1000px' }}>
+      <DialogContent className="sm:max-w-[61.6rem] max-h-[90vh] overflow-y-auto" style={{ width: '90vw', maxWidth: '1100px' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-slate-600" />
@@ -553,7 +553,7 @@ export default function Companies() {
       </div>
 
       <Dialog open={showForm} onOpenChange={v => { setShowForm(v); if (!v) setEditing(null); }}>
-        <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1000px' }}>
+        <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1100px' }}>
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Editar empresa" : "Nueva empresa"}</DialogTitle>
           </DialogHeader>

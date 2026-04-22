@@ -294,6 +294,30 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [rides]);
 
+  useEffect(() => {
+    const currentRideId = etaModalData?.ride?.id;
+    if (!currentRideId) return;
+    if (etaModalData?.phase !== "waiting_acceptance") return;
+
+    const current = rides.find((r: any) => r.id === currentRideId);
+    if (!current) return;
+
+    const driverAccepted = !!(current.driver_accepted_at || current.en_route_at || current.arrived_at || current.in_progress_at);
+    if (current.status !== "assigned" || !current.driver_id || !driverAccepted) return;
+
+    const driver = drivers.find((dr: any) => dr.id === current.driver_id);
+    if (driver) {
+      setEtaModalData({ ride: current, driver, phase: "assigned" });
+      return;
+    }
+
+    supabaseApi.drivers.get(current.driver_id)
+      .then((fetched) => {
+        if (fetched) setEtaModalData({ ride: current, driver: fetched, phase: "assigned" });
+      })
+      .catch(() => {});
+  }, [etaModalData, rides, drivers]);
+
   const handleUpdateStatus = async (ride: any, newStatus: string) => {
     const now = new Date().toISOString();
     const updates: any = { status: newStatus };

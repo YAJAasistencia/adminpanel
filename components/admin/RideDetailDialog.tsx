@@ -15,6 +15,10 @@ import useAppSettings from "@/components/shared/useAppSettings";
 const paymentLabels = { cash: "Efectivo", card: "Tarjeta", transfer: "Transferencia" };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+function hasDriverAccepted(ride) {
+  return !!(ride?.driver_accepted_at || ride?.en_route_at || ride?.arrived_at || ride?.in_progress_at);
+}
+
 function calcTotals(ride) {
   const extras = Array.isArray(ride.extra_charges) ? ride.extra_charges : [];
   const basePrice = ride.estimated_price || 0;
@@ -201,7 +205,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[35.2rem] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
@@ -268,7 +272,13 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           {/* Driver + service */}
           <div className="bg-slate-50 rounded-xl p-4 space-y-1.5">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Conductor y servicio</p>
-            {ride.driver_name ? <div className="flex items-center gap-2 text-sm"><Car className="w-4 h-4 text-slate-400" /><span className="font-medium">{ride.driver_name}</span></div> : <span className="text-xs text-slate-400">Sin conductor asignado</span>}
+            {ride.driver_name ? (
+              hasDriverAccepted(ride) || ride.status !== "assigned" ? (
+                <div className="flex items-center gap-2 text-sm"><Car className="w-4 h-4 text-slate-400" /><span className="font-medium">{ride.driver_name}</span></div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm"><Car className="w-4 h-4 text-amber-500" /><span className="font-medium text-amber-700">Pendiente de aceptación</span></div>
+              )
+            ) : <span className="text-xs text-slate-400">Sin conductor asignado</span>}
             {ride.service_type_name && <div className="flex items-center gap-2 text-sm text-slate-500"><span className="text-slate-400">Tipo:</span>{ride.service_type_name}</div>}
             {ride.city_name && <div className="flex items-center gap-2 text-sm text-slate-500"><MapPin className="w-3.5 h-3.5 text-slate-400" />{ride.city_name}</div>}
             {ride.admin_rating && <div className="flex items-center gap-1 text-sm text-amber-600"><Star className="w-3.5 h-3.5 fill-amber-400" />Calificación: {ride.admin_rating}/5 {ride.admin_rating_comment && `· "${ride.admin_rating_comment}"`}</div>}

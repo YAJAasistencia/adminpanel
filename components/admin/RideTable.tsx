@@ -37,6 +37,10 @@ const rowBgColors = {
   scheduled:     "bg-blue-50 border-l-blue-400",
 };
 
+function hasDriverAccepted(ride) {
+  return !!(ride?.driver_accepted_at || ride?.en_route_at || ride?.arrived_at || ride?.in_progress_at);
+}
+
 export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, onDelete, canEdit = true, canDelete = true, drivers = [], settings }) {
   const [rateRide, setRateRide] = useState(null);
   const [detailRide, setDetailRide] = useState(null);
@@ -134,10 +138,14 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
 
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
                     {ride.driver_name ? (
-                      <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                        {ride.driver_name}
-                      </span>
+                      hasDriverAccepted(ride) || ride.status !== "assigned" ? (
+                        <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                          {ride.driver_name}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Pendiente de aceptación</span>
+                      )
                     ) : (
                       <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Sin conductor</span>
                     )}

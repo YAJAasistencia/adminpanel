@@ -106,28 +106,28 @@ html { font-size: 14px; }
 }
 
 @layer components {
-  /* Dialog sizes increased by 30% */
+  /* Shared dialog sizes */
   .dialog-size-lg {
-    @apply max-w-[604px] w-[95vw];
+    @apply max-w-[664px] w-[95vw];
   }
 
   .dialog-size-xl {
-    @apply max-w-[748px] w-[95vw];
+    @apply max-w-[823px] w-[95vw];
   }
 
   .dialog-size-2xl {
-    @apply max-w-[874px] w-[95vw];
+    @apply max-w-[961px] w-[95vw];
   }
 
   .dialog-size-3xl {
-    @apply max-w-[1000px] w-[95vw];
+    @apply max-w-[1100px] w-[95vw];
   }
 
   .dialog-size-4xl {
-    @apply max-w-[1165px] w-[95vw];
+    @apply max-w-[1282px] w-[95vw];
   }
 
   .dialog-size-5xl {
-    @apply max-w-[1331px] w-[95vw];
+    @apply max-w-[1464px] w-[95vw];
   }
 }

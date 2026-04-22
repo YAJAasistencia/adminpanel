@@ -238,7 +238,7 @@ export default function RedZones() {
 
       {/* Edit/Create Dialog */}
       <Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) { setDrawing(false); setPolygon([]); } }}>
-        <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1000px' }}>
+        <DialogContent className="dialog-size-3xl max-h-[90vh] overflow-y-auto p-4" style={{ width: '90vw', maxWidth: '1100px' }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <ShieldAlert className="w-5 h-5" />
