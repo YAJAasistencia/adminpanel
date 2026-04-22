@@ -1326,6 +1326,7 @@ export default function DriverApp() {
   const handleAcceptRide = async () => {
     if (!incomingRide) return;
     const ride = incomingRide;
+    const acceptedAt = new Date().toISOString();
     stopNewRideAlarm(ride.id);
     cancelSWRideTimer(ride.id);
     setIncomingRide(null);
@@ -1343,11 +1344,19 @@ export default function DriverApp() {
             driver_id: driver?.id,
             driver_name: driver?.full_name,
             assignment_mode: "auction",
+            driver_accepted_at: acceptedAt,
+            driver_accepted: true,
           }),
         supabaseApi.drivers.update(driver?.id || "", { status: "busy" })
       ]);
     } else if (ride.status === "assigned" && ride.driver_id === driver?.id) {
-      await supabaseApi.drivers.update(driver?.id || "", { status: "busy" });
+      await Promise.all([
+        supabaseApi.rideRequests.update(ride.id, {
+          driver_accepted_at: acceptedAt,
+          driver_accepted: true,
+        }),
+        supabaseApi.drivers.update(driver?.id || "", { status: "busy" })
+      ]);
     }
 
     // Update local driver state
@@ -1837,11 +1846,38 @@ export default function DriverApp() {
     );
 
   const isSuspended = driver.status === "suspended" || driver.status === "blocked";
-  const activeRides = rides.filter((r) => !["completed", "cancelled"].includes(r.status));
+  const activeRides = rides.filter((r) => {
+    if (["completed", "cancelled"].includes(r.status)) return false;
+    if (r.status === "assigned") {
+      return !!(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at);
+    }
+    return true;
+  });
   const completedRides = rides.filter((r) => ["completed", "cancelled"].includes(r.status));
   const hasActiveRide = activeRides.some((r) =>
     ["assigned", "admin_approved", "en_route", "arrived", "in_progress"].includes(r.status)
   );
+
+  useEffect(() => {
+    if (!driver?.id) return;
+    if (incomingRide) return;
+
+    const assignedPendingAcceptance = [...rides]
+      .filter((r) =>
+        r.driver_id === driver.id &&
+        r.status === "assigned" &&
+        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at)
+      )
+      .sort((a, b) => {
+        const aTs = new Date(a.updated_at || a.requested_at || 0).getTime();
+        const bTs = new Date(b.updated_at || b.requested_at || 0).getTime();
+        return bTs - aTs;
+      })[0];
+
+    if (assignedPendingAcceptance) {
+      setIncomingRide(assignedPendingAcceptance);
+    }
+  }, [rides, driver?.id, incomingRide]);
 
   return (
     <div
