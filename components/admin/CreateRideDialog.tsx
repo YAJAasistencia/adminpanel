@@ -297,6 +297,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       requested_at: nowCDMX(),
       // estimated_price: for normal = total; for corporate = driver's amount (driver-visible)
       estimated_price: isCorporate ? (driverEstimated || undefined) : (totalPrice > 0 ? totalPrice : undefined),
+      driver_estimated_price: driverEstimated > 0 ? driverEstimated : undefined,
       company_price: companyPrice > 0 ? companyPrice : undefined,
       extra_company_cost: extraCost > 0 ? extraCost : undefined,
       distance_km: form.distance_km ? parseFloat(form.distance_km) : undefined,
