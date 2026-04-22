@@ -1788,6 +1788,27 @@ export default function DriverApp() {
     alert("✅ Alerta SOS enviada. El administrador fue notificado.");
   };
 
+  useEffect(() => {
+    if (!driver?.id) return;
+    if (incomingRide) return;
+
+    const assignedPendingAcceptance = [...rides]
+      .filter((r) =>
+        r.driver_id === driver.id &&
+        r.status === "assigned" &&
+        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at)
+      )
+      .sort((a, b) => {
+        const aTs = new Date(a.updated_at || a.requested_at || 0).getTime();
+        const bTs = new Date(b.updated_at || b.requested_at || 0).getTime();
+        return bTs - aTs;
+      })[0];
+
+    if (assignedPendingAcceptance) {
+      setIncomingRide(assignedPendingAcceptance);
+    }
+  }, [rides, driver?.id, incomingRide]);
+
   // ─── Guards ───────────────────────────────────────────────────────────────
   if (locationPermission === "denied") return <LocationPermissionScreen onGranted={() => {}} onDenied={() => {}} />;
   if (sessionLoading)
@@ -1857,27 +1878,6 @@ export default function DriverApp() {
   const hasActiveRide = activeRides.some((r) =>
     ["assigned", "admin_approved", "en_route", "arrived", "in_progress"].includes(r.status)
   );
-
-  useEffect(() => {
-    if (!driver?.id) return;
-    if (incomingRide) return;
-
-    const assignedPendingAcceptance = [...rides]
-      .filter((r) =>
-        r.driver_id === driver.id &&
-        r.status === "assigned" &&
-        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at)
-      )
-      .sort((a, b) => {
-        const aTs = new Date(a.updated_at || a.requested_at || 0).getTime();
-        const bTs = new Date(b.updated_at || b.requested_at || 0).getTime();
-        return bTs - aTs;
-      })[0];
-
-    if (assignedPendingAcceptance) {
-      setIncomingRide(assignedPendingAcceptance);
-    }
-  }, [rides, driver?.id, incomingRide]);
 
   return (
     <div
