@@ -66,23 +66,28 @@ BEGIN
      ) THEN
     topic := format('driver:%s:incoming-rides', NEW.driver_id::text);
 
-    PERFORM realtime.broadcast_changes(
-      topic,
-      'new_ride_notification',
-      'UPDATE',
-      TG_TABLE_NAME,
-      TG_TABLE_SCHEMA,
-      jsonb_build_object(
-        'ride_id', NEW.id,
-        'notification_type', 'ride_assigned',
-        'ride_data', row_to_json(NEW)
-      ),
-      jsonb_build_object(
-        'ride_id', OLD.id,
-        'notification_type', 'ride_assigned',
-        'ride_data', row_to_json(OLD)
-      )
-    );
+    BEGIN
+      PERFORM realtime.broadcast_changes(
+        topic::text,
+        'new_ride_notification'::text,
+        'UPDATE'::text,
+        TG_TABLE_NAME::text,
+        TG_TABLE_SCHEMA::text,
+        jsonb_build_object(
+          'ride_id', NEW.id,
+          'notification_type', 'ride_assigned',
+          'ride_data', row_to_json(NEW)
+        ),
+        jsonb_build_object(
+          'ride_id', OLD.id,
+          'notification_type', 'ride_assigned',
+          'ride_data', row_to_json(OLD)
+        )
+      );
+    EXCEPTION WHEN undefined_function THEN
+      -- Keep ride updates working even if realtime.broadcast_changes is unavailable
+      NULL;
+    END;
   END IF;
 
   -- Auction offer notification for newly included drivers
@@ -94,23 +99,28 @@ BEGIN
          OR OLD.auction_expires_at IS DISTINCT FROM NEW.auction_expires_at THEN
         topic := format('driver:%s:incoming-rides', target_driver_id);
 
-        PERFORM realtime.broadcast_changes(
-          topic,
-          'new_ride_notification',
-          'UPDATE',
-          TG_TABLE_NAME,
-          TG_TABLE_SCHEMA,
-          jsonb_build_object(
-            'ride_id', NEW.id,
-            'notification_type', 'ride_offer',
-            'ride_data', row_to_json(NEW)
-          ),
-          jsonb_build_object(
-            'ride_id', OLD.id,
-            'notification_type', 'ride_offer',
-            'ride_data', row_to_json(OLD)
-          )
-        );
+        BEGIN
+          PERFORM realtime.broadcast_changes(
+            topic::text,
+            'new_ride_notification'::text,
+            'UPDATE'::text,
+            TG_TABLE_NAME::text,
+            TG_TABLE_SCHEMA::text,
+            jsonb_build_object(
+              'ride_id', NEW.id,
+              'notification_type', 'ride_offer',
+              'ride_data', row_to_json(NEW)
+            ),
+            jsonb_build_object(
+              'ride_id', OLD.id,
+              'notification_type', 'ride_offer',
+              'ride_data', row_to_json(OLD)
+            )
+          );
+        EXCEPTION WHEN undefined_function THEN
+          -- Keep ride updates working even if realtime.broadcast_changes is unavailable
+          NULL;
+        END;
       END IF;
     END LOOP;
   END IF;
