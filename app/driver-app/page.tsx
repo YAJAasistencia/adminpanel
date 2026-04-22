@@ -986,7 +986,9 @@ export default function DriverApp() {
       .filter((r) => r.status === "assigned" && r.driver_id === driver.id)
       .forEach((r) => {
         shownRideAssignmentsRef.current[r.id] = r.requested_at || "";
-        acceptedRideIdsRef.current.add(r.id);
+        if (r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at) {
+          acceptedRideIdsRef.current.add(r.id);
+        }
       });
   }, [rides.length > 0 || initializedRef.current, driver?.id]);
 
@@ -1004,25 +1006,26 @@ export default function DriverApp() {
           table: "ride_requests",
         },
         (payload: any) => {
+          const eventType = payload.eventType || payload.type;
           const data = payload.new as Ride;
           if (!data) return;
 
           // ── 1. Sync cache for rides belonging to this driver ──────────────────
-          if (payload.type === "UPDATE" && data.driver_id && data.driver_id !== driverId) {
+          if (eventType === "UPDATE" && data.driver_id && data.driver_id !== driverId) {
             queryClient.setQueryData(["driverRides", driverId], (old: any[] = []) =>
               old.filter((r) => r.id !== data.id)
             );
           }
-          if (data.driver_id === driverId || payload.type === "INSERT") {
+          if (data.driver_id === driverId || eventType === "INSERT") {
             queryClient.setQueryData(["driverRides", driverId], (old: any[] = []) => {
-              if (payload.type === "DELETE") return old.filter((r) => r.id !== data.id);
+              if (eventType === "DELETE") return old.filter((r) => r.id !== data.id);
               const idx = old.findIndex((r) => r.id === data.id);
               if (idx === -1) return data.driver_id === driverId ? [data, ...old] : old;
               return old.map((r) => (r.id === data.id ? { ...r, ...data } : r));
             });
           }
           if (
-            payload.type === "UPDATE" &&
+            eventType === "UPDATE" &&
             data.driver_id === driverId &&
             !["completed", "cancelled"].includes(data.status)
           ) {
@@ -1031,7 +1034,7 @@ export default function DriverApp() {
 
           // ── 2. Auction ride: show alert to this driver ────────────────────────
           if (
-            payload.type === "UPDATE" &&
+            eventType === "UPDATE" &&
             data.status === "auction" &&
             Array.isArray(data.auction_driver_ids) &&
             data.auction_driver_ids.includes(driverId)
@@ -1057,7 +1060,7 @@ export default function DriverApp() {
           }
 
           // ── 3. Direct assignment (auto/manual): show alert ────────────────────
-          if (payload.type === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
+          if (eventType === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
             if (!initializedRef.current) return;
             const prevShownAt = shownRideAssignmentsRef.current[data.id];
             const thisAssignmentAt = data.requested_at;
@@ -1080,7 +1083,7 @@ export default function DriverApp() {
           }
 
           // ── 4. Ride no longer available for this driver ──
-          if (payload.type === "UPDATE") {
+          if (eventType === "UPDATE") {
             if (data.driver_id && data.driver_id !== driverId && data.status === "assigned") {
               delete shownRideAssignmentsRef.current[data.id];
               acceptedRideIdsRef.current.delete(data.id);
@@ -1132,7 +1135,7 @@ export default function DriverApp() {
 
     const notificationChannel = supabase
       .channel(`driver:${driverId}:incoming-rides`)
-      .on('broadcast', { event: 'new_ride_notification' }, (message: any) => {
+      .on('broadcast', { event: 'new_ride_notification' }, async (message: any) => {
         const payload = message.payload;
         console.log('[DRIVER-APP] Received incoming ride notification:', payload);
 
@@ -1148,6 +1151,10 @@ export default function DriverApp() {
             body: `Recoge a ${payload.ride_data?.passenger_name || 'Pasajero'} · ${payload.ride_data?.pickup_address || ''}`,
             rideId: payload.ride_id,
           });
+          const current = await supabaseApi.rideRequests.get(payload.ride_id).catch(() => null);
+          if (current?.status === 'assigned' && current?.driver_id === driverId) {
+            setIncomingRide(current);
+          }
           startNewRideAlarm(payload.ride_id);
           const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
           startSWRideTimer(
@@ -1162,6 +1169,14 @@ export default function DriverApp() {
             body: `${payload.ride_data?.passenger_name || 'Pasajero'} · ${payload.ride_data?.pickup_address || ''}`,
             rideId: payload.ride_id,
           });
+          const current = await supabaseApi.rideRequests.get(payload.ride_id).catch(() => null);
+          if (
+            current?.status === 'auction' &&
+            Array.isArray(current?.auction_driver_ids) &&
+            current.auction_driver_ids.includes(driverId)
+          ) {
+            setIncomingRide(current);
+          }
           startNewRideAlarm(payload.ride_id);
           const auctionTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
           startSWRideTimer(
