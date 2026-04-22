@@ -71,6 +71,9 @@ const defaults = {
   auction_primary_radius_km: 5,
   auction_secondary_radius_km: 8,
   auction_timeout_seconds: 35,
+  auto_primary_radius_km: 5,
+  auto_secondary_radius_km: 8,
+  total_search_window_seconds: 180,
   auction_max_drivers: 5,
   auction_max_retries: 3,
   max_concurrent_rides: 1,
@@ -243,6 +246,9 @@ export default function SettingsPage() {
       }
       if (form.eta_speed_kmh < 5 || form.eta_speed_kmh > 120) {
         throw new Error("Velocidad ETA debe estar entre 5 y 120 km/h");
+      }
+      if ((form.total_search_window_seconds ?? 180) < 30) {
+        throw new Error("La ventana total de búsqueda debe ser de al menos 30 segundos");
       }
       
       // Validar códigos promo duplicados
@@ -567,6 +573,24 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-5 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                  <div>
+                    <Label>Radio automático primario (km)</Label>
+                    <Input type="number" min={1} value={form.auto_primary_radius_km ?? 5} onChange={e => update("auto_primary_radius_km", parseFloat(e.target.value) || 5)} />
+                    <p className="text-xs text-slate-500 mt-1">Primera búsqueda en modo automático</p>
+                  </div>
+                  <div>
+                    <Label>Radio automático secundario (km)</Label>
+                    <Input type="number" min={1} value={form.auto_secondary_radius_km ?? 8} onChange={e => update("auto_secondary_radius_km", parseFloat(e.target.value) || 8)} />
+                    <p className="text-xs text-slate-500 mt-1">Si no hay conductores, amplía a este radio en automático</p>
+                  </div>
+                  <div>
+                    <Label>Ventana total de búsqueda (segundos)</Label>
+                    <Input type="number" min={30} value={form.total_search_window_seconds ?? 180} onChange={e => update("total_search_window_seconds", parseFloat(e.target.value) || 180)} />
+                    <p className="text-xs text-slate-500 mt-1">Tiempo máximo total de búsqueda antes de pasar a manual o sin conductores</p>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100">
                   <div>
                     <p className="font-medium text-slate-800">Subasta de viajes</p>

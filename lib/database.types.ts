@@ -269,6 +269,8 @@ export type Database = {
           auction_primary_radius_km: number | null
           auction_secondary_radius_km: number | null
           auction_timeout_seconds: number | null
+          auto_primary_radius_km: number | null
+          auto_secondary_radius_km: number | null
           auto_assign_nearest_driver: boolean | null
           base_fare: number | null
           city_traffic_factor: number | null
@@ -326,6 +328,7 @@ export type Database = {
           soft_block_low_acceptance_rate_enabled: boolean | null
           support_whatsapp_message: string | null
           support_whatsapp_number: string | null
+          total_search_window_seconds: number | null
           timezone: string | null
           updated_at: string | null
           version: number | null
@@ -351,6 +354,8 @@ export type Database = {
           auction_primary_radius_km?: number | null
           auction_secondary_radius_km?: number | null
           auction_timeout_seconds?: number | null
+          auto_primary_radius_km?: number | null
+          auto_secondary_radius_km?: number | null
           auto_assign_nearest_driver?: boolean | null
           base_fare?: number | null
           city_traffic_factor?: number | null
@@ -408,6 +413,7 @@ export type Database = {
           soft_block_low_acceptance_rate_enabled?: boolean | null
           support_whatsapp_message?: string | null
           support_whatsapp_number?: string | null
+          total_search_window_seconds?: number | null
           timezone?: string | null
           updated_at?: string | null
           version?: number | null
@@ -433,6 +439,8 @@ export type Database = {
           auction_primary_radius_km?: number | null
           auction_secondary_radius_km?: number | null
           auction_timeout_seconds?: number | null
+          auto_primary_radius_km?: number | null
+          auto_secondary_radius_km?: number | null
           auto_assign_nearest_driver?: boolean | null
           base_fare?: number | null
           city_traffic_factor?: number | null
@@ -490,6 +498,7 @@ export type Database = {
           soft_block_low_acceptance_rate_enabled?: boolean | null
           support_whatsapp_message?: string | null
           support_whatsapp_number?: string | null
+          total_search_window_seconds?: number | null
           timezone?: string | null
           updated_at?: string | null
           version?: number | null

@@ -203,6 +203,7 @@ export default function Dashboard() {
           const d = payload.new;
           const prevRide = ridesRef.current.find((r: any) => r.id === d?.id);
           const prevStatus = prevRide?.status;
+          const isPassengerAppRide = !!d?.passenger_user_id;
 
           // Update rides data first (atomic update)
           queryClient.setQueryData(["rides"], (old: any = []) =>
@@ -217,6 +218,10 @@ export default function Dashboard() {
           }
 
           if (d?.status === "no_drivers") {
+            if (isPassengerAppRide) {
+              setEtaModalData((prev: any) => prev?.ride?.id === d.id ? null : prev);
+              return;
+            }
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
             setEtaModalData({ ride: fullRide, driver: null, phase: "no_drivers" });
             return;
@@ -243,7 +248,7 @@ export default function Dashboard() {
             return;
           }
 
-          if (d?.status === "assigned" && d?.driver_id) {
+          if (d?.status === "assigned" && d?.driver_id && !isPassengerAppRide) {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
             const driverAccepted = !!(d?.driver_accepted_at || d?.en_route_at);
             
