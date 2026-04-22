@@ -271,6 +271,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       driver_id: best.id,
       driver_name: best.full_name,
       status: "assigned",
+      assigned_at: assignedNow,
+      updated_at: assignedNow,
     });
     queryClient.invalidateQueries({ queryKey: ["drivers"] });
   };

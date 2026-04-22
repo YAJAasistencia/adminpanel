@@ -87,7 +87,14 @@ export default function LiveDriversPage() {
     const channel = supabase.channel("drivers_live").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "Driver" },
-      () => queryClient.invalidateQueries({ queryKey: ["driversLive"] })
+      (payload: any) => {
+        queryClient.setQueryData(["driversLive"], (old: any = []) => {
+          if (payload.eventType === "DELETE") return old.filter((d: any) => d.id !== payload.old.id);
+          if (payload.eventType === "INSERT") return [...old, payload.new];
+          if (payload.eventType === "UPDATE") return old.map((d: any) => d.id === payload.new.id ? { ...d, ...payload.new } : d);
+          return old;
+        });
+      }
     ).subscribe();
     return () => { channel.unsubscribe(); };
   }, [queryClient]);

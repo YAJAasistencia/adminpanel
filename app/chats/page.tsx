@@ -57,7 +57,6 @@ export default function ChatsPage() {
     },
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 5000,
   });
 
   // Mensajes de chat
@@ -82,8 +81,13 @@ export default function ChatsPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "chat_messages" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["allMessages"] });
+        (payload: any) => {
+          queryClient.setQueryData(["allMessages"], (old: any = []) => {
+            if (payload.eventType === "DELETE") return old.filter((m: any) => m.id !== payload.old.id);
+            if (payload.eventType === "INSERT") return [...old, payload.new];
+            if (payload.eventType === "UPDATE") return old.map((m: any) => m.id === payload.new.id ? { ...m, ...payload.new } : m);
+            return old;
+          });
         }
       )
       .subscribe();
@@ -153,7 +157,6 @@ export default function ChatsPage() {
         read_by_admin: true,
       });
       setMessageText("");
-      queryClient.invalidateQueries({ queryKey: ["allMessages"] });
       toast.success("Mensaje enviado");
     } catch (error: any) {
       toast.error(error.message || "Error al enviar mensaje");

@@ -91,6 +91,7 @@ type Ride = {
   created_date?: string;
   updated_date?: string;
   requested_at?: string;
+  assigned_at?: string;
   en_route_at?: string;
   arrived_at?: string;
   in_progress_at?: string;
@@ -659,6 +660,10 @@ export default function DriverApp() {
   useWakeLock();
 
   const queryClient = useQueryClient();
+  const getAssignmentSignal = useCallback((ride?: Ride | null) => {
+    if (!ride) return "";
+    return String(ride.assigned_at || ride.updated_at || ride.requested_at || "");
+  }, []);
   const prefilledEmail = useRef(
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("driverEmail") || ""
   ).current;
@@ -985,12 +990,12 @@ export default function DriverApp() {
     rides
       .filter((r) => r.status === "assigned" && r.driver_id === driver.id)
       .forEach((r) => {
-        shownRideAssignmentsRef.current[r.id] = r.requested_at || "";
+        shownRideAssignmentsRef.current[r.id] = getAssignmentSignal(r);
         if (r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at) {
           acceptedRideIdsRef.current.add(r.id);
         }
       });
-  }, [rides.length > 0 || initializedRef.current, driver?.id]);
+  }, [rides.length > 0 || initializedRef.current, driver?.id, getAssignmentSignal]);
 
   useEffect(() => {
     if (!driver?.id) return;
@@ -1061,9 +1066,8 @@ export default function DriverApp() {
 
           // ── 3. Direct assignment (auto/manual): show alert ────────────────────
           if (eventType === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
-            if (!initializedRef.current) return;
             const prevShownAt = shownRideAssignmentsRef.current[data.id];
-            const thisAssignmentAt = data.requested_at;
+            const thisAssignmentAt = getAssignmentSignal(data);
             const isNewAssignment = !prevShownAt || prevShownAt !== thisAssignmentAt;
             const alreadyAccepted = acceptedRideIdsRef.current.has(data.id);
             if (isNewAssignment && !alreadyAccepted) {
@@ -1126,67 +1130,94 @@ export default function DriverApp() {
     return () => {
       channel.unsubscribe();
     };
-  }, [driver?.id, queryClient]);
+  }, [driver?.id, queryClient, getAssignmentSignal]);
 
   // ─── REAL-TIME incoming ride notifications channel ─────────────────────
   useEffect(() => {
     if (!driver?.id) return;
     const driverId = driver.id;
 
+    const handleBroadcast = async (message: any) => {
+      const payload = message?.payload || {};
+      const broadcastRide = payload?.new || payload?.record || null;
+
+      let notificationType = payload?.notification_type as string | undefined;
+      let rideId = payload?.ride_id as string | undefined;
+      let rideData = payload?.ride_data as any;
+
+      // Support payloads emitted by realtime.broadcast_changes (event: UPDATE)
+      if (!rideId && broadcastRide?.id) {
+        rideId = broadcastRide.id;
+        rideData = broadcastRide;
+
+        if (
+          broadcastRide.status === "assigned" &&
+          broadcastRide.driver_id === driverId
+        ) {
+          notificationType = "ride_assigned";
+        } else if (
+          broadcastRide.status === "auction" &&
+          Array.isArray(broadcastRide.auction_driver_ids) &&
+          broadcastRide.auction_driver_ids.includes(driverId)
+        ) {
+          notificationType = "ride_offer";
+        }
+      }
+
+      if (!rideId || !notificationType) return;
+
+      queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
+
+      if (notificationType === "ride_assigned") {
+        showDriverNotification({
+          title: "🚗 ¡Servicio asignado!",
+          body: `Recoge a ${rideData?.passenger_name || "Pasajero"} · ${rideData?.pickup_address || ""}`,
+          rideId,
+        });
+        const current = await supabaseApi.rideRequests.get(rideId).catch(() => null);
+        if (current?.status === "assigned" && current?.driver_id === driverId) {
+          setIncomingRide(current);
+        }
+        startNewRideAlarm(rideId);
+        const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+        startSWRideTimer(
+          rideId,
+          assignTimeoutMs,
+          rideData?.passenger_name || "Pasajero",
+          rideData?.pickup_address || ""
+        );
+        return;
+      }
+
+      if (notificationType === "ride_offer") {
+        showDriverNotification({
+          title: "🚗 ¡Nuevo servicio disponible!",
+          body: `${rideData?.passenger_name || "Pasajero"} · ${rideData?.pickup_address || ""}`,
+          rideId,
+        });
+        const current = await supabaseApi.rideRequests.get(rideId).catch(() => null);
+        if (
+          current?.status === "auction" &&
+          Array.isArray(current?.auction_driver_ids) &&
+          current.auction_driver_ids.includes(driverId)
+        ) {
+          setIncomingRide(current);
+        }
+        startNewRideAlarm(rideId);
+        const auctionTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+        startSWRideTimer(
+          rideId,
+          auctionTimeoutMs,
+          rideData?.passenger_name || "Pasajero",
+          rideData?.pickup_address || ""
+        );
+      }
+    };
+
     const notificationChannel = supabase
       .channel(`driver:${driverId}:incoming-rides`)
-      .on('broadcast', { event: 'new_ride_notification' }, async (message: any) => {
-        const payload = message.payload;
-        console.log('[DRIVER-APP] Received incoming ride notification:', payload);
-
-        if (!payload?.ride_id) return;
-
-        // Refetch rides to ensure we have the latest data
-        queryClient.invalidateQueries({ queryKey: ['driverRides', driverId] });
-
-        // Show notification to driver
-        if (payload.notification_type === 'ride_assigned') {
-          showDriverNotification({
-            title: '🚗 ¡Servicio asignado!',
-            body: `Recoge a ${payload.ride_data?.passenger_name || 'Pasajero'} · ${payload.ride_data?.pickup_address || ''}`,
-            rideId: payload.ride_id,
-          });
-          const current = await supabaseApi.rideRequests.get(payload.ride_id).catch(() => null);
-          if (current?.status === 'assigned' && current?.driver_id === driverId) {
-            setIncomingRide(current);
-          }
-          startNewRideAlarm(payload.ride_id);
-          const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
-          startSWRideTimer(
-            payload.ride_id,
-            assignTimeoutMs,
-            payload.ride_data?.passenger_name || 'Pasajero',
-            payload.ride_data?.pickup_address || ''
-          );
-        } else if (payload.notification_type === 'ride_offer') {
-          showDriverNotification({
-            title: '🚗 ¡Nuevo servicio disponible!',
-            body: `${payload.ride_data?.passenger_name || 'Pasajero'} · ${payload.ride_data?.pickup_address || ''}`,
-            rideId: payload.ride_id,
-          });
-          const current = await supabaseApi.rideRequests.get(payload.ride_id).catch(() => null);
-          if (
-            current?.status === 'auction' &&
-            Array.isArray(current?.auction_driver_ids) &&
-            current.auction_driver_ids.includes(driverId)
-          ) {
-            setIncomingRide(current);
-          }
-          startNewRideAlarm(payload.ride_id);
-          const auctionTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
-          startSWRideTimer(
-            payload.ride_id,
-            auctionTimeoutMs,
-            payload.ride_data?.passenger_name || 'Pasajero',
-            payload.ride_data?.pickup_address || ''
-          );
-        }
-      })
+      .on("broadcast", { event: "new_ride_notification" }, handleBroadcast)
+      .on("broadcast", { event: "UPDATE" }, handleBroadcast)
       .subscribe();
 
     return () => {
