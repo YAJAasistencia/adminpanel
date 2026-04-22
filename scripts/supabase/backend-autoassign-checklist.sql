@@ -9,6 +9,10 @@ ADD COLUMN IF NOT EXISTS auto_secondary_radius_km numeric DEFAULT 8;
 ALTER TABLE public.app_settings
 ADD COLUMN IF NOT EXISTS total_search_window_seconds integer DEFAULT 180;
 
+-- Needed by auto-assign deduplication and trigger comparisons
+ALTER TABLE public.ride_requests
+ADD COLUMN IF NOT EXISTS assigned_at timestamptz;
+
 UPDATE public.app_settings
 SET
   auto_primary_radius_km = COALESCE(auto_primary_radius_km, auction_primary_radius_km, 5),
@@ -58,7 +62,7 @@ BEGIN
      AND (
        OLD.status IS DISTINCT FROM NEW.status
        OR OLD.driver_id IS DISTINCT FROM NEW.driver_id
-       OR OLD.assigned_at IS DISTINCT FROM NEW.assigned_at
+       OR COALESCE(to_jsonb(OLD)->>'assigned_at', '') IS DISTINCT FROM COALESCE(to_jsonb(NEW)->>'assigned_at', '')
      ) THEN
     topic := format('driver:%s:incoming-rides', NEW.driver_id::text);
 
