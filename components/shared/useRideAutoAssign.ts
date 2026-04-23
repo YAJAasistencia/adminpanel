@@ -163,10 +163,21 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       if (driver.approval_status !== "approved") return false;
       if (busyRideDriverIds.has(driver.id)) return false;
 
+      const hasServiceNames = Array.isArray(driver.service_type_names) && driver.service_type_names.length > 0;
+      const hasServiceIds = Array.isArray(driver.service_type_ids) && driver.service_type_ids.length > 0;
+
       if (ride.service_type_name) {
-        if (!driver.service_type_names?.includes(ride.service_type_name)) return false;
+        // Only enforce name-based filtering when driver has explicit service-name configuration.
+        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
       } else if (ride.service_type_id) {
-        if (!driver.service_type_ids?.includes(ride.service_type_id)) return false;
+        // Only enforce id-based filtering when driver has explicit service-id configuration.
+        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
+      }
+
+      // If ride carries both fields, honor either configured list when present.
+      if (ride.service_type_name && ride.service_type_id) {
+        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
+        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
       }
 
       if (ride.city_id && driver.city_id && driver.city_id !== ride.city_id) return false;
@@ -359,6 +370,19 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
         if (payload.eventType === "INSERT") {
           if (data.status === "scheduled") return;
+
+          if (data.status === "auction" && data.assignment_mode === "auction") {
+            if (data.awaiting_payment_confirmation) return;
+            const createdRideId = data.id;
+            setTimeout(async () => {
+              const current = await supabaseApi.rideRequests.get(createdRideId).catch(() => null);
+              if (!current) return;
+              if (current.driver_id || current.status !== "auction") return;
+              const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
+              await startAuction(current, prevNotified);
+            }, 250);
+            return;
+          }
 
           if (data.status === "pending" && data.assignment_mode !== "manual") {
             if (data.awaiting_payment_confirmation) return;
