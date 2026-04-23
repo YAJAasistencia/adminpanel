@@ -568,12 +568,16 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-purple-50 text-purple-600"><Users className="w-5 h-5" /></div>
                 <div>
-                  <h2 className="font-semibold text-slate-900">🔨 Modo Subasta Global</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Controla cómo se asignan los viajes a los conductores</p>
+                  <h2 className="font-semibold text-slate-900">Asignación automática y subasta</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Configura por separado el comportamiento de automático y subasta</p>
                 </div>
               </div>
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-5 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                  <div className="col-span-2">
+                    <p className="font-medium text-slate-800">Modo automático</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Estos radios solo aplican cuando el viaje se crea en automático</p>
+                  </div>
                   <div>
                     <Label>Radio automático primario (km)</Label>
                     <Input type="number" min={1} value={form.auto_primary_radius_km ?? 5} onChange={e => update("auto_primary_radius_km", parseFloat(e.target.value) || 5)} />
@@ -601,6 +605,10 @@ export default function SettingsPage() {
                 
                 {form.auction_mode_enabled && (
                   <div className="grid grid-cols-2 gap-5 p-4 bg-purple-50 rounded-xl border border-purple-100">
+                    <div className="col-span-2">
+                      <p className="font-medium text-slate-800">Modo subasta</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Estos radios solo aplican cuando el viaje se crea o se procesa en subasta</p>
+                    </div>
                     <div>
                       <Label>Radio primario (km)</Label>
                       <Input type="number" min={1} value={form.auction_primary_radius_km ?? 5} onChange={e => update("auction_primary_radius_km", parseFloat(e.target.value) || 5)} />

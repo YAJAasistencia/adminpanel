@@ -16,7 +16,7 @@ import { Gavel, Car, AlertTriangle, Camera, Calendar, Phone } from "lucide-react
 import { Switch } from "@/components/ui/switch";
 import { nowCDMX } from "@/components/shared/dateUtils";
 
-export default function CreateRideDialog({ open, onOpenChange, serviceTypes, paymentMethods }) {
+export default function CreateRideDialog({ open, onOpenChange, serviceTypes, paymentMethods, onRideCreated }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [pickupCoords, setPickupCoords] = useState(null);
@@ -339,8 +339,9 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       gasoline_liters: isGasolineService ? (form.gasoline_liters || undefined) : undefined,
       is_red_zone_blocked: !!detectedRedZone,
     };
-    await supabaseApi.rideRequests.create(data);
+    const createdRide = await supabaseApi.rideRequests.create(data);
     queryClient.invalidateQueries({ queryKey: ["rides"] });
+    onRideCreated?.(createdRide || data);
     onOpenChange(false);
     setForm({ passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", show_phone_to_driver: true, company_price: "", driver_estimated_price: "", gasoline_liters: "" });
     setSelectedCategory("");

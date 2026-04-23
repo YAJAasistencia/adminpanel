@@ -230,8 +230,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
   const autoAssignDriver = async (ride: Ride, excludeDriverIds: string[] = []) => {
     const s = settingsRef.current;
     const allRides = ridesRef.current;
-    const primaryRadius = s?.auto_primary_radius_km ?? s?.auction_primary_radius_km ?? 5;
-    const secondaryRadius = s?.auto_secondary_radius_km ?? s?.auction_secondary_radius_km ?? 15;
+    const primaryRadius = s?.auto_primary_radius_km ?? 5;
+    const secondaryRadius = s?.auto_secondary_radius_km ?? 8;
 
     if (isSearchWindowExceeded(ride, s)) {
       await moveRideToFallback(ride, "Sin conductores disponibles");
@@ -372,7 +372,11 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
               const s = settingsRef.current;
               const globalAuction = !!s?.auction_mode_enabled;
-              if (globalAuction || current.assignment_mode === "auction") {
+              const mode = current.assignment_mode;
+              const useAuction = mode
+                ? mode === "auction"
+                : globalAuction;
+              if (useAuction) {
                 await startAuction(current);
               } else {
                 await autoAssignDriver(current);
@@ -483,7 +487,10 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         }
 
         const excludeIds = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
-        const useAuction = !!s?.auction_mode_enabled || current.assignment_mode === "auction";
+        const mode = current.assignment_mode;
+        const useAuction = mode
+          ? mode === "auction"
+          : !!s?.auction_mode_enabled;
 
         if (useAuction) {
           const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
@@ -556,7 +563,10 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               _excluded_driver_ids: excludedIds,
             });
 
-            const useAuction = !!settingsRef.current?.auction_mode_enabled || current.assignment_mode === "auction";
+            const mode = current.assignment_mode;
+            const useAuction = mode
+              ? mode === "auction"
+              : !!settingsRef.current?.auction_mode_enabled;
             if (useAuction) {
               await startAuction({ ...current, status: "pending", driver_id: null, assignment_mode: "auction" }, excludedIds);
             } else {

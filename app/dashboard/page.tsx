@@ -962,6 +962,15 @@ export default function Dashboard() {
           onOpenChange={setShowCreate}
           serviceTypes={serviceTypes}
           paymentMethods={(settings as any)?.payment_methods}
+          onRideCreated={(ride: any) => {
+            const isPassengerAppRide = !!ride?.passenger_user_id;
+            const isSearchingStatus = ride?.status === "pending" || ride?.status === "auction";
+            const isManual = ride?.assignment_mode === "manual";
+
+            if (!isPassengerAppRide && isSearchingStatus && !isManual) {
+              setEtaModalData({ ride, driver: null, phase: "searching" });
+            }
+          }}
         />
       </div>
     </Layout>
