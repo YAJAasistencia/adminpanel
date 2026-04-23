@@ -163,24 +163,24 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       if (driver.approval_status !== "approved") return false;
       if (busyRideDriverIds.has(driver.id)) return false;
 
-      const hasServiceNames = Array.isArray(driver.service_type_names) && driver.service_type_names.length > 0;
-      const hasServiceIds = Array.isArray(driver.service_type_ids) && driver.service_type_ids.length > 0;
+      // En modo automático solo se considera disponibilidad y distancia; sin filtros de tipo ni ciudad.
+      if (ride.assignment_mode !== "auto") {
+        const hasServiceNames = Array.isArray(driver.service_type_names) && driver.service_type_names.length > 0;
+        const hasServiceIds = Array.isArray(driver.service_type_ids) && driver.service_type_ids.length > 0;
 
-      if (ride.service_type_name) {
-        // Only enforce name-based filtering when driver has explicit service-name configuration.
-        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
-      } else if (ride.service_type_id) {
-        // Only enforce id-based filtering when driver has explicit service-id configuration.
-        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
+        if (ride.service_type_name) {
+          if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
+        } else if (ride.service_type_id) {
+          if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
+        }
+
+        if (ride.service_type_name && ride.service_type_id) {
+          if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
+          if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
+        }
+
+        if (ride.city_id && driver.city_id && driver.city_id !== ride.city_id) return false;
       }
-
-      // If ride carries both fields, honor either configured list when present.
-      if (ride.service_type_name && ride.service_type_id) {
-        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
-        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
-      }
-
-      if (ride.city_id && driver.city_id && driver.city_id !== ride.city_id) return false;
 
       if (ride.pickup_lat && ride.pickup_lon) {
         const driverCity = localCities.find((city) => city.id === driver.city_id);
