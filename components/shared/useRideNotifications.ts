@@ -407,6 +407,20 @@ export function useDriverNotifications(driverId?: string) {
         const ride = (payload.new || payload.old) as Ride;
         if (!ride?.id) return;
 
+        // Handle direct assigned INSERT in case the driver receives a pre-assigned ride row.
+        if (payload.eventType === "INSERT" && ride.driver_id === driverId && ride.status === "assigned") {
+          const cfg = STATUS_MESSAGES.assigned?.driver?.(ride);
+          if (cfg) showNotification({ ...cfg, sound: null });
+          startNewRideAlarm(ride.id);
+          showDriverNotification({
+            title: "🚗 ¡Servicio asignado!",
+            body: `Recoge a ${ride.passenger_name || "Pasajero"} · ${ride.pickup_address || ""}`,
+            rideId: ride.id,
+          });
+          prevRides.current[ride.id] = ride;
+          return;
+        }
+
         if (
           payload.eventType === "UPDATE" &&
           ride.status === "auction" &&
@@ -432,12 +446,18 @@ export function useDriverNotifications(driverId?: string) {
         if (ride.driver_id !== driverId) return;
         const prev = prevRides.current[ride.id];
 
-        if (payload.eventType === "UPDATE" && prev && prev.status !== ride.status) {
+        if (payload.eventType === "UPDATE") {
+          const statusChanged = !prev || prev.status !== ride.status;
+          if (!statusChanged) {
+            prevRides.current[ride.id] = ride;
+            return;
+          }
+
           if (["assigned", "cancelled", "completed"].includes(ride.status || "")) {
             stopNewRideAlarm(ride.id);
           }
 
-          if (ride.status === "assigned" && prev.status !== "assigned") {
+          if (ride.status === "assigned") {
             const cfg = STATUS_MESSAGES.assigned?.driver?.(ride);
             if (cfg) showNotification({ ...cfg, sound: null });
             startNewRideAlarm(ride.id);
