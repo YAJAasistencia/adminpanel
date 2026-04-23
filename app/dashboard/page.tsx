@@ -324,6 +324,33 @@ export default function Dashboard() {
       .catch(() => {});
   }, [etaModalData, rides, drivers]);
 
+  useEffect(() => {
+    if (etaModalData) return;
+
+    const active = rides.find((r: any) => {
+      if (!r || r.passenger_user_id) return false;
+      if (["cancelled", "completed"].includes(r.status)) return false;
+
+      const driverAccepted = !!(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at);
+      const searching = (r.status === "pending" || r.status === "auction") && r.assignment_mode !== "manual";
+      const assignedWaiting = r.status === "assigned" && r.driver_id && !driverAccepted;
+
+      return searching || assignedWaiting;
+    });
+
+    if (!active) return;
+
+    const driverAccepted = !!(active.driver_accepted_at || active.en_route_at || active.arrived_at || active.in_progress_at);
+    if (driverAccepted && active.driver_id) {
+      const driver = drivers.find((d: any) => d.id === active.driver_id) || null;
+      setEtaModalData({ ride: active, driver, phase: "assigned" });
+      return;
+    }
+
+    const phase = active.assignment_mode === "manual" ? "waiting_acceptance" : "searching";
+    setEtaModalData({ ride: active, driver: null, phase });
+  }, [etaModalData, rides, drivers]);
+
   const handleUpdateStatus = async (ride: any, newStatus: string) => {
     const now = new Date().toISOString();
     const updates: any = { status: newStatus };
