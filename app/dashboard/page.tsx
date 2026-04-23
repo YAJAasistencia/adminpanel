@@ -251,6 +251,7 @@ export default function Dashboard() {
           if (d?.status === "assigned" && d?.driver_id && !isPassengerAppRide) {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
             const driverAccepted = !!(d?.driver_accepted_at || d?.en_route_at);
+            const waitingPhase = d?.assignment_mode === "manual" ? "waiting_acceptance" : "searching";
             
             if (driverAccepted) {
               const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
@@ -263,9 +264,9 @@ export default function Dashboard() {
             } else {
               setEtaModalData((prev: any) => {
                 if (prev?.ride?.id === d.id) {
-                  return { ...prev, ride: fullRide, phase: "waiting_acceptance" };
+                  return { ...prev, ride: fullRide, phase: waitingPhase };
                 }
-                return { ride: fullRide, driver: null, phase: "waiting_acceptance" };
+                return { ride: fullRide, driver: null, phase: waitingPhase };
               });
             }
           }
@@ -302,7 +303,7 @@ export default function Dashboard() {
   useEffect(() => {
     const currentRideId = etaModalData?.ride?.id;
     if (!currentRideId) return;
-    if (etaModalData?.phase !== "waiting_acceptance") return;
+    if (!["searching", "waiting_acceptance"].includes(etaModalData?.phase)) return;
 
     const current = rides.find((r: any) => r.id === currentRideId);
     if (!current) return;
@@ -932,10 +933,11 @@ export default function Dashboard() {
           onAssigned={(updatedRide: any, driver: any) => {
             setAssignRide(null);
             const driverAccepted = !!(updatedRide?.driver_accepted_at || updatedRide?.en_route_at);
+            const waitingPhase = updatedRide?.assignment_mode === "manual" ? "waiting_acceptance" : "searching";
             setEtaModalData({
               ride: updatedRide,
               driver: driverAccepted ? driver : null,
-              phase: driverAccepted ? "assigned" : "waiting_acceptance",
+              phase: driverAccepted ? "assigned" : waitingPhase,
             });
           }}
         />
