@@ -16,6 +16,30 @@ import { Gavel, Car, AlertTriangle, Camera, Calendar, Phone } from "lucide-react
 import { Switch } from "@/components/ui/switch";
 import { nowCDMX } from "@/components/shared/dateUtils";
 
+// Haversine formula to calculate distance between two coordinates
+function getHaverDist(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+// Detect which city contains the pickup coordinates
+function detectCity(lat: number, lon: number, cities: any[]) {
+  if (!lat || !lon || !cities?.length) return null;
+  for (const city of cities) {
+    if (!city.center_lat || !city.center_lon) continue;
+    const radius = city.geofence_radius_km || city.radius_km || 5;
+    const dist = getHaverDist(lat, lon, city.center_lat, city.center_lon);
+    if (dist <= radius) return city;
+  }
+  return null;
+}
+
+
 export default function CreateRideDialog({ open, onOpenChange, serviceTypes, paymentMethods, onRideCreated }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -286,6 +310,9 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     const extraCost = form.extra_company_cost ? parseFloat(form.extra_company_cost) : 0;
     const totalPrice = basePrice + extraCost;
 
+    // Detect city from pickup coordinates
+    const detectedCity = pickupCoords ? detectCity(pickupCoords.lat, pickupCoords.lon || pickupCoords.lng, zones) : null;
+
     // For corporate: company_price = what company pays, driver_estimated_price = what driver receives
     const companyPrice = isCorporate ? (form.company_price ? parseFloat(form.company_price) + extraCost : totalPrice) : undefined;
     const driverEstimated = isCorporate
@@ -318,6 +345,8 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       pickup_lon: pickupCoords?.lon || pickupCoords?.lng || undefined,
       dropoff_lat: dropoffCoords?.lat || undefined,
       dropoff_lon: dropoffCoords?.lon || dropoffCoords?.lng || undefined,
+      // ── Auto-detected city from pickup coordinates ──
+      city_id: detectedCity?.id || undefined,
       scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
         ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
         : undefined,
