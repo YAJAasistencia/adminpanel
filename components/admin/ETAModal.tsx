@@ -274,20 +274,10 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
   const isAssigned = phase === "assigned" && driver;
   const isNoDrivers = phase === "no_drivers";
   const isWaitingAcceptance = phase === "waiting_acceptance";
-  const lockOpen = phase === "searching" || phase === "waiting_acceptance";
 
   return (
-    <Dialog open={open} onOpenChange={(v) => {
-      if (!v) {
-        if (lockOpen) return;
-        onClose();
-      }
-    }}>
-      <DialogContent
-        className={`p-0 overflow-hidden border-0 shadow-2xl ${isAssigned ? "sm:max-w-[30.8rem]" : "sm:max-w-[26.4rem]"}`}
-        onInteractOutside={(e) => { if (lockOpen) e.preventDefault(); }}
-        onEscapeKeyDown={(e) => { if (lockOpen) e.preventDefault(); }}
-      >
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl ${isAssigned ? "sm:max-w-[30.8rem]" : "sm:max-w-[26.4rem]"}`}>
         <DialogTitle className="sr-only">Estado de asignacion de conductor</DialogTitle>
         <DialogDescription className="sr-only">
           Muestra el estado actual de la busqueda o asignacion de conductor para el viaje.

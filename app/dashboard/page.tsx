@@ -178,6 +178,7 @@ export default function Dashboard() {
   ridesRef.current = rides;
   const driversRef = useRef(drivers);
   driversRef.current = drivers;
+  const dismissedEtaRideIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
     const unsub = supabase.channel("rides_changes").on(
@@ -212,6 +213,7 @@ export default function Dashboard() {
 
           // Handle ETA modal transitions - simplified logic
           if (["cancelled", "completed"].includes(d?.status)) {
+            dismissedEtaRideIdsRef.current.delete(d.id);
             // Terminal states: close modal if this ride
             setEtaModalData((prev: any) => prev?.ride?.id === d.id ? null : prev);
             return;
@@ -234,6 +236,7 @@ export default function Dashboard() {
           }
 
           if ((d?.status === "auction" || d?.status === "pending") && !d?.passenger_user_id) {
+            if (dismissedEtaRideIdsRef.current.has(d.id)) return;
             setEtaModalData((prev: any) => {
               if (prev?.ride?.id === d.id) {
                 const fullRide = prevRide ? { ...prevRide, ...d } : d;
@@ -254,6 +257,7 @@ export default function Dashboard() {
             const waitingPhase = d?.assignment_mode === "manual" ? "waiting_acceptance" : "searching";
             
             if (driverAccepted) {
+              dismissedEtaRideIdsRef.current.delete(d.id);
               const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
               if (driver) {
                 setEtaModalData({ ride: fullRide, driver, phase: "assigned" });
@@ -262,6 +266,7 @@ export default function Dashboard() {
                 if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
               }
             } else {
+              if (waitingPhase === "searching" && dismissedEtaRideIdsRef.current.has(d.id)) return;
               setEtaModalData((prev: any) => {
                 if (prev?.ride?.id === d.id) {
                   return { ...prev, ride: fullRide, phase: waitingPhase };
@@ -334,6 +339,9 @@ export default function Dashboard() {
       const driverAccepted = !!(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at);
       const searching = (r.status === "pending" || r.status === "auction") && r.assignment_mode !== "manual";
       const assignedWaiting = r.status === "assigned" && r.driver_id && !driverAccepted;
+
+      if (searching && dismissedEtaRideIdsRef.current.has(r.id)) return false;
+      if (assignedWaiting && r.assignment_mode !== "manual" && dismissedEtaRideIdsRef.current.has(r.id)) return false;
 
       return searching || assignedWaiting;
     });
@@ -975,7 +983,14 @@ export default function Dashboard() {
           phase={etaModalData?.phase}
           settings={settings}
           open={!!etaModalData}
-          onClose={() => setEtaModalData(null)}
+          onClose={() => {
+            const currentRide = etaModalData?.ride;
+            const currentPhase = etaModalData?.phase;
+            if (currentRide?.id && ["searching", "waiting_acceptance"].includes(currentPhase || "")) {
+              dismissedEtaRideIdsRef.current.add(currentRide.id);
+            }
+            setEtaModalData(null);
+          }}
           onAssignManual={(ride: any) => { setEtaModalData(null); setAssignRide(ride); }}
         />
 
