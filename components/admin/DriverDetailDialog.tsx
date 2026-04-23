@@ -226,18 +226,25 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       const found = serviceTypes.find(s => s.id === id);
       return found ? found.name : null;
     }).filter(Boolean);
+    const { _isNewDriver, ...editDriverClean } = editDriver as any;
     const dataToSave = {
-      ...editDriver,
+      ...editDriverClean,
       service_type_names: syncedNames,
       approved_docs: Object.keys(docApproved).filter(k => docApproved[k]),
       rejected_docs: Object.keys(docRejected).filter(k => docRejected[k]),
       doc_expiries: docExpiries,
     };
-    await supabaseApi.drivers.update(driver.id, dataToSave);
-    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
-      old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
-    );
-    toast.success("Conductor actualizado");
+    if (driver._isNewDriver) {
+      const created = await supabaseApi.drivers.create(dataToSave);
+      queryClient.setQueryData<any[]>(["drivers"], (old = []) => [created, ...old]);
+      toast.success("Conductor creado");
+    } else {
+      await supabaseApi.drivers.update(driver.id, dataToSave);
+      queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
+        old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
+      );
+      toast.success("Conductor actualizado");
+    }
     setSaving(false);
     onOpenChange(false);
   };
