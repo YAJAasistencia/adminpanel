@@ -972,12 +972,14 @@ export default function DriverApp() {
   const initializedRef = useRef(false);
   const shownRideAssignmentsRef = useRef<Record<string, string>>({});
   const acceptedRideIdsRef = useRef(new Set<string>());
+  const rejectedRideSignalsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (!driver?.id) return;
     initializedRef.current = false;
     shownRideAssignmentsRef.current = {};
     acceptedRideIdsRef.current = new Set();
+    rejectedRideSignalsRef.current = {};
   }, [driver?.id]);
 
   useEffect(() => {
@@ -1067,8 +1069,13 @@ export default function DriverApp() {
             const thisAssignmentAt = getAssignmentSignal(data);
             const isNewAssignment = !prevShownAt || prevShownAt !== thisAssignmentAt;
             const alreadyAccepted = acceptedRideIdsRef.current.has(data.id);
+            const wasRejectedThisAssignment = rejectedRideSignalsRef.current[data.id] === thisAssignmentAt;
             if (isNewAssignment && !alreadyAccepted) {
               shownRideAssignmentsRef.current[data.id] = thisAssignmentAt || "";
+              if (rejectedRideSignalsRef.current[data.id] && rejectedRideSignalsRef.current[data.id] !== thisAssignmentAt) {
+                delete rejectedRideSignalsRef.current[data.id];
+              }
+              if (wasRejectedThisAssignment) return;
               stopNewRideAlarm(data.id);
               startNewRideAlarm(data.id);
               showDriverNotification({
@@ -1088,6 +1095,7 @@ export default function DriverApp() {
             if (data.driver_id && data.driver_id !== driverId && data.status === "assigned") {
               delete shownRideAssignmentsRef.current[data.id];
               acceptedRideIdsRef.current.delete(data.id);
+              delete rejectedRideSignalsRef.current[data.id];
             }
 
             if (data.status === "cancelled" && data.driver_id === driverId) {
@@ -1173,6 +1181,8 @@ export default function DriverApp() {
         });
         const current = await supabaseApi.rideRequests.get(rideId).catch(() => null);
         if (current?.status === "assigned" && current?.driver_id === driverId) {
+          const assignmentSignal = getAssignmentSignal(current);
+          if (rejectedRideSignalsRef.current[rideId] === assignmentSignal) return;
           setIncomingRide(current);
         }
         startNewRideAlarm(rideId);
@@ -1360,6 +1370,7 @@ export default function DriverApp() {
     setIncomingRide(null);
 
     acceptedRideIdsRef.current.add(ride.id);
+    delete rejectedRideSignalsRef.current[ride.id];
 
     // Optimistic update to avoid the banner reopening with stale data.
     queryClient.setQueryData(["driverRides", driver?.id], (old: Ride[] = []) =>
@@ -1410,6 +1421,7 @@ export default function DriverApp() {
 
   const handleRejectRide = async (ride: Ride | null, reason: string = "driver_declined") => {
     if (ride?.id) {
+      rejectedRideSignalsRef.current[ride.id] = getAssignmentSignal(ride);
       stopNewRideAlarm(ride.id);
       cancelSWRideTimer(ride.id);
     }
@@ -1839,7 +1851,8 @@ export default function DriverApp() {
         r.driver_id === driver.id &&
         r.status === "assigned" &&
         !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at) &&
-        !acceptedRideIdsRef.current.has(r.id)
+        !acceptedRideIdsRef.current.has(r.id) &&
+        rejectedRideSignalsRef.current[r.id] !== getAssignmentSignal(r)
       )
       .sort((a, b) => {
         const aTs = new Date(a.updated_at || a.requested_at || 0).getTime();
