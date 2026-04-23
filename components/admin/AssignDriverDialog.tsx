@@ -165,10 +165,13 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       await supabaseApi.drivers.update(previousDriverId, { status: "available" });
     }
 
+    const assignedNow = new Date().toISOString();
     const updatedRide = {
       driver_id: selectedDriverId,
       driver_name: driver.full_name,
       status: "assigned",
+      assigned_at: assignedNow,
+      updated_at: assignedNow,
       _excluded_driver_ids: [],
       auction_driver_ids: [],
     };
