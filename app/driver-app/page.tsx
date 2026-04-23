@@ -1065,19 +1065,28 @@ export default function DriverApp() {
 
           // ── 3. Direct assignment (auto/manual): show alert ────────────────────
           if (eventType === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
-            shownRideAssignmentsRef.current[data.id] = getAssignmentSignal(data) || "";
-            acceptedRideIdsRef.current.delete(data.id);
-            delete rejectedRideSignalsRef.current[data.id];
-            stopNewRideAlarm(data.id);
-            startNewRideAlarm(data.id);
-            showDriverNotification({
-              title: "🚗 ¡Servicio asignado!",
-              body: `Recoge a ${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`,
-              rideId: data.id,
-            });
-            const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
-            startSWRideTimer(data.id, assignTimeoutMs, data.passenger_name, data.pickup_address);
-            setIncomingRide(data);
+            const prevShownAt = shownRideAssignmentsRef.current[data.id];
+            const thisAssignmentAt = getAssignmentSignal(data);
+            const isNewAssignment = !prevShownAt || prevShownAt !== thisAssignmentAt;
+            const alreadyAccepted = acceptedRideIdsRef.current.has(data.id);
+            const wasRejectedThisAssignment = rejectedRideSignalsRef.current[data.id] === thisAssignmentAt;
+            if (isNewAssignment && !alreadyAccepted) {
+              shownRideAssignmentsRef.current[data.id] = thisAssignmentAt || "";
+              if (rejectedRideSignalsRef.current[data.id] && rejectedRideSignalsRef.current[data.id] !== thisAssignmentAt) {
+                delete rejectedRideSignalsRef.current[data.id];
+              }
+              if (wasRejectedThisAssignment) return;
+              stopNewRideAlarm(data.id);
+              startNewRideAlarm(data.id);
+              showDriverNotification({
+                title: "🚗 ¡Servicio asignado!",
+                body: `Recoge a ${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`,
+                rideId: data.id,
+              });
+              const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+              startSWRideTimer(data.id, assignTimeoutMs, data.passenger_name, data.pickup_address);
+              setIncomingRide(data);
+            }
             return;
           }
 
@@ -1841,7 +1850,9 @@ export default function DriverApp() {
       .filter((r) =>
         r.driver_id === driver.id &&
         r.status === "assigned" &&
-        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at)
+        !(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at) &&
+        !acceptedRideIdsRef.current.has(r.id) &&
+        rejectedRideSignalsRef.current[r.id] !== getAssignmentSignal(r)
       )
       .sort((a, b) => {
         const aTs = new Date(a.updated_at || a.requested_at || 0).getTime();
