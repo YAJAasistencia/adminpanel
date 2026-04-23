@@ -5,9 +5,6 @@ import { supabase } from "@/lib/supabase";
 
 interface City {
   id: string;
-  name: string;
-  latitude?: number;
-  longitude?: number;
   center_lat?: number;
   center_lon?: number;
   radius_km?: number;
@@ -39,6 +36,7 @@ interface Ride {
   passenger_user_id?: string | null;
   manual_assignment_requested_at?: string | null;
   cancellation_reason?: string;
+  _excluded_driver_ids?: string[];
   [key: string]: any;
 }
 
@@ -56,29 +54,13 @@ interface Driver {
 }
 
 interface AppSettings {
-  total_search_window_seconds?: number;
+  search_phase_seconds?: number;
+  auction_mode_enabled?: boolean;
+  auction_primary_radius_km?: number;
+  auction_secondary_radius_km?: number;
+  auction_timeout_seconds?: number;
+  auction_max_drivers?: number;
   [key: string]: any;
-}
-
-function getRideCreatedTs(ride: Ride) {
-  return new Date(ride.requested_at || 0).getTime();
-}
-
-function getRideUpdatedIso(ride: Ride) {
-  return ride.assigned_at || ride.updated_at || ride.requested_at || new Date().toISOString();
-}
-
-function getSearchWindowMs(s: any) {
-  return Math.max(30, Number(s?.total_search_window_seconds ?? 180)) * 1000;
-}
-
-function isSearchWindowExceeded(ride: Ride, s: any) {
-  const rideAge = Date.now() - getRideCreatedTs(ride);
-  return rideAge >= getSearchWindowMs(s);
-}
-
-function uniqueIds(values: Array<string | null | undefined>) {
-  return [...new Set(values.filter(Boolean) as string[])];
 }
 
 function getHaverDist(lat1?: number, lon1?: number, lat2?: number, lon2?: number) {
@@ -86,18 +68,29 @@ function getHaverDist(lat1?: number, lon1?: number, lat2?: number, lon2?: number
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export default function useRideAutoAssign(settings: AppSettings | undefined, cities: City[], enabled = true) {
+function getRideCreatedTs(ride: Ride) {
+  return new Date(ride.requested_at || 0).getTime();
+}
+
+function getRideUpdatedTs(ride: Ride) {
+  return new Date(ride.assigned_at || ride.updated_at || ride.requested_at || 0).getTime();
+}
+
+function uniqueIds(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter(Boolean) as string[])];
+}
+
+export default function useRideAutoAssign(settings: AppSettings | undefined, cities: City[] | undefined, enabled = true) {
   const queryClient = useQueryClient();
+
   const ridesRef = useRef<Ride[]>([]);
   const driversRef = useRef<Driver[]>([]);
   const settingsRef = useRef(settings);
-  const citiesRef = useRef(cities);
+  const citiesRef = useRef(cities ?? []);
   const assignTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
 
   useEffect(() => {
@@ -117,8 +110,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     if (ridesRef.current.length === 0) {
       supabaseApi.rideRequests.list().then((data) => {
         if (data?.length) {
-          ridesRef.current = data.slice(0, 100);
-          queryClient.setQueryData(["rides"], ridesRef.current);
+          const top = data.slice(0, 100);
+          ridesRef.current = top;
+          queryClient.setQueryData(["rides"], top);
         }
       }).catch(() => {});
     }
@@ -142,55 +136,38 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     return unsub;
   }, [queryClient, enabled]);
 
-  const getAvailableCandidates = (
-    ride: Ride,
-    allDrivers: Driver[],
-    allRides: Ride[],
-    radiusKm: number | null = null,
-  ) => {
+  const getAvailableCandidates = (ride: Ride, allDrivers: Driver[], allRides: Ride[], radiusKm: number | null = null) => {
     const localCities = citiesRef.current;
 
-    // Only exclude drivers who have ACCEPTED a ride (en_route/arrived/in_progress/admin_approved)
-    // Drivers with status "assigned" but not yet accepted are still available (driver.status is still "available")
     const busyRideDriverIds = new Set(
       allRides
         .filter((r) => ["en_route", "arrived", "in_progress", "admin_approved"].includes(r.status || "") && r.driver_id)
         .map((r) => r.driver_id as string)
     );
 
-    return allDrivers.filter((driver) => {
-      if (driver.status !== "available") return false;
-      if (driver.approval_status !== "approved") return false;
-      if (busyRideDriverIds.has(driver.id)) return false;
-
-      const hasServiceNames = Array.isArray(driver.service_type_names) && driver.service_type_names.length > 0;
-      const hasServiceIds = Array.isArray(driver.service_type_ids) && driver.service_type_ids.length > 0;
+    return allDrivers.filter((d) => {
+      if (d.status !== "available") return false;
+      if (d.approval_status !== "approved") return false;
+      if (busyRideDriverIds.has(d.id)) return false;
 
       if (ride.service_type_name) {
-        // Only enforce name-based filtering when driver has explicit service-name configuration.
-        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
+        if (!d.service_type_names?.includes(ride.service_type_name)) return false;
       } else if (ride.service_type_id) {
-        // Only enforce id-based filtering when driver has explicit service-id configuration.
-        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
+        if (!d.service_type_ids?.includes(ride.service_type_id)) return false;
       }
 
-      // If ride carries both fields, honor either configured list when present.
-      if (ride.service_type_name && ride.service_type_id) {
-        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
-        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
-      }
-
-      if (ride.city_id && driver.city_id && driver.city_id !== ride.city_id) return false;
+      if (ride.city_id && d.city_id && d.city_id !== ride.city_id) return false;
 
       if (ride.pickup_lat && ride.pickup_lon) {
-        const driverCity = localCities.find((city) => city.id === driver.city_id);
-        if (driverCity?.center_lat && (driverCity.geofence_radius_km || driverCity.radius_km)) {
+        const driverCity = localCities.find((c) => c.id === d.city_id);
+        const cityRadius = driverCity?.geofence_radius_km || driverCity?.radius_km;
+        if (driverCity?.center_lat && driverCity?.center_lon && cityRadius) {
           const dist = getHaverDist(ride.pickup_lat, ride.pickup_lon, driverCity.center_lat, driverCity.center_lon);
-          if (dist > (driverCity.geofence_radius_km || driverCity.radius_km || 0)) return false;
+          if (dist > cityRadius) return false;
         }
 
-        if (radiusKm !== null && driver.latitude && driver.longitude) {
-          const distToRide = getHaverDist(ride.pickup_lat, ride.pickup_lon, driver.latitude, driver.longitude);
+        if (radiusKm !== null && d.latitude && d.longitude) {
+          const distToRide = getHaverDist(ride.pickup_lat, ride.pickup_lon, d.latitude, d.longitude);
           if (distToRide > radiusKm) return false;
         }
       }
@@ -206,90 +183,56 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     return freshDrivers;
   };
 
-  const moveRideToFallback = async (ride: Ride, cancellationReason?: string) => {
-    const isPassengerRide = !!ride.passenger_user_id;
-    if (isPassengerRide) {
-      const updatePayload = {
-        status: "no_drivers",
-        cancellation_reason: cancellationReason || "Sin conductores disponibles",
-      };
-
-      await supabaseApi.rideRequests.update(ride.id, updatePayload);
-      queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
-        old.map((r) => r.id === ride.id ? { ...r, ...updatePayload } : r)
-      );
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const manualPayload = {
-      status: "pending",
-      assignment_mode: "manual",
-      manual_assignment_requested_at: now,
-      driver_id: null,
-      driver_name: null,
-      auction_driver_ids: [],
-      cancellation_reason: cancellationReason || null,
-    };
-
-    await supabaseApi.rideRequests.update(ride.id, manualPayload);
-    queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
-      old.map((r) => r.id === ride.id ? { ...r, ...manualPayload } : r)
-    );
-  };
-
   const autoAssignDriver = async (ride: Ride, excludeDriverIds: string[] = []) => {
     const s = settingsRef.current;
     const allRides = ridesRef.current;
-    const primaryRadius = s?.auto_primary_radius_km ?? 5;
-    const secondaryRadius = s?.auto_secondary_radius_km ?? 8;
-
-    console.log(`[autoAssignDriver] Starting for ride ${ride.id}, primaryRadius=${primaryRadius}, secondaryRadius=${secondaryRadius}`);
-
-    if (isSearchWindowExceeded(ride, s)) {
-      console.log(`[autoAssignDriver] Search window exceeded for ${ride.id}`);
-      await moveRideToFallback(ride, "Sin conductores disponibles");
-      return;
-    }
+    const primaryRadius = s?.auction_primary_radius_km ?? 5;
+    const secondaryRadius = s?.auction_secondary_radius_km ?? 15;
 
     const allDrivers = await fetchFreshDrivers();
-    console.log(`[autoAssignDriver] Found ${allDrivers.length} total drivers`);
 
     let candidates = getAvailableCandidates(ride, allDrivers, allRides, primaryRadius)
-      .filter((driver) => !excludeDriverIds.includes(driver.id));
-
-    console.log(`[autoAssignDriver] Primary radius (${primaryRadius}km) candidates: ${candidates.length}`);
+      .filter((d) => !excludeDriverIds.includes(d.id));
 
     if (candidates.length === 0) {
       candidates = getAvailableCandidates(ride, allDrivers, allRides, secondaryRadius)
-        .filter((driver) => !excludeDriverIds.includes(driver.id));
-      console.log(`[autoAssignDriver] Secondary radius (${secondaryRadius}km) candidates: ${candidates.length}`);
+        .filter((d) => !excludeDriverIds.includes(d.id));
     }
 
     if (candidates.length === 0) {
-      console.log(`[autoAssignDriver] No candidates found for ${ride.id}`);
-      if (isSearchWindowExceeded(ride, s)) {
-        await moveRideToFallback(ride, "Sin conductores disponibles");
+      candidates = getAvailableCandidates(ride, allDrivers, allRides, null)
+        .filter((d) => !excludeDriverIds.includes(d.id));
+    }
+
+    if (candidates.length === 0) {
+      const rideAge = Date.now() - getRideCreatedTs(ride);
+      const minWaitBeforeNoDrivers = 45 * 1000;
+      if (ride.assignment_mode !== "manual" && rideAge > minWaitBeforeNoDrivers) {
+        await supabaseApi.rideRequests.update(ride.id, {
+          status: "no_drivers",
+          cancellation_reason: "Sin conductores disponibles",
+        });
+        queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
+          old.map((r) => r.id === ride.id ? { ...r, status: "no_drivers", cancellation_reason: "Sin conductores disponibles" } : r)
+        );
       }
       return;
     }
 
     let sorted = candidates;
     if (ride.pickup_lat && ride.pickup_lon) {
-      sorted = [...candidates].sort((left, right) =>
-        getHaverDist(ride.pickup_lat, ride.pickup_lon, left.latitude, left.longitude) -
-        getHaverDist(ride.pickup_lat, ride.pickup_lon, right.latitude, right.longitude)
+      sorted = [...candidates].sort((a, b) =>
+        getHaverDist(ride.pickup_lat, ride.pickup_lon, a.latitude, a.longitude) -
+        getHaverDist(ride.pickup_lat, ride.pickup_lon, b.latitude, b.longitude)
       );
     }
 
     const best = sorted[0];
     const assignedNow = new Date().toISOString();
-    console.log(`[autoAssignDriver] Assigning driver ${best.full_name} (${best.id}) to ride ${ride.id}`);
-    
     queryClient.setQueryData(["lastAssignedDriver"], best);
     queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
       old.map((r) => r.id === ride.id
-        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned", updated_at: assignedNow }
+        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned", updated_at: assignedNow, assigned_at: assignedNow }
         : r)
     );
 
@@ -300,22 +243,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       assigned_at: assignedNow,
       updated_at: assignedNow,
     });
-
-    // 🔔 Create notification for assigned driver
-    try {
-      console.log(`[autoAssignDriver] Creating notification for driver ${best.id}`);
-      await supabaseApi.notifications.create({
-        title: "Viaje asignado",
-        body: `Se te ha asignado un viaje a ${ride.service_type_name || "Servicio"}`,
-        driver_ids: [best.id],
-        driver_names: [best.full_name],
-        tag: "ride_assigned",
-        sent_by: "system",
-      });
-      console.log(`[autoAssignDriver] Notification created for ${best.id}`);
-    } catch (err) {
-      console.error("[autoAssignDriver] Error creating notification:", err);
-    }
 
     queryClient.invalidateQueries({ queryKey: ["drivers"] });
   };
@@ -328,77 +255,65 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     const maxDrivers = s?.auction_max_drivers ?? 5;
     const isSecondRound = excludeDriverIds.length > 0;
 
-    console.log(`[startAuction] Starting for ride ${ride.id}, round=${isSecondRound ? "2nd" : "1st"}, maxDrivers=${maxDrivers}`);
-
-    if (isSearchWindowExceeded(ride, s)) {
-      console.log(`[startAuction] Search window exceeded for ${ride.id}`);
-      await moveRideToFallback(ride, "Sin conductores disponibles");
-      return;
-    }
-
     const allDrivers = await fetchFreshDrivers();
-    console.log(`[startAuction] Found ${allDrivers.length} total drivers`);
-    let candidates: Driver[] = [];
 
+    let candidates: Driver[] = [];
     if (!isSecondRound) {
       candidates = getAvailableCandidates(ride, allDrivers, allRides, primaryRadius)
-        .filter((driver) => !excludeDriverIds.includes(driver.id));
-
-      console.log(`[startAuction] Primary radius (${primaryRadius}km) candidates: ${candidates.length}`);
-
+        .filter((d) => !excludeDriverIds.includes(d.id));
       if (candidates.length === 0) {
         candidates = getAvailableCandidates(ride, allDrivers, allRides, secondaryRadius)
-          .filter((driver) => !excludeDriverIds.includes(driver.id));
-        console.log(`[startAuction] Secondary radius (${secondaryRadius}km) candidates: ${candidates.length}`);
+          .filter((d) => !excludeDriverIds.includes(d.id));
       }
     } else {
       candidates = getAvailableCandidates(ride, allDrivers, allRides, secondaryRadius)
-        .filter((driver) => !excludeDriverIds.includes(driver.id));
-      console.log(`[startAuction] 2nd round secondary radius candidates: ${candidates.length}`);
+        .filter((d) => !excludeDriverIds.includes(d.id));
     }
 
     if (candidates.length === 0) {
-      console.log(`[startAuction] No candidates found for ${ride.id}`);
-      if (isSearchWindowExceeded(ride, s)) {
-        await moveRideToFallback(ride, "Sin conductores disponibles");
+      if (ride.assignment_mode !== "manual") {
+        const nowIso = new Date().toISOString();
+        await supabaseApi.rideRequests.update(ride.id, {
+          status: "pending",
+          assignment_mode: "manual",
+          manual_assignment_requested_at: nowIso,
+          driver_id: null,
+          driver_name: null,
+          auction_driver_ids: [],
+        });
+        queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
+          old.map((r) => r.id === ride.id
+            ? {
+                ...r,
+                status: "pending",
+                assignment_mode: "manual",
+                manual_assignment_requested_at: nowIso,
+                driver_id: null,
+                driver_name: null,
+                auction_driver_ids: [],
+              }
+            : r)
+        );
       }
       return;
     }
 
     let sorted = candidates;
     if (ride.pickup_lat && ride.pickup_lon) {
-      sorted = [...candidates].sort((left, right) =>
-        getHaverDist(ride.pickup_lat, ride.pickup_lon, left.latitude, left.longitude) -
-        getHaverDist(ride.pickup_lat, ride.pickup_lon, right.latitude, right.longitude)
+      sorted = [...candidates].sort((a, b) =>
+        getHaverDist(ride.pickup_lat, ride.pickup_lon, a.latitude, a.longitude) -
+        getHaverDist(ride.pickup_lat, ride.pickup_lon, b.latitude, b.longitude)
       );
     }
 
     const notifyDrivers = sorted.slice(0, maxDrivers);
     const auctionExpiresAt = new Date(Date.now() + (s?.auction_timeout_seconds ?? 30) * 1000).toISOString();
 
-    console.log(`[startAuction] Notifying ${notifyDrivers.length} drivers for ride ${ride.id}`);
-
     await supabaseApi.rideRequests.update(ride.id, {
-      auction_driver_ids: notifyDrivers.map((driver) => driver.id),
+      auction_driver_ids: notifyDrivers.map((d) => d.id),
       auction_expires_at: auctionExpiresAt,
       status: "auction",
     });
-
-    // 🔔 Create notification for auction drivers
-    try {
-      console.log(`[startAuction] Creating notification for ${notifyDrivers.length} drivers`);
-      await supabaseApi.notifications.create({
-        title: "Subasta de viaje",
-        body: `Hay una subasta disponible para un viaje a ${ride.service_type_name || "Servicio"}`,
-        driver_ids: notifyDrivers.map((driver) => driver.id),
-        driver_names: notifyDrivers.map((driver) => driver.full_name),
-        tag: "ride_auction",
-        sent_by: "system",
-      });
-      console.log(`[startAuction] Notification created for auction`);
-    } catch (err) {
-      console.error("[startAuction] Error creating auction notification:", err);
-    }
 
     queryClient.invalidateQueries({ queryKey: ["rides"] });
   };
@@ -426,82 +341,38 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         if (payload.eventType === "INSERT") {
           if (data.status === "scheduled") return;
 
-          if (data.status === "auction" && data.assignment_mode === "auction") {
-            if (data.awaiting_payment_confirmation) return;
-            const createdRideId = data.id;
-            console.log(`[useRideAutoAssign] INSERT auction ride: ${createdRideId}`);
-            setTimeout(async () => {
-              try {
-                const current = await supabaseApi.rideRequests.get(createdRideId).catch(() => null);
-                console.log(`[useRideAutoAssign] Fetched auction ride after delay:`, current?.id, current?.status, current?.driver_id);
-                if (!current) return;
-                if (current.driver_id || current.status !== "auction") return;
-                const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
-                console.log(`[useRideAutoAssign] Starting auction for ${createdRideId}`);
-                await startAuction(current, prevNotified);
-              } catch (err) {
-                console.error(`[useRideAutoAssign] Error in auction timeout:`, err);
-              }
-            }, 250);
-            return;
-          }
-
           if (data.status === "pending" && data.assignment_mode !== "manual") {
             if (data.awaiting_payment_confirmation) return;
+
             const searchDelaySec = settingsRef.current?.search_phase_seconds ?? 5;
             const createdRideId = data.id;
-            console.log(`[useRideAutoAssign] INSERT pending ride: ${createdRideId}, mode: ${data.assignment_mode}, delay: ${searchDelaySec}s`);
 
             setTimeout(async () => {
-              try {
-                const current = await supabaseApi.rideRequests.get(createdRideId).catch((err) => {
-                  console.error(`[useRideAutoAssign] Error fetching ride:`, err);
-                  return null;
-                });
-                console.log(`[useRideAutoAssign] Fetched pending ride after delay:`, current?.id, current?.status, current?.driver_id);
-                if (!current) {
-                  console.warn(`[useRideAutoAssign] Could not fetch ride ${createdRideId}`);
-                  return;
-                }
-                if (current.driver_id) {
-                  console.log(`[useRideAutoAssign] Ride ${createdRideId} already has driver ${current.driver_id}, skipping`);
-                  return;
-                }
-                if (!["pending", "auction"].includes(current.status)) {
-                  console.log(`[useRideAutoAssign] Ride ${createdRideId} status is ${current.status}, skipping`);
-                  return;
-                }
+              const current = await supabaseApi.rideRequests.get(createdRideId).catch(() => null);
+              if (!current) return;
+              if (current.driver_id || !["pending", "auction"].includes(current.status)) return;
 
-                const s = settingsRef.current;
-                const globalAuction = !!s?.auction_mode_enabled;
-                const mode = current.assignment_mode;
-                const useAuction = mode
-                  ? mode === "auction"
-                  : globalAuction;
-                console.log(`[useRideAutoAssign] Deciding mode: mode=${mode}, globalAuction=${globalAuction}, useAuction=${useAuction}`);
-                if (useAuction) {
-                  console.log(`[useRideAutoAssign] Starting auction for ${createdRideId}`);
-                  await startAuction(current);
-                } else {
-                  console.log(`[useRideAutoAssign] Auto-assigning driver for ${createdRideId}`);
-                  await autoAssignDriver(current);
-                }
-              } catch (err) {
-                console.error(`[useRideAutoAssign] Error in pending timeout:`, err);
+              const s = settingsRef.current;
+              const globalAuction = !!s?.auction_mode_enabled;
+              if (globalAuction || current.assignment_mode === "auction") {
+                await startAuction(current);
+              } else {
+                await autoAssignDriver(current);
               }
             }, searchDelaySec * 1000);
           }
         }
 
         if (payload.eventType === "UPDATE") {
-          const wasReassignment = Array.isArray(data._excluded_driver_ids) && data._excluded_driver_ids.length > 0;
-          if (data.status === "pending" && !data.driver_id && wasReassignment) {
-            const excludeIds = data._excluded_driver_ids || [];
-            if (data.assignment_mode === "auto" || !data.assignment_mode) {
-              await autoAssignDriver(data, excludeIds);
-            } else if (data.assignment_mode === "auction") {
-              const prevNotified = Array.isArray(data.auction_driver_ids) ? data.auction_driver_ids : [];
-              await startAuction(data, prevNotified);
+          const d = data;
+          const wasReassignment = Array.isArray(d._excluded_driver_ids) && d._excluded_driver_ids.length > 0;
+          if (d.status === "pending" && !d.driver_id && wasReassignment) {
+            const excludeIds = d._excluded_driver_ids || [];
+            if (d.assignment_mode === "auto" || !d.assignment_mode) {
+              await autoAssignDriver(d, excludeIds);
+            } else if (d.assignment_mode === "auction") {
+              const prevNotified = Array.isArray(d.auction_driver_ids) ? d.auction_driver_ids : [];
+              await startAuction(d, prevNotified);
             }
           }
         }
@@ -522,15 +393,17 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       const now = Date.now();
       const freshRides = await supabaseApi.rideRequests.list().catch(() => [] as Ride[]);
       if (freshRides?.length) {
-        ridesRef.current = freshRides.slice(0, 100);
+        const top = freshRides.slice(0, 100);
+        ridesRef.current = top;
         queryClient.setQueryData(["rides"], (old: Ride[] = []) => {
-          const freshIds = new Set(ridesRef.current.map((r) => r.id));
+          const freshIds = new Set(top.map((r) => r.id));
           const recentLocal = (old || []).filter((r) => !freshIds.has(r.id) && (now - getRideCreatedTs(r) < 5000));
-          return [...recentLocal, ...ridesRef.current];
+          return [...recentLocal, ...top];
         });
       }
 
       const rides = ridesRef.current;
+
       const scheduledPending = rides.filter((r) => r.status === "scheduled" && r.scheduled_time && !r.driver_id);
       for (const ride of scheduledPending) {
         const serviceTypes = (queryClient.getQueryData(["serviceTypes"]) as any[]) ?? [];
@@ -564,12 +437,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       );
 
       for (const ride of rescueRides) {
-        if (isSearchWindowExceeded(ride, s)) {
-          await moveRideToFallback(ride, "Sin conductores disponibles");
-          processingRideIds.delete(ride.id);
-          continue;
-        }
-
         if (ride.status === "auction" && ride.auction_expires_at) {
           const expiresAt = new Date(ride.auction_expires_at).getTime();
           if (now < expiresAt) continue;
@@ -595,11 +462,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         }
 
         const excludeIds = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
-        const mode = current.assignment_mode;
-        const useAuction = mode
-          ? mode === "auction"
-          : !!s?.auction_mode_enabled;
-
+        const useAuction = !!s?.auction_mode_enabled || current.assignment_mode === "auction";
         if (useAuction) {
           const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
           await startAuction(current, uniqueIds([...excludeIds, ...prevNotified]));
@@ -611,9 +474,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       }
     };
 
-    const interval = setInterval(checkScheduledAndPending, 10000);
+    const id = setInterval(checkScheduledAndPending, 10000);
     checkScheduledAndPending();
-    return () => clearInterval(interval);
+    return () => clearInterval(id);
   }, [queryClient, enabled]);
 
   const assignedRideTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -638,19 +501,14 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         ) {
           if (assignedRideTimersRef.current[ride.id]) continue;
 
-          const assignedAt = new Date(getRideUpdatedIso(ride)).getTime();
+          const assignedAt = getRideUpdatedTs(ride);
           const graceMs = ride.assignment_mode === "auction" ? 3000 : 0;
           const remaining = Math.max(0, timeoutMs + graceMs - (now - assignedAt));
 
-          const timer = setTimeout(async () => {
+          const t = setTimeout(async () => {
             delete assignedRideTimersRef.current[ride.id];
             const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
             if (!current || current.status !== "assigned" || current.en_route_at || current.driver_accepted_at) return;
-
-            if (isSearchWindowExceeded(current, settingsRef.current)) {
-              await moveRideToFallback(current, "Sin conductores disponibles");
-              return;
-            }
 
             const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
             const excludedIds = uniqueIds([...prevExcluded, current.driver_id]);
@@ -671,10 +529,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               _excluded_driver_ids: excludedIds,
             });
 
-            const mode = current.assignment_mode;
-            const useAuction = mode
-              ? mode === "auction"
-              : !!settingsRef.current?.auction_mode_enabled;
+            const useAuction = !!settingsRef.current?.auction_mode_enabled || current.assignment_mode === "auction";
             if (useAuction) {
               await startAuction({ ...current, status: "pending", driver_id: null, assignment_mode: "auction" }, excludedIds);
             } else {
@@ -682,10 +537,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             }
           }, remaining);
 
-          assignedRideTimersRef.current[ride.id] = timer;
+          assignedRideTimersRef.current[ride.id] = t;
         } else if (
           ride.driver_accepted_at ||
-          ride.en_route_at ||
           ["completed", "cancelled", "en_route", "arrived", "in_progress", "admin_approved"].includes(ride.status || "")
         ) {
           if (assignedRideTimersRef.current[ride.id]) {
@@ -702,14 +556,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           const remaining = Math.max(0, expiresAt - now);
           processedAuctionsRef.current.add(key);
 
-          const timer = setTimeout(async () => {
+          const t = setTimeout(async () => {
             const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
             if (!current || current.status !== "auction") return;
-
-            if (isSearchWindowExceeded(current, settingsRef.current)) {
-              await moveRideToFallback(current, "Sin conductores disponibles");
-              return;
-            }
 
             const notifiedIds = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
             const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
@@ -719,7 +568,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               old.map((r) => r.id === current.id ? { ...r, status: "pending", auction_driver_ids: [], _excluded_driver_ids: allExcluded } : r)
             );
 
-            await Promise.all(notifiedIds.map((driverId) => supabaseApi.drivers.update(driverId, { status: "available" }).catch(() => {})));
+            await Promise.all(
+              notifiedIds.map((dId) => supabaseApi.drivers.update(dId, { status: "available" }).catch(() => {}))
+            );
             queryClient.setQueryData(["drivers"], (old: Driver[] = []) =>
               old.map((d) => notifiedIds.includes(d.id) ? { ...d, status: "available" } : d)
             );
@@ -734,7 +585,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             await startAuction({ ...current, status: "pending", driver_id: null, auction_driver_ids: [], assignment_mode: "auction" }, allExcluded);
           }, remaining);
 
-          assignTimeoutsRef.current.push(timer);
+          assignTimeoutsRef.current.push(t);
         }
       }
     });
