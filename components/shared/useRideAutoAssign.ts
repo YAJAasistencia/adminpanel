@@ -279,7 +279,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     queryClient.setQueryData(["lastAssignedDriver"], best);
     queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
       old.map((r) => r.id === ride.id
-        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned", updated_at: assignedNow }
+        ? { ...r, driver_id: best.id, driver_name: best.full_name, status: "assigned" }
         : r)
     );
 
@@ -288,7 +288,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       driver_name: best.full_name,
       status: "assigned",
       assigned_at: assignedNow,
-      updated_at: assignedNow,
     });
     queryClient.invalidateQueries({ queryKey: ["drivers"] });
   };
