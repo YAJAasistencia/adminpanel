@@ -290,21 +290,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       assigned_at: assignedNow,
       updated_at: assignedNow,
     });
-
-    // 🔔 Create notification for assigned driver
-    try {
-      await supabaseApi.notifications.create({
-        title: "Viaje asignado",
-        body: `Se te ha asignado un viaje a ${ride.service_type_name || "Servicio"}`,
-        driver_ids: [best.id],
-        driver_names: [best.full_name],
-        tag: "ride_assigned",
-        sent_by: "system",
-      });
-    } catch (err) {
-      console.error("[useRideAutoAssign] Error creating notification:", err);
-    }
-
     queryClient.invalidateQueries({ queryKey: ["drivers"] });
   };
 
@@ -360,21 +345,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       auction_expires_at: auctionExpiresAt,
       status: "auction",
     });
-
-    // 🔔 Create notification for auction drivers
-    try {
-      await supabaseApi.notifications.create({
-        title: "Subasta de viaje",
-        body: `Hay una subasta disponible para un viaje a ${ride.service_type_name || "Servicio"}`,
-        driver_ids: notifyDrivers.map((driver) => driver.id),
-        driver_names: notifyDrivers.map((driver) => driver.full_name),
-        tag: "ride_auction",
-        sent_by: "system",
-      });
-    } catch (err) {
-      console.error("[useRideAutoAssign] Error creating auction notification:", err);
-    }
-
     queryClient.invalidateQueries({ queryKey: ["rides"] });
   };
 
