@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery } from "@tanstack/react-query";
 
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -58,7 +59,7 @@ const destIconSvg = () => L.divIcon({
   popupAnchor: [0, -20],
 });
 
-function MapRecenter({ pos }) {
+function MapRecenter({ pos }: { pos: LatLngTuple | null }) {
   const map = useMap();
   useEffect(() => { if (pos) map.setView(pos, map.getZoom()); }, [pos?.[0], pos?.[1]]);
   return null;
@@ -131,7 +132,7 @@ export default function RideLiveMap({ ride, settings }) {
   if (!hasPickup && !hasDriverLoc) return null;
   // Always show map if we have pickup coords (even without driver GPS yet)
 
-  const center = hasDriverLoc
+  const center: LatLngTuple | null = hasDriverLoc
     ? [driver.latitude, driver.longitude]
     : hasPickup
     ? [ride.pickup_lat, ride.pickup_lon]

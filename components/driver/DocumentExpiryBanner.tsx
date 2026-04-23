@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { AlertTriangle, X, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -12,13 +12,13 @@ const DEFAULT_VEHICLE_DOCS = [
 
 const DEFAULT_PERSONAL_DOCS = [];
 
-function getDaysUntil(dateStr) {
+function getDaysUntil(dateStr: string | null | undefined) {
   if (!dateStr) return null;
-  const diff = new Date(dateStr) - new Date();
+  const diff = new Date(dateStr).getTime() - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function DocumentExpiryBanner({ driver }) {
+export default function DocumentExpiryBanner({ driver }: { driver: any }) {
   const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: () => supabaseApi.settings.list(),
@@ -30,13 +30,13 @@ export default function DocumentExpiryBanner({ driver }) {
   const personalDocsConfig = settings?.driver_required_docs || DEFAULT_PERSONAL_DOCS;
 
   const alerts = useMemo(() => {
-    const result = [];
+    const result: any[] = [];
 
     // ── 1. Vehicle doc expiries ──────────────────────────────────────────────
     const vehicles = driver?.vehicles || [];
     for (const vehicle of vehicles) {
       const vtype = vehicle.vehicle_type || "car";
-      const docs = vehicleDocsConfig.filter(d =>
+      const docs = vehicleDocsConfig.filter((d: any) =>
         d.require_expiry !== false &&
         (!d.applies_to || d.applies_to === "both" || d.applies_to === vtype)
       );
@@ -72,7 +72,7 @@ export default function DocumentExpiryBanner({ driver }) {
     return result.sort((a, b) => a.days - b.days);
   }, [driver?.vehicles, driver?.doc_expiries, vehicleDocsConfig, personalDocsConfig]);
 
-  const [dismissed, setDismissed] = React.useState([]);
+  const [dismissed, setDismissed] = React.useState<string[]>([]);
   const visible = alerts.filter(a => !dismissed.includes(a.key));
 
   if (visible.length === 0) return null;

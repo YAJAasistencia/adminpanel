@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { CAR_BRANDS, MOTO_BRANDS, VEHICLE_YEARS } from "@/components/shared/vehicleBrands";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Star, Car, MapPin, DollarSign, CreditCard, FileText, CheckCircle, Clock, Upload, X, TimerOff, ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
+import { Star, Car, CheckCircle, Clock, Upload, X, TimerOff, ThumbsUp, ThumbsDown } from "lucide-react";
 import DriverSmsNotifier from "@/components/admin/DriverSmsNotifier";
 import { toast } from "sonner";
 
@@ -236,7 +234,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       doc_expiries: docExpiries,
     };
     await supabaseApi.drivers.update(driver.id, dataToSave);
-    queryClient.setQueryData(["drivers"], (old = []) =>
+    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
       old.map(d => d.id === driver.id ? { ...d, ...dataToSave } : d)
     );
     toast.success("Conductor actualizado");
@@ -253,7 +251,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       const updated = { ...prev, doc_urls: newUrls };
       // Persist immediately (fire and forget, handleSave will also save it)
       supabaseApi.drivers.update(driver.id, { doc_urls: newUrls });
-      queryClient.setQueryData(["drivers"], (old = []) =>
+      queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
         old.map(d => d.id === driver.id ? { ...d, doc_urls: newUrls } : d)
       );
       return updated;
@@ -270,7 +268,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
       rejected_docs: rejectedList,
     });
     // Update cache directly so the re-render doesn't reset local state
-    queryClient.setQueryData(["drivers"], (old = []) =>
+    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
       old.map(d => d.id === driver.id ? { ...d, approved_docs: approvedList, rejected_docs: rejectedList } : d)
     );
   };
@@ -340,7 +338,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
   const saveVehicles = async (updated) => {
     update("vehicles", updated);
     await supabaseApi.drivers.update(driver.id, { vehicles: updated });
-    queryClient.setQueryData(["drivers"], (old = []) =>
+    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
       old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
     );
   };
@@ -507,7 +505,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   setEditDriver(prev => {
                     const updated = [...(prev.vehicles || []), newVehicle];
                     supabaseApi.drivers.update(driver.id, { vehicles: updated });
-                    queryClient.setQueryData(["drivers"], (old = []) =>
+                    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
                       old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                     );
                     return { ...prev, vehicles: updated };
@@ -515,6 +513,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                   toast.success("Vehículo agregado");
                 }}
                 onCancel={() => {}}
+                editingVehicle={null}
                 vehicleDocs={vehicleDocsConfig}
               />
             )}
@@ -547,7 +546,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                       setEditDriver(prev => {
                         const updated = (prev.vehicles || []).map(x => x.id === updatedVehicle.id ? updatedVehicle : x);
                         supabaseApi.drivers.update(driver.id, { vehicles: updated });
-                        queryClient.setQueryData(["drivers"], (old = []) =>
+                        queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
                           old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                         );
                         return { ...prev, vehicles: updated };
@@ -565,7 +564,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                 setEditDriver(prev => {
                   const updated = (prev.vehicles || []).map((x, j) => j === i ? { ...x, admin_disabled: newDisabled } : x);
                   supabaseApi.drivers.update(driver.id, { vehicles: updated });
-                  queryClient.setQueryData(["drivers"], (old = []) =>
+                  queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
                     old.map(d => d.id === driver.id ? { ...d, vehicles: updated } : d)
                   );
                   return { ...prev, vehicles: updated };
@@ -611,7 +610,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                       const expiryKey = `doc_${doc.key}_expiry`;
                       const url = v[urlKey];
                       const expiry = v[expiryKey];
-                      const days = expiry ? Math.ceil((new Date(expiry) - new Date()) / 86400000) : null;
+                      const days = expiry ? Math.ceil((new Date(expiry).getTime() - Date.now()) / 86400000) : null;
                       const isVDocApproved = (v.approved_docs || []).includes(doc.key);
                       const isVDocRejected = (v.rejected_docs || []).includes(doc.key);
                       const requireExpiry = doc.require_expiry !== false;
@@ -659,7 +658,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                                   setEditDriver(prev => {
                                     const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [urlKey]: file_url } : x);
                                     supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles });
-                                    queryClient.setQueryData(["drivers"], (old = []) =>
+                                    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
                                       old.map(d => d.id === driver.id ? { ...d, vehicles: updatedVehicles } : d)
                                     );
                                     return { ...prev, vehicles: updatedVehicles };
@@ -682,7 +681,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
                                   setEditDriver(prev => {
                                     const updatedVehicles = (prev.vehicles || []).map((x, j) => j === i ? { ...x, [expiryKey]: val } : x);
                                     supabaseApi.drivers.update(driver.id, { vehicles: updatedVehicles }).catch(err => console.error("Error updating vehicles:", err));
-                                    queryClient.setQueryData(["drivers"], (old = []) =>
+                                    queryClient.setQueryData<any[]>(["drivers"], (old = []) =>
                                       old.map(d => d.id === driver.id ? { ...d, vehicles: updatedVehicles } : d)
                                     );
                                     return { ...prev, vehicles: updatedVehicles };
@@ -774,7 +773,7 @@ export default function DriverDetailDialog({ driver, open, onOpenChange, cities,
               const isApproved = !!docApproved[doc.key];
               const isRejected = !!docRejected[doc.key];
               const expiry = docExpiries[doc.key] || "";
-              const expiryDays = expiry ? Math.ceil((new Date(expiry) - new Date()) / 86400000) : null;
+              const expiryDays = expiry ? Math.ceil((new Date(expiry).getTime() - Date.now()) / 86400000) : null;
               return (
                 <div key={doc.key} className={`p-3 rounded-xl border-2 transition-all ${isApproved ? "border-emerald-300 bg-emerald-50" : isRejected ? "border-red-200 bg-red-50" : docUrl ? "border-amber-200 bg-amber-50" : "border-slate-100"}`}>
                   <div className="flex items-center justify-between gap-2 flex-wrap">

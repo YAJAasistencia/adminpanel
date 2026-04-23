@@ -5,7 +5,7 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-interface DrawerProps extends React.ComponentProps<typeof DrawerPrimitive.Root> {
+type DrawerProps = React.ComponentProps<typeof DrawerPrimitive.Root> & {
   shouldScaleBackground?: boolean
 }
 

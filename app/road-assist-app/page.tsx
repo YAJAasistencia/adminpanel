@@ -25,7 +25,8 @@ function usePassengerSounds() {
   const ctxRef = useRef(null);
   const playSound = React.useCallback((type) => {
     if (!ctxRef.current || ctxRef.current.state === "closed") {
-      ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+      ctxRef.current = new AudioCtx();
     }
     const ctx = ctxRef.current;
     const tones = {
@@ -241,7 +242,7 @@ function RideDetailModal({ ride, onClose }) {
 export default function RoadAssistApp() {
   const { user, login, logout, loading, refreshUser, setUser } = useRoadAssistAuth();
   const [tab, setTab] = useState("home");
-  const [showTickets, setShowTickets] = useState(false);
+  const [showTickets, setShowTickets] = useState<any>(false);
   const [detailRide, setDetailRide] = useState(null);
   const [endedRide, setEndedRide] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -301,7 +302,7 @@ export default function RoadAssistApp() {
         { event: "UPDATE", schema: "public", table: "road_assist_users", filter: `id=eq.${user.id}` },
         (payload) => {
           if (payload.new) {
-            setUser(payload.new);
+            setUser(payload.new as any);
           }
         }
       )
@@ -380,7 +381,7 @@ export default function RoadAssistApp() {
 
   return (
     <div className="fixed inset-0 bg-slate-900" style={{ paddingTop: "env(safe-area-inset-top)", touchAction: "pan-y" }}>
-      <AnnouncementModal audience="passengers" storageKey="passenger_shown_announcements" />
+      <AnnouncementModal audience="passengers" cityId="" serviceTypeId="" storageKey="passenger_shown_announcements" />
 
       {/* Header flotante */}
       <div className="absolute top-0 left-0 right-0 z-30" style={{ paddingTop: "env(safe-area-inset-top)" }}>
@@ -440,7 +441,7 @@ export default function RoadAssistApp() {
                       <p className="text-sm">Sin servicios solicitados aún</p>
                     </div>
                   ) : (
-                    [...allRides].sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at)).map(r => (
+                    [...allRides].sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime()).map(r => (
                       <RACompletedRideCard key={r.id} ride={r}
                         onReportProblem={(ride) => setShowTickets({ rideContext: { ride_id: ride.id, service_id: ride.service_id } })}
                         onViewDetail={(ride) => setDetailRide(ride)}
@@ -546,8 +547,10 @@ export default function RoadAssistApp() {
         {showTickets && (
           <TicketsPanel
             role="passenger"
+            driverId=""
             passengerUserId={user?.id}
             passengerName={user?.full_name}
+            driverName=""
             passengerPhone={user?.phone}
             rideContext={showTickets?.rideContext || null}
             onClose={() => setShowTickets(false)}

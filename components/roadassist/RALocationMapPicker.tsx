@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { CheckCircle, X, MapPin, Loader2, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -135,7 +135,6 @@ export default function RALocationMapPicker({ initialLat, initialLon, initialAdd
           zoom={16}
           style={{ width: "100%", height: "100%" }}
           zoomControl={false}
-          tap={false}
         >
           <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
           <DraggableMarker position={[lat, lon]} onMove={updatePosition} />

@@ -1,11 +1,10 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Car, CheckCircle2, X, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 function daysUntilExpiry(dateStr) {
   if (!dateStr) return null;
-  return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 export default function VehicleSelectorModal({ vehicles = [], vehicleDocs = [], onSelect, onClose }) {

@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion, AnimatePresence } from "framer-motion";
-import { HelpCircle, Plus, MessageSquare, ChevronLeft, Car, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
+import { HelpCircle, Plus, MessageSquare, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import moment from "moment";
 
@@ -26,7 +26,7 @@ const CATEGORIES = [
   { key: "otro", label: "Otro" },
 ];
 
-export default function DriverHelpTicket({ driver, rideContext, onClose }) {
+export default function DriverHelpTicket({ driver, rideContext, onClose }: { driver: any; rideContext: any; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [view, setView] = useState(rideContext ? "new" : "list");
   const [form, setForm] = useState({
@@ -48,9 +48,9 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
 
   const { data: driverRides = [] } = useQuery({
     queryKey: ["driverRidesForTicket", driver.id],
-    queryFn: () => supabaseApi.rides.list({ driver_id: driver.id }),
+    queryFn: () => supabaseApi.rideRequests.list({ driver_id: driver.id }),
     enabled: !!driver.id && !rideContext,
-    select: (data) => data.filter(r => r.status === "completed").slice(0, 30),
+    select: (data: any[]) => data.filter((r: any) => r.status === "completed").slice(0, 30),
   });
 
   const handleSubmit = async () => {
@@ -80,14 +80,14 @@ export default function DriverHelpTicket({ driver, rideContext, onClose }) {
     setSaving(false);
   };
 
-  const handleRideSelect = (rideId) => {
+  const handleRideSelect = (rideId: string) => {
     if (!rideId || rideId === "_none") {
-      setForm(p => ({ ...p, ride_id: "", service_id: "" }));
+      setForm((p: any) => ({ ...p, ride_id: "", service_id: "" }));
       return;
     }
-    const ride = driverRides.find(r => r.id === rideId);
+    const ride = driverRides.find((r: any) => r.id === rideId);
     if (ride) {
-      setForm(p => ({
+      setForm((p: any) => ({
         ...p,
         ride_id: ride.id,
         service_id: ride.service_id || "",

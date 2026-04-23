@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { MapPin, User, Car, CreditCard, Clock, DollarSign, Phone, Building2, Layers, FileText, Star, ChevronDown, ChevronUp, UserCheck, MessageCircle } from "lucide-react";
+import { MapPin, User, Car, CreditCard, Clock, Phone, Building2, Layers, FileText, Star, ChevronDown, ChevronUp, UserCheck, MessageCircle } from "lucide-react";
 import { formatCDMX } from "@/components/shared/dateUtils";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { toast } from "sonner";

@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, Clock, Car, XCircle, DollarSign, Star, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { Download, Car, Star, AlertTriangle, FileText } from "lucide-react";
 import moment from "moment";
 import { formatCDMX, formatStoredLocal } from "@/components/shared/dateUtils";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -18,7 +18,7 @@ const CHART_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 function diffMin(from, to) {
   if (!from || !to) return null;
-  const d = (new Date(to) - new Date(from)) / 60000;
+  const d = (new Date(to).getTime() - new Date(from).getTime()) / 60000;
   return d >= 0 ? d.toFixed(1) : null;
 }
 
@@ -38,7 +38,10 @@ export default function CompanyKPITab({ company, rides }) {
 
   const { data: surveyResponses = [] } = useQuery({
     queryKey: ["surveyResponses", company.id],
-    queryFn: () => supabaseApi.surveyResponses.filter({ company_id: company.id }),
+    queryFn: async () => {
+      const all = await supabaseApi.surveyResponses.list();
+      return all.filter((sr: any) => sr.company_id === company.id);
+    },
   });
 
   const filtered = useMemo(() => rides.filter(r => {
@@ -76,7 +79,7 @@ export default function CompanyKPITab({ company, rides }) {
   const avgServicio = avgOf(tableRows.map(r => r.tServicio));
 
   const questionAverages = useMemo(() => {
-    const map = {};
+    const map: Record<string, number[]> = {};
     filteredSurveys.forEach(sr => {
       (sr.answers || []).forEach(a => {
         const n = parseFloat(a.answer);
@@ -138,11 +141,11 @@ export default function CompanyKPITab({ company, rides }) {
 
   const exportEncuestas = () => {
     if (filteredSurveys.length === 0) return;
-    const allQuestions = [...new Set(filteredSurveys.flatMap(sr => (sr.answers || []).map(a => a.question)))];
+    const allQuestions: string[] = [...new Set(filteredSurveys.flatMap(sr => (sr.answers || []).map((a: any) => a.question)))];
     const headers = ["Fecha","Folio","Pasajero","Conductor","Empresa","Encuesta", ...allQuestions, "Firmado por"];
     const rows = filteredSurveys.map(sr => {
-      const answerMap = {};
-      (sr.answers || []).forEach(a => { answerMap[a.question] = a.answer; });
+      const answerMap: Record<string, any> = {};
+      (sr.answers || []).forEach((a: any) => { answerMap[a.question] = a.answer; });
       return [
         formatCDMX(sr.completed_at || sr.created_date, "shortdatetime"),
         sr.service_id || "",
@@ -179,14 +182,14 @@ export default function CompanyKPITab({ company, rides }) {
       y = 36;
 
       const kpiData = [
-        { label: "Total solicitados", value: String(filtered.length), color: [59, 130, 246] },
-        { label: "Completados", value: String(completed.length), color: [16, 185, 129] },
-        { label: "Cancelados", value: String(cancelled.length), color: [239, 68, 68] },
-        { label: "Costo promedio", value: `$${avgCost.toFixed(0)}`, color: [139, 92, 246] },
-        { label: "T. prom. asignación", value: avgAsignacion ? `${avgAsignacion} min` : "N/D", color: [245, 158, 11] },
-        { label: "T. prom. llegada", value: avgLlegada ? `${avgLlegada} min` : "N/D", color: [249, 115, 22] },
-        { label: "T. prom. servicio", value: avgServicio ? `${avgServicio} min` : "N/D", color: [100, 116, 139] },
-        { label: "Cal. prom. encuesta", value: avgSurveyRating ? `★ ${avgSurveyRating}` : "N/D", color: [234, 179, 8] },
+        { label: "Total solicitados", value: String(filtered.length), color: [59, 130, 246] as [number, number, number] },
+        { label: "Completados", value: String(completed.length), color: [16, 185, 129] as [number, number, number] },
+        { label: "Cancelados", value: String(cancelled.length), color: [239, 68, 68] as [number, number, number] },
+        { label: "Costo promedio", value: `$${avgCost.toFixed(0)}`, color: [139, 92, 246] as [number, number, number] },
+        { label: "T. prom. asignación", value: avgAsignacion ? `${avgAsignacion} min` : "N/D", color: [245, 158, 11] as [number, number, number] },
+        { label: "T. prom. llegada", value: avgLlegada ? `${avgLlegada} min` : "N/D", color: [249, 115, 22] as [number, number, number] },
+        { label: "T. prom. servicio", value: avgServicio ? `${avgServicio} min` : "N/D", color: [100, 116, 139] as [number, number, number] },
+        { label: "Cal. prom. encuesta", value: avgSurveyRating ? `★ ${avgSurveyRating}` : "N/D", color: [234, 179, 8] as [number, number, number] },
       ];
       const boxW = (pageW - margin * 2 - 6 * 3) / 4;
       const boxH = 16;
@@ -195,7 +198,7 @@ export default function CompanyKPITab({ company, rides }) {
         const row = Math.floor(idx / 4);
         const bx = margin + col * (boxW + 6);
         const by = y + row * (boxH + 4);
-        pdf.setFillColor(...k.color);
+        pdf.setFillColor(k.color[0], k.color[1], k.color[2]);
         pdf.roundedRect(bx, by, boxW, boxH, 2, 2, "F");
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(11);
@@ -288,7 +291,7 @@ export default function CompanyKPITab({ company, rides }) {
         y += rowH;
       });
 
-      const totalPages = pdf.internal.getNumberOfPages();
+      const totalPages = (pdf as any).internal.getNumberOfPages();
       for (let p = 1; p <= totalPages; p++) {
         pdf.setPage(p);
         pdf.setFontSize(7);
@@ -493,7 +496,7 @@ export default function CompanyKPITab({ company, rides }) {
       {filtered.length > 0 && (
         <div ref={chartsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {(() => {
-            const dailyMap = {};
+            const dailyMap: Record<string, { day: string; total: number; completados: number }> = {};
             filtered.forEach(r => {
               const day = moment(r.requested_at || r.created_date).format("DD/MM");
               if (!dailyMap[day]) dailyMap[day] = { day, total: 0, completados: 0 };
@@ -519,7 +522,7 @@ export default function CompanyKPITab({ company, rides }) {
           })()}
 
           {(() => {
-            const svcMap = {};
+            const svcMap: Record<string, { name: string; total: number; count: number }> = {};
             completed.forEach(r => {
               const svc = r.service_type_name || "Sin servicio";
               if (!svcMap[svc]) svcMap[svc] = { name: svc, total: 0, count: 0 };
@@ -549,9 +552,9 @@ export default function CompanyKPITab({ company, rides }) {
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Tiempos promedio (minutos)</p>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart layout="vertical" data={[
-                  { name: "Asignación", min: parseFloat(avgAsignacion || 0) },
-                  { name: "Llegada", min: parseFloat(avgLlegada || 0) },
-                  { name: "Servicio", min: parseFloat(avgServicio || 0) },
+                  { name: "Asignación", min: Number(avgAsignacion || 0) },
+                  { name: "Llegada", min: Number(avgLlegada || 0) },
+                  { name: "Servicio", min: Number(avgServicio || 0) },
                 ]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} unit="'" />
@@ -579,7 +582,7 @@ export default function CompanyKPITab({ company, rides }) {
           )}
 
           {(() => {
-            const driverMap = {};
+            const driverMap: Record<string, { name: string; completados: number; cancelados: number; ingresos: number }> = {};
             filtered.forEach(r => {
               if (!r.driver_name) return;
               if (!driverMap[r.driver_name]) driverMap[r.driver_name] = { name: r.driver_name, completados: 0, cancelados: 0, ingresos: 0 };
@@ -611,7 +614,7 @@ export default function CompanyKPITab({ company, rides }) {
           })()}
 
           {(() => {
-            const svcMap = {};
+            const svcMap: Record<string, { name: string; total: number; completados: number; ingresos: number }> = {};
             filtered.forEach(r => {
               const svc = r.service_type_name || "Sin tipo";
               if (!svcMap[svc]) svcMap[svc] = { name: svc, total: 0, completados: 0, ingresos: 0 };
@@ -639,7 +642,7 @@ export default function CompanyKPITab({ company, rides }) {
           })()}
 
           {(() => {
-            const pmMap = {};
+            const pmMap: Record<string, { name: string; value: number }> = {};
             completed.forEach(r => {
               const pm = r.payment_method || "otro";
               if (!pmMap[pm]) pmMap[pm] = { name: pm, value: 0 };
@@ -653,7 +656,7 @@ export default function CompanyKPITab({ company, rides }) {
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Método de pago (completados)</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={data.map(d => ({ ...d, name: PM_LABELS[d.name] || d.name }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75}
+                    <Pie data={data.map((d: any) => ({ ...d, name: PM_LABELS[d.name as keyof typeof PM_LABELS] || d.name }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75}
                       label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false}>
                       {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Pie>
@@ -665,7 +668,7 @@ export default function CompanyKPITab({ company, rides }) {
           })()}
 
           {(() => {
-            const dailyMap = {};
+            const dailyMap: Record<string, { day: string; total: number; cancelados: number }> = {};
             filtered.forEach(r => {
               const day = moment(r.requested_at || r.created_date).format("DD/MM");
               if (!dailyMap[day]) dailyMap[day] = { day, total: 0, cancelados: 0 };

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, ChevronDown, ChevronUp, Loader } from "lucide-react";
-import { formatCDMX } from "@/components/shared/dateUtils";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

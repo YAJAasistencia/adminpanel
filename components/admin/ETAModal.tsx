@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Car, MapPin, Clock, Navigation, X, RefreshCw, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
+import { Car, MapPin, Clock, Navigation, X, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { getRoute, getHaverDist } from "@/components/shared/mapsUtils";
 
@@ -28,7 +28,7 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
   useEffect(() => {
     if (!ride?.auction_expires_at) { setAuctionSecsLeft(null); return; }
     const update = () => {
-      const remaining = Math.max(0, Math.round((new Date(ride.auction_expires_at) - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.round((new Date(ride.auction_expires_at).getTime() - Date.now()) / 1000));
       setAuctionSecsLeft(remaining);
     };
     update();

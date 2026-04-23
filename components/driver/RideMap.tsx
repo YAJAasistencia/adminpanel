@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Navigation, ExternalLink, Clock, Route } from "lucide-react";
+import type { LatLngTuple } from "leaflet";
+import { Navigation, ExternalLink, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getOSRMRoute, getGoogleMapsRoute } from "@/components/shared/mapsUtils";
 import useAppSettings from "@/components/shared/useAppSettings";
 
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -41,7 +42,7 @@ async function geocode(address) {
 }
 
 // Auto-recenter map when driver moves
-function MapRecenter({ center }) {
+function MapRecenter({ center }: { center: LatLngTuple }) {
   const map = useMap();
   const prevCenter = useRef(null);
   useEffect(() => {
@@ -145,7 +146,7 @@ export default function RideMap({ ride, fullScreen = false, driverLocation = nul
   ]);
 
   // Determine map center: prioritize driver location, then pickup, then dropoff
-  const centerCoords = driverLocation
+  const centerCoords: LatLngTuple = driverLocation
     ? [driverLocation.lat, driverLocation.lon]
     : pickupCoords
     ? [pickupCoords.lat, pickupCoords.lon]
@@ -163,7 +164,7 @@ export default function RideMap({ ride, fullScreen = false, driverLocation = nul
             <span className="text-[10px] text-slate-500">Calculando ruta...</span>
           </div>
         )}
-        <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} zoomControl={false} dragging={true} tap={false}>
+        <MapContainer center={centerCoords} zoom={15} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} zoomControl={false} dragging={true}>
           <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
           {/* Center on pickup when just accepted (assigned), center on driver when en_route */}
           {['assigned'].includes(ride.status) && pickupCoords
@@ -203,7 +204,7 @@ export default function RideMap({ ride, fullScreen = false, driverLocation = nul
   return (
     <div>
       <div className="rounded-xl overflow-hidden border border-slate-200 mb-2" style={{ height: 180 }}>
-        <MapContainer center={centerCoords} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} tap={false}>
+        <MapContainer center={centerCoords} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
           <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
           {pickupCoords && <Marker position={[pickupCoords.lat, pickupCoords.lon]} icon={greenIcon}><Popup>Recoger aquí</Popup></Marker>}
           {dropoffCoords && <Marker position={[dropoffCoords.lat, dropoffCoords.lon]} icon={redIcon}><Popup>Destino</Popup></Marker>}

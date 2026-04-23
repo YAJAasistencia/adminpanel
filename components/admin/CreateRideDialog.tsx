@@ -40,6 +40,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     // Corporate: company_price = what company pays, driver sees only driver_estimated_price
     company_price: "",
     driver_estimated_price: "",
+    gasoline_liters: "",
   });
 
   const { data: zones = [] } = useQuery({
@@ -56,7 +57,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
 
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
-    queryFn: () => supabaseApi.companies.list({ is_active: true }),
+    queryFn: async () => (await supabaseApi.companies.list()).filter(c => c.is_active === true),
     enabled: open,
   });
 
@@ -73,7 +74,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   // Auto-fill passenger data from phone number
   const handlePhoneBlur = async (phone) => {
     if (!phone || phone.length < 8) return;
-    const found = await supabaseApi.roadAssistUsers.list({ phone: phone.trim() });
+    const found = (await supabaseApi.roadAssistUsers.list()).filter(p => p.phone === phone.trim());
     if (found.length > 0) {
       const p = found[0];
       setForm(prev => ({ ...prev, passenger_name: p.full_name || prev.passenger_name }));
@@ -87,7 +88,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const categoryList = useMemo(() => {
     const cats = new Set();
     (serviceTypes || []).filter(s => s.is_active).forEach(s => cats.add(s.category?.trim() || "Servicios"));
-    return Array.from(cats).sort();
+    return (Array.from(cats) as string[]).sort();
   }, [serviceTypes]);
 
   // Filter services by selected category
@@ -341,7 +342,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     await supabaseApi.rideRequests.create(data);
     queryClient.invalidateQueries({ queryKey: ["rides"] });
     onOpenChange(false);
-    setForm({ passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", show_phone_to_driver: true });
+    setForm({ passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "", service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", duration_minutes: "", payment_method: "", notes: "", company_id: "", ride_type: "normal", assignment_mode: "auto", require_proof_photo: false, require_admin_approval: false, is_scheduled: false, scheduled_date: "", scheduled_time: "", extra_company_cost: "", show_phone_to_driver: true, company_price: "", driver_estimated_price: "", gasoline_liters: "" });
     setSelectedCategory("");
     setQuestionnaireAnswers({});
     setCustomFieldAnswers({});
@@ -529,6 +530,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
               value={form.pickup_address}
               onChange={handlePickupChange}
               placeholder="¿Dónde recogemos?"
+              label="Dirección de recogida"
             />
             {detectedRedZone && (
               <div className="mt-1.5 flex items-center gap-2 bg-red-50 border border-red-300 rounded-xl px-3 py-2">
@@ -561,6 +563,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   if (pickupCoords) fetchRoute(pickupCoords, coords);
                 }}
                 placeholder={destinationRequired ? "¿A dónde va? (obligatorio)" : "¿A dónde va? (opcional)"}
+                label="Dirección de destino"
               />
             </div>
           )}
@@ -604,7 +607,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                     key={liters}
                     type="button"
                     onClick={() => update("gasoline_liters", liters)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${form.gasoline_liters === liters ? "bg-amber-600 border-amber-600 text-white" : "bg-white border-amber-200 text-amber-700"}`}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${Number(form.gasoline_liters) === liters ? "bg-amber-600 border-amber-600 text-white" : "bg-white border-amber-200 text-amber-700"}`}
                   >
                     {liters} litros
                   </button>
@@ -686,7 +689,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                 <Input type="number" value={form.extra_company_cost} onChange={e => update("extra_company_cost", e.target.value)} placeholder="$0" className="mt-1" />
                 {form.extra_company_cost && parseFloat(form.extra_company_cost) > 0 && (
                   <p className="text-xs text-blue-600 mt-1">
-                    Total con extra: ${(parseFloat(form.estimated_price || 0) + parseFloat(form.extra_company_cost)).toFixed(0)}
+                    Total con extra: ${(parseFloat(String(form.estimated_price || "0")) + parseFloat(form.extra_company_cost)).toFixed(0)}
                   </p>
                 )}
               </div>

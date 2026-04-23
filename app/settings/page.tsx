@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Palette, Building2, Phone, Mail, DollarSign, Settings2, Zap, Tag, Plus, Trash2, Bell, Scissors, Car, Users, Clock, MapPin, Shield, RefreshCw, Layers, Share2, Copy, Check, Truck, Globe, LayoutDashboard, Map, Layout as LayoutIcon, AlertTriangle } from "lucide-react";
+import { Save, Palette, Building2, Phone, Mail, DollarSign, Settings2, Zap, Tag, Plus, Trash2, Bell, Scissors, Users, Clock, Shield, Truck, Globe, LayoutDashboard, Map, Layout as LayoutIcon, AlertTriangle } from "lucide-react";
 import LandingEditor from "@/components/settings/LandingEditor";
 import NavConfigEditor from "@/components/admin/NavConfigEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -16,7 +16,7 @@ function formatMinutes(mins) {
 function RatingsHistoryPanel({ rides = [], role, onClose, darkMode = false }) {
   const isDriver = role === "driver";
   const rated = rides.filter(r => isDriver ? r.passenger_rating_for_driver > 0 : r.driver_rating_for_passenger > 0)
-    .sort((a, b) => new Date(b.completed_at || b.updated_date) - new Date(a.completed_at || a.updated_date));
+    .sort((a, b) => new Date(b.completed_at || b.updated_date).getTime() - new Date(a.completed_at || a.updated_date).getTime());
   const avg = rated.length > 0
     ? (rated.reduce((s, r) => s + (isDriver ? r.passenger_rating_for_driver : r.driver_rating_for_passenger), 0) / rated.length).toFixed(1)
     : null;
@@ -125,7 +125,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
 
   const { data: driverRides = [] } = useQuery({
     queryKey: ["driverAllRides", driver?.id],
-    queryFn: () => supabaseApi.rides.list({ driver_id: driver?.id }),
+    queryFn: () => supabaseApi.rideRequests.list({ driver_id: driver?.id }),
     enabled: !!driver?.id && showRatings,
     staleTime: 60000,
   });

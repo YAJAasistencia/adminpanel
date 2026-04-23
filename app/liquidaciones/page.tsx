@@ -6,9 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Calculator, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { FileText, Download, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import moment from "moment";
 import { toast } from "sonner";
 
@@ -79,7 +78,7 @@ export default function Liquidaciones() {
   const driver = drivers.find(d => d.id === selectedDriverId);
 
   // By method breakdown
-  const byMethod = {};
+  const byMethod: Record<string, { count: number; total: number; comm: number }> = {};
   weekRides.forEach(r => {
     const k = r.payment_method || "unknown";
     if (!byMethod[k]) byMethod[k] = { count: 0, total: 0, comm: 0 };

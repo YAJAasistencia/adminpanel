@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send } from "lucide-react";
 import { playMessageSound } from "@/components/shared/useRideNotifications";
 
-export default function DriverChat({ driver, ride }) {
+export default function DriverChat({ driver, ride }: { driver: any; ride: any }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
-  const prevCountRef = useRef(0);
+  const prevCountRef = useRef<number>(0);
   const isRideActive = !["completed", "cancelled"].includes(ride?.status);
 
   const { data: messages = [] } = useQuery({
@@ -28,11 +28,11 @@ export default function DriverChat({ driver, ride }) {
     // Set up real-time listener for chat messages
     const channel = supabase.channel(`chat-${ride.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages', filter: `ride_id=eq.${ride.id}` }, (payload) => {
-        queryClient.setQueryData(["chatMessages", ride.id], (old = []) => {
-          if (payload.eventType === 'DELETE') return old.filter(m => m.id !== payload.old.id);
-          const idx = old.findIndex(m => m.id === payload.new.id);
+        queryClient.setQueryData(["chatMessages", ride.id], (old: any[] = []) => {
+          if (payload.eventType === 'DELETE') return old.filter((m: any) => m.id !== payload.old.id);
+          const idx = old.findIndex((m: any) => m.id === payload.new.id);
           if (idx === -1) return [...old, payload.new];
-          return old.map(m => m.id === payload.new.id ? payload.new : m);
+          return old.map((m: any) => m.id === payload.new.id ? payload.new : m);
         });
       })
       .subscribe();

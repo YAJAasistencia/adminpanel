@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/admin/Layout";
@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapContainer, TileLayer, Polygon, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Polygon, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { Plus, Pencil, Trash2, Map, Check, X, Layers, DollarSign, AlertTriangle, EyeOff, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Map, Check, X, Layers, EyeOff, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 const COLORS = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#84CC16"];

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,11 @@ import {
   Car, Crown, Truck, Ambulance, Wrench, ShieldAlert, Zap, Bike, Bus,
   Flame, Star, Navigation, AlertTriangle, Settings, Phone, HardHat, Cog,
   MapPin, ChevronRight, ArrowLeft, CreditCard, Banknote,
-  ArrowRightLeft, AlertCircle, Locate, Loader2, CheckCircle2, Shield, Wallet
+  ArrowRightLeft, AlertCircle, Locate, Loader2, CheckCircle2, Wallet
 } from "lucide-react";
 import RAAddressSearch from "@/components/roadassist/RAAddressSearch";
 import RALocationMapPicker from "@/components/roadassist/RALocationMapPicker";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { nowCDMX } from "@/components/shared/dateUtils";
@@ -40,7 +40,7 @@ function calcDistance(lat1, lon1, lat2, lon2) {
 
 // Leaflet icon fix
 try {
-  delete L.Icon.Default.prototype._getIconUrl;
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -274,6 +274,8 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
 
   // ── Transfer payment reference generation ────────────────────────────────
   const [transferRefGenerated, setTransferRefGenerated] = useState(null);
+  const walletRef = walletRefGenerated?.ref;
+  const transferRef = transferRefGenerated?.ref;
   const [generatingTransferRef, setGeneratingTransferRef] = useState(false);
 
   const handleGenerateTransferRef = async (amount) => {
@@ -496,7 +498,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       <div className="fixed inset-0 flex flex-col bg-slate-900 z-10">
         {/* Map */}
         <div className="relative flex-1 min-h-0">
-          <MapContainer center={[19.4326, -99.1332]} zoom={13} style={{ width: "100%", height: "100%" }} zoomControl={false} tap={false}>
+          <MapContainer center={[19.4326, -99.1332]} zoom={13} style={{ width: "100%", height: "100%" }} zoomControl={false}>
             <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
             {pickupLat && pickupLon && <MapFlyTo lat={pickupLat} lon={pickupLon} />}
             {routePolyline && <Polyline positions={routePolyline} color="#3B82F6" weight={4} opacity={0.85} />}
@@ -548,7 +550,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
                         if (data[0]) { setPickupLat(parseFloat(data[0].lat)); setPickupLon(parseFloat(data[0].lon)); }
                       } catch (_) {}
                     }}
-                    onKeyDown={e => e.key === "Enter" && e.target.blur()}
+                    onKeyDown={e => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
                     placeholder="Obteniendo ubicación..."
                     className="text-white text-xs flex-1 min-w-0 bg-transparent outline-none placeholder:text-white/40"
                   />
@@ -817,6 +819,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
             <label className="text-white/50 text-xs font-medium block mb-1.5">📍 Dirección de recogida *</label>
             <RAAddressSearch
               value={pickupAddress}
+              placeholder="Dirección de recogida"
               recentAddresses={recentAddresses}
               onChange={(addr, lat, lon) => {
                 setPickupAddress(addr); setPickupLat(lat); setPickupLon(lon);
@@ -855,6 +858,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
               <label className="text-white/50 text-xs font-medium block mb-1.5">🏁 Destino {destinationRequired ? <span className="text-red-400">*</span> : "(opcional)"}</label>
               <RAAddressSearch
                 value={dropoffAddress}
+                placeholder="Dirección destino"
                 recentAddresses={recentAddresses}
                 onChange={(addr, lat, lon) => {
                   setDropoffAddress(addr); setDropoffLat(lat); setDropoffLon(lon);
@@ -1061,7 +1065,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center justify-between">
               <div>
                 <p className="text-white/40 text-xs">Total estimado</p>
-                <p className="text-white font-bold text-lg">${(estimated - (coupon?.discount || 0)).toFixed(0)} MXN</p>
+                <p className="text-white font-bold text-lg">${(estimated - (appliedCoupon?.discount || 0)).toFixed(0)} MXN</p>
               </div>
               <div className="text-right text-white/60 text-xs">Extras: +${extrasTotal.toFixed(0)}</div>
             </div>
@@ -1073,7 +1077,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
               <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
                 <p className="text-white/70 text-sm">Saldo: ${walletBalance.toFixed(2)}</p>
                 <div className="flex gap-2 mt-3">
-                  <button onClick={async () => { await handleGenerateWalletRef(estimated); }} className="flex-1 rounded-2xl bg-blue-600 text-white py-2">Pagar con wallet</button>
+                  <button onClick={async () => { await handleGenerateWalletRef(); }} className="flex-1 rounded-2xl bg-blue-600 text-white py-2">Pagar con wallet</button>
                   <button onClick={() => setPaymentMethod('card')} className="rounded-2xl px-3 bg-white/5 text-white">Usar tarjeta</button>
                 </div>
               </div>
@@ -1114,7 +1118,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
                 if (paymentMethod === 'card') {
                   await handleChargeCard(estimated);
                 } else if (paymentMethod === 'wallet') {
-                  if (!walletRef) await handleGenerateWalletRef(estimated);
+                  if (!walletRef) await handleGenerateWalletRef();
                 } else if (paymentMethod === 'transfer') {
                   if (!transferRef) await handleGenerateTransferRef(estimated);
                 }

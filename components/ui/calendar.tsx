@@ -5,7 +5,7 @@ import { DayPicker, DayPickerProps } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
-interface CalendarProps extends DayPickerProps {
+type CalendarProps = DayPickerProps & {
   className?: string
   classNames?: Record<string, string>
 }

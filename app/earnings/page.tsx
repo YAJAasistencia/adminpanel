@@ -11,11 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 import moment from "moment";
 import { formatCDMX } from "@/components/shared/dateUtils";
-import { TrendingUp, DollarSign, Car, Users, Receipt } from "lucide-react";
+import { TrendingUp, DollarSign, Car, Receipt } from "lucide-react";
 
 const COLORS = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"];
 
@@ -51,7 +51,7 @@ export default function Earnings() {
   });
 
   // Daily earnings (admin sees full price)
-  const dailyMap = {};
+  const dailyMap: Record<string, number> = {};
   filtered.forEach(r => {
     const day = formatCDMX(r.requested_at, "daymonth");
     dailyMap[day] = (dailyMap[day] || 0) + (r.final_price || r.estimated_price || 0);
@@ -61,7 +61,7 @@ export default function Earnings() {
     .map(([date, total]) => ({ date, total: parseFloat(total.toFixed(0)) }));
 
   // By service
-  const serviceMap = {};
+  const serviceMap: Record<string, { name: string; total: number; count: number }> = {};
   filtered.forEach(r => {
     const s = r.service_type_name || "Sin servicio";
     if (!serviceMap[s]) serviceMap[s] = { name: s, total: 0, count: 0 };
@@ -71,7 +71,7 @@ export default function Earnings() {
   const serviceData = Object.values(serviceMap);
 
   // By payment method
-  const payMap = {};
+  const payMap: Record<string, number> = {};
   filtered.forEach(r => {
     const m = r.payment_method || "cash";
     payMap[m] = (payMap[m] || 0) + (r.final_price || r.estimated_price || 0);
@@ -81,7 +81,7 @@ export default function Earnings() {
 
   // By driver — filterable
   const driverFilteredRides = driverFilter === "all" ? filtered : filtered.filter(r => r.driver_name === driverFilter);
-  const driverMap = {};
+  const driverMap: Record<string, { name: string; total: number; driverPay: number; commission: number; net: number; count: number }> = {};
   filtered.forEach(r => {
     const d = r.driver_name || "Sin asignar";
     if (!driverMap[d]) driverMap[d] = { name: d, total: 0, driverPay: 0, commission: 0, net: 0, count: 0 };

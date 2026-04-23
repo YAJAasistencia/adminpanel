@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   MapPin, CheckCircle2, XCircle, ChevronLeft, Star, Clock,
@@ -64,11 +65,11 @@ function RideDetailMap({ ride }) {
     if (!pickupCoords && ride.pickup_address) _geocode(ride.pickup_address).then(setPickupCoords);
     if (!dropoffCoords && ride.dropoff_address) _geocode(ride.dropoff_address).then(setDropoffCoords);
   }, []);
-  const center = pickupCoords ? [pickupCoords.lat, pickupCoords.lon] : [19.4326, -99.1332];
+  const center: LatLngTuple = pickupCoords ? [pickupCoords.lat, pickupCoords.lon] : [19.4326, -99.1332];
   const positions = [...(pickupCoords ? [[pickupCoords.lat, pickupCoords.lon]] : []), ...(dropoffCoords ? [[dropoffCoords.lat, dropoffCoords.lon]] : [])];
   return (
     <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: 200 }}>
-      <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false} tap={false}>
+      <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
         <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
         {pickupCoords && <Marker position={[pickupCoords.lat, pickupCoords.lon]} icon={_greenIcon}><Popup>Recogida</Popup></Marker>}
         {dropoffCoords && <Marker position={[dropoffCoords.lat, dropoffCoords.lon]} icon={_redIcon}><Popup>Destino</Popup></Marker>}
@@ -203,7 +204,7 @@ function RideDetailModal({ ride: initialRide, driver, onClose }) {
         </div>
       </motion.div>
       <AnimatePresence>
-        {showTicket && <TicketsPanel role="driver" driverId={driver?.id} driverName={driver?.full_name} rideContext={{ ride_id: ride.id, service_id: ride.service_id, passenger_name: ride.passenger_name }} onClose={() => setShowTicket(false)} darkMode={false} />}
+        {showTicket && <TicketsPanel role="driver" driverId={driver?.id} passengerUserId={ride?.passenger_user_id} passengerName={ride?.passenger_name} passengerPhone={ride?.passenger_phone} driverName={driver?.full_name} rideContext={{ ride_id: ride.id, service_id: ride.service_id, passenger_name: ride.passenger_name }} onClose={() => setShowTicket(false)} darkMode={false} />}
         {showRating && <RatingModal ride={ride} raterRole="driver" targetName={ride.passenger_name} targetPhoto={ride.passenger_photo_url} onClose={(skipped) => { setShowRating(false); if (!skipped) setRide(r => ({ ...r, driver_rating_for_passenger: 1 })); }} />}
       </AnimatePresence>
     </motion.div>

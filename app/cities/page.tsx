@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Plus, MapPin, Pencil, Trash2, Globe, AlertCircle, Map, Layers } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import AdminMapPicker from "@/components/admin/AdminMapPicker";
 
@@ -435,6 +434,7 @@ export default function CitiesPage() {
           lat={editCity?.center_lat ? parseFloat(editCity.center_lat) : undefined}
           lon={editCity?.center_lon ? parseFloat(editCity.center_lon) : undefined}
           label="Centro de ciudad"
+          isDropoff={false}
           onConfirm={handleMapConfirm}
         />
       </div>

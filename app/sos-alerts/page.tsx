@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle2, Clock, ShieldAlert, Trash2 } from "lucide-react";
-import { formatCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 const statusConfig = {

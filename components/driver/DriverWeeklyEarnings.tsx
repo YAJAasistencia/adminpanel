@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Download, DollarSign, Car, Calendar, MapPin, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, MapPin, Star } from "lucide-react";
 import moment from "moment";
 import { formatCDMX } from "@/components/shared/dateUtils";
 
@@ -84,7 +82,7 @@ export default function DriverWeeklyEarnings({ driver, rides = [], darkMode = fa
   const weekCommission = weekRides.reduce((s, r) => s + (r.platform_commission || 0), 0);
 
   // Payment method breakdown — dynamic keys
-  const byMethod = {};
+  const byMethod: Record<string, { rides: any[]; e: number; c: number }> = {};
   weekRides.forEach(r => {
     const key = r.payment_method || "cash";
     if (!byMethod[key]) byMethod[key] = { rides: [], e: 0, c: 0 };

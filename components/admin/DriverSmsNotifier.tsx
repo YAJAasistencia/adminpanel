@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, ChevronDown, Phone } from "lucide-react";
+import { MessageSquare, X, Send, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TEMPLATES = [

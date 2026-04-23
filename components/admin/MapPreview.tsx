@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { Map, EyeOff, Edit3 } from "lucide-react";
 
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -27,7 +28,7 @@ const redIcon = new L.Icon({
 function FitBounds({ pickup, dropoff }) {
   const map = useMap();
   useEffect(() => {
-    const points = [];
+    const points: LatLngTuple[] = [];
     if (pickup?.lat) points.push([pickup.lat, pickup.lon || pickup.lng]);
     if (dropoff?.lat) points.push([dropoff.lat, dropoff.lon || dropoff.lng]);
     if (points.length === 2) {
@@ -64,7 +65,7 @@ export default function MapPreview({ pickup, dropoff, routePoints, height = 220,
     );
   }
 
-  const center = hasPickup ? [pickup.lat, pickupLon] : [dropoff.lat, dropoffLon];
+  const center: LatLngTuple = hasPickup ? [pickup.lat, pickupLon] : [dropoff.lat, dropoffLon];
 
   return (
     <div className="space-y-1">

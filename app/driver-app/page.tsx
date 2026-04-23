@@ -6,17 +6,15 @@ import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useDriverNotifications, requestNotificationPermission, stopNewRideAlarm, startNewRideAlarm } from "@/components/shared/useRideNotifications";
-import { Button } from "@/components/ui/button";
-import { Car, Star, Clock, User, AlertTriangle, DollarSign, ShieldAlert, HelpCircle, Wifi, MapPin, CheckCircle2, XCircle, ChevronLeft, Map, Download, AlertCircle, Navigation, TrendingUp, History, LogOut, X, Menu } from "lucide-react";
+import { Car, Star, Clock, User, AlertTriangle, DollarSign, ShieldAlert, HelpCircle, Wifi, Navigation, TrendingUp, History, LogOut, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 // Leaflet CSS is imported via npm package
 import L from "leaflet";
-import { formatCDMX, setSystemTimezone } from "@/components/shared/dateUtils";
+import { setSystemTimezone } from "@/components/shared/dateUtils";
 import IncomingRideAlert, { playAcceptedSound } from "@/components/driver/IncomingRideAlert";
 import DriverSurveyModal from "@/components/driver/DriverSurveyModal";
 import DriverHelpTicket from "@/components/driver/DriverHelpTicket";
-import TicketsPanel from "@/components/shared/TicketsPanel";
 import PullToRefresh from "@/components/driver/PullToRefresh";
 import PushPermissionBanner from "@/components/driver/PushPermissionBanner";
 import { showDriverNotification, startSWRideTimer, cancelSWRideTimer, sendDriverHeartbeat, stopDriverHeartbeat, registerDriverSW } from "@/components/shared/usePushNotifications";
@@ -34,7 +32,6 @@ import { LocationPermissionScreen, SuspendedScreen, AdminSuspendedScreen } from 
 import AnnouncementModal from "@/components/shared/AnnouncementModal";
 import RideSummaryScreen from "@/components/driver/RideSummaryScreen";
 import RideHistoryModal from "@/components/driver/RideHistoryModal";
-import RatingModal from "@/components/driver/RatingModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Driver = {

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Upload, ArrowLeft, Clock, XCircle, CheckCircle2, FileText, MapPin, ChevronRight, User, Bike } from "lucide-react";
+import { Car, Upload, ArrowLeft, Clock, XCircle, CheckCircle2, FileText, MapPin, ChevronRight, User } from "lucide-react";
 import { SESSION_KEY, SESSION_TOKEN_KEY } from "@/components/driver/driverUtils";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -604,13 +604,13 @@ export default function DriverRegisterScreen({ onBack, prefilledEmail = "", onLo
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Año">
+              <Field label="Año" required={false}>
                 <Select value={vehicle.year} onValueChange={v => updateVehicle("year", v)}>
                   <SelectTrigger className="mt-1 rounded-xl"><SelectValue placeholder="Año" /></SelectTrigger>
                   <SelectContent>{VEHICLE_YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Color">
+              <Field label="Color" required={false}>
                 <Input value={vehicle.color} onChange={e => updateVehicle("color", e.target.value.toUpperCase())} className="rounded-xl mt-1" placeholder="BLANCO" />
               </Field>
             </div>

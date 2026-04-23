@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 function RatingsHistoryPanel({ rides = [], role, onClose, darkMode = false }) {
   const isDriver = role === "driver";
   const rated = rides.filter(r => isDriver ? r.passenger_rating_for_driver > 0 : r.driver_rating_for_passenger > 0)
-    .sort((a, b) => new Date(b.completed_at || b.requested_at) - new Date(a.completed_at || a.requested_at));
+    .sort((a, b) => new Date(b.completed_at || b.requested_at).getTime() - new Date(a.completed_at || a.requested_at).getTime());
   const avg = rated.length > 0
     ? (rated.reduce((s, r) => s + (isDriver ? r.passenger_rating_for_driver : r.driver_rating_for_passenger), 0) / rated.length).toFixed(1)
     : null;
@@ -132,7 +132,8 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     if (!token || !newPassword) { setPwError("Ingresa el código y la nueva contraseña"); return; }
     setPwLoading(true);
     setPwError("");
-    const fresh = await supabaseApi.passengers.list({ email: user.email });
+    const allPassengers = await supabaseApi.passengers.list();
+    const fresh = allPassengers.filter((p) => p.email === user.email);
     const u = fresh?.[0];
     if (!u) { setPwError("Error al verificar. Intenta de nuevo."); setPwLoading(false); return; }
     if (u.reset_token !== token.trim().toUpperCase()) { setPwError("Código incorrecto"); setPwLoading(false); return; }

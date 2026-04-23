@@ -55,6 +55,11 @@ interface Driver {
   [key: string]: any;
 }
 
+interface AppSettings {
+  total_search_window_seconds?: number;
+  [key: string]: any;
+}
+
 function getRideCreatedTs(ride: Ride) {
   return new Date(ride.requested_at || 0).getTime();
 }

@@ -2,8 +2,8 @@ import React, { useState, useRef } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, ChevronRight, Star, ClipboardList, PenLine, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { CheckCircle2, Star, ClipboardList, PenLine, X } from "lucide-react";
 
 function SignaturePad({ onCapture }) {
   const canvasRef = useRef(null);

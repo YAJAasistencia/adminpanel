@@ -8,11 +8,9 @@ import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Send, MessageCircle, Search } from "lucide-react";
-import { formatCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 export default function ChatsPage() {

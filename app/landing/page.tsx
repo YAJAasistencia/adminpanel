@@ -17,7 +17,7 @@ export default function Landing() {
   return (
     <QueryClientProvider client={queryClientInstance}>
       <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
-        <InstallAppBanner />
+        <InstallAppBanner settings={{}} />
         <LandingNav />
         <HeroSection />
         <ServicesSection />

@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Layout from "@/components/admin/Layout";
-import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Building2, Pencil, Trash2, TrendingUp, FileText, Download, Search, Calendar, DollarSign, Car, Clock, XCircle, BarChart3, Layers, MapPin, ChevronDown, ChevronRight, FileCheck, Percent, ClipboardList, GitBranch, Shield, Users, PenLine, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Building2, Pencil, Trash2, TrendingUp, Download, Search, DollarSign, Car, XCircle, BarChart3, Layers, MapPin, ChevronDown, ChevronRight, FileCheck, Percent, ClipboardList, GitBranch, Shield, Users, PenLine, AlertCircle, CheckCircle2 } from "lucide-react";
 import CompanyKPITab from "@/components/admin/CompanyKPITab";
 import { toast } from "sonner";
 import moment from "moment";

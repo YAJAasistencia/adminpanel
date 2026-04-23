@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,9 +39,9 @@ function PassengerProfileModal({ passenger, onClose }) {
   const now = new Date();
   const filteredRides = rides.filter(r => {
     const rDate = new Date(r.requested_at);
-    if (dateFilter === "7d" && (now - rDate) > 7 * 86400000) return false;
-    if (dateFilter === "30d" && (now - rDate) > 30 * 86400000) return false;
-    if (dateFilter === "90d" && (now - rDate) > 90 * 86400000) return false;
+    if (dateFilter === "7d" && (now.getTime() - rDate.getTime()) > 7 * 86400000) return false;
+    if (dateFilter === "30d" && (now.getTime() - rDate.getTime()) > 30 * 86400000) return false;
+    if (dateFilter === "90d" && (now.getTime() - rDate.getTime()) > 90 * 86400000) return false;
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
     return true;
   });
@@ -234,7 +234,7 @@ function PassengersContent() {
   const handleEdit = async () => {
     if (!editForm.full_name || !editForm.email) { toast.error("Nombre y correo son obligatorios"); return; }
     setSaving(true);
-    const updates = { full_name: editForm.full_name.trim(), email: editForm.email.trim().toLowerCase(), phone: editForm.phone.trim() };
+    const updates: any = { full_name: editForm.full_name.trim(), email: editForm.email.trim().toLowerCase(), phone: editForm.phone.trim() };
     if (editForm.password) updates.password = editForm.password;
     await supabaseApi.passengers.update(editPassenger.id, updates);
     toast.success("Usuario actualizado");

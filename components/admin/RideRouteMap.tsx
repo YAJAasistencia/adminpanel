@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { Clock, MapPin, CheckCircle2, XCircle, Car, Navigation, User, AlertCircle } from "lucide-react";
 import { formatCDMX } from "@/components/shared/dateUtils";
 
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -33,7 +34,7 @@ const dropoffIcon = L.divIcon({
 });
 
 // Auto-fit bounds when both points are present
-function FitBounds({ pickup, dropoff }) {
+function FitBounds({ pickup, dropoff }: { pickup: LatLngTuple | null; dropoff: LatLngTuple | null }) {
   const map = useMap();
   useEffect(() => {
     if (pickup && dropoff) {
@@ -113,14 +114,14 @@ export default function RideRouteMap({ ride }) {
 
   if (!ride) return null;
 
-  const center = hasPickup
+  const center: LatLngTuple | null = hasPickup
     ? [ride.pickup_lat, ride.pickup_lon]
     : hasDropoff
     ? [ride.dropoff_lat, ride.dropoff_lon]
     : null;
 
-  const pickupPos = hasPickup ? [ride.pickup_lat, ride.pickup_lon] : null;
-  const dropoffPos = hasDropoff ? [ride.dropoff_lat, ride.dropoff_lon] : null;
+  const pickupPos: LatLngTuple | null = hasPickup ? [ride.pickup_lat, ride.pickup_lon] : null;
+  const dropoffPos: LatLngTuple | null = hasDropoff ? [ride.dropoff_lat, ride.dropoff_lon] : null;
 
   return (
     <div className="space-y-4">

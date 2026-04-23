@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Star, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
@@ -39,7 +39,7 @@ export default function RatingModal({ ride, raterRole, targetName, targetPhoto, 
 
     // If passenger rates the driver, update driver's average rating
     if (!isDriver && ride.driver_id) {
-      const allRides = await supabaseApi.rideRequests.filter({ driver_id: ride.driver_id });
+      const allRides = await supabaseApi.rideRequests.list({ driver_id: ride.driver_id });
       const rated = allRides.filter(r => r.passenger_rating_for_driver > 0);
       if (rated.length > 0) {
         const avg = rated.reduce((s, r) => s + r.passenger_rating_for_driver, 0) / rated.length;

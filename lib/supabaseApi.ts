@@ -45,13 +45,14 @@ async function createWithFallback(tableName: string, record: any) {
   try {
     debugLog(`[supabaseApi] INSERT ${tableName}`, record);
     // Realizar insert SIN .select() para evitar introspección de schema
-    const { data: insertedData, error: insertError } = await supabase.from(tableName).insert(record);
+    const { data: insertedData, error: insertError } = await supabase.from(tableName as any).insert(record as any);
     if (insertError) throw insertError;
     debugLog(`[supabaseApi] INSERT SUCCESS (without .select())`);
     
     // Si el insert devolvió datos, usarlos; si no, hacer GET
-    if (insertedData && insertedData.length > 0) {
-      return insertedData[0];
+    const insertedRows = insertedData as any[] | null;
+    if (insertedRows && insertedRows.length > 0) {
+      return insertedRows[0];
     }
     
     // Fallback: obtener el último record insertado (usar 'id' ya que no todas las tablas tienen created_at)

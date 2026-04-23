@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import StatusBadge from "@/components/shared/StatusBadge";
 import {
   MapPin, Phone, Navigation, CheckCircle2, Car, Star, Camera,
-  MessageCircle, AlertTriangle, HelpCircle, ChevronUp, ChevronDown, User
+  MessageCircle, AlertTriangle, HelpCircle, ChevronUp, ChevronDown
 } from "lucide-react";
 import RideMap from "@/components/driver/RideMap";
 import RideFareBreakdown from "@/components/driver/RideFareBreakdown";

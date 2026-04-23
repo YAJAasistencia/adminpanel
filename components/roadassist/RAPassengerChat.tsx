@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,13 +18,23 @@ export default function RAPassengerChat({ ride, user, onClose }) {
     enabled: !!ride.id,
   });
 
+  type ChatMessage = {
+    id: string;
+    ride_id: string;
+    sender_role?: string;
+    sender_name?: string;
+    message?: string;
+    read_by_passenger?: boolean;
+    [key: string]: any;
+  };
+
   React.useEffect(() => {
     if (!ride.id) return;
     const channel = supabase.channel(`realtime:ChatMessage:${ride.id}`);
     const sub = channel.on("postgres_changes", { event: "*", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
-      const msg = event.new;
+      const msg = event.new as ChatMessage | null;
       if (!msg || msg.ride_id !== ride.id) return;
-      queryClient.setQueryData(["passengerChat", ride.id], (old = []) => {
+      queryClient.setQueryData<ChatMessage[]>(["passengerChat", ride.id], (old = []) => {
         if (event.eventType === "DELETE") return old.filter(m => m.id !== msg.id);
         const idx = old.findIndex(m => m.id === msg.id);
         if (idx === -1) return [...old, msg];
@@ -40,7 +50,8 @@ export default function RAPassengerChat({ ride, user, onClose }) {
     // Play notification sound when new message arrives
     if (unread.length > prevCountRef.current) {
       try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
         const osc = ctx.createOscillator(); const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
         osc.frequency.value = 880; gain.gain.setValueAtTime(0.3, ctx.currentTime);

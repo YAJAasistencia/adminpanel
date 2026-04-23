@@ -12,7 +12,7 @@
  */
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Star, AlertCircle, Clock, Loader2, MessageCircle, Copy, CreditCard, Building2 } from "lucide-react";
+import { CheckCircle2, XCircle, Star, AlertCircle, Clock, Loader2, MessageCircle, Copy, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";

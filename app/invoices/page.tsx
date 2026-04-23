@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
-import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,12 +11,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  FileText, Building2, Search, Download, Plus, DollarSign, CheckCircle2,
-  ChevronDown, ChevronUp, Calendar, Eye, Trash2, Send, Clock, XCircle
+  FileText, Building2, Search, Download, Plus, CheckCircle2, Eye, Trash2, Send, Clock, XCircle
 } from "lucide-react";
 import moment from "moment";
 import { formatCDMX } from "@/components/shared/dateUtils";
@@ -366,7 +362,7 @@ export default function Invoices() {
   });
 
   const handleStatusChange = async (invoice, newStatus) => {
-    const updates = { status: newStatus };
+    const updates: any = { status: newStatus };
     if (newStatus === "paid") updates.paid_at = new Date().toISOString();
     const res = await fetch(`/api/invoices?id=${invoice.id}`, {
       method: 'PATCH',

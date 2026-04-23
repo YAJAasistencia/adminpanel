@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, AlertTriangle, UserCheck, ChevronRight, Wifi, CalendarClock, Calendar, XCircle, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Filter, AlertTriangle, UserCheck, ChevronRight, Wifi, CalendarClock, Calendar, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardStats from "@/components/admin/DashboardStats";
@@ -864,7 +864,7 @@ export default function Dashboard() {
                           }}
                           className="rounded"
                         />
-                        <span className="text-sm text-slate-600">{driver.full_name}</span>
+                        <span className="text-sm text-slate-600">{driver.name}</span>
                       </label>
                     ))}
                   </div>

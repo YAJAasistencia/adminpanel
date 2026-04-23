@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MapPin, Navigation, CheckCircle2, XCircle, Car, User, Clock, CreditCard, Building2, Star } from "lucide-react";
+import { MapPin, Navigation, CheckCircle2, XCircle, Car, User, Clock, Building2, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
 import L from "leaflet";
@@ -30,7 +30,8 @@ const driverIcon  = mkIcon("#3b82f6", 18);
 // ─── Sound helpers ───────────────────────────────────────────────────────────
 function playAlarmSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AudioCtx();
     const now = ctx.currentTime;
     for (let i = 0; i < 3; i++) {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
@@ -46,7 +47,8 @@ function playAlarmSound() {
 
 function playAcceptedSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AudioCtx();
     const now = ctx.currentTime;
     [[520, 0], [660, 0.18], [880, 0.36]].forEach(([freq, when]) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
@@ -138,7 +140,7 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
     const fallback = setTimeout(() => setPhase("ready"), 6000);
     calc().then(() => clearTimeout(fallback)).catch(() => { clearTimeout(fallback); setPhase("ready"); });
     return () => clearTimeout(fallback);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [ride?.id]);
 
   // Countdown starts once alert is ready
@@ -153,7 +155,7 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
       if (rem <= 0) { clearInterval(iv); onReject(ride, "timeout"); }
     }, 1000);
     return () => clearInterval(iv);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [phase, ride?.id]);
 
   const hasPickup  = ride?.pickup_lat  && ride?.pickup_lon;

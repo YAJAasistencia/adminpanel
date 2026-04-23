@@ -5,20 +5,8 @@ import React, { useState, useMemo } from "react";
 import Layout from "@/components/admin/Layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import {
-  Scissors, DollarSign, Users, TrendingUp, Download, Plus, ChevronDown, ChevronUp,
-  Car, Search, Calendar, CheckCircle2, AlertCircle
-} from "lucide-react";
+
 import moment from "moment";
-import { formatCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 interface Ride {

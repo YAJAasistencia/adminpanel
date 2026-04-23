@@ -1,13 +1,14 @@
 import * as React from "react"
-import useEmblaCarousel, { UseEmblaCarouselType, EmblaOptionsType, EmblaPluginType } from "embla-carousel-react"
+import useEmblaCarousel from "embla-carousel-react"
+import type { EmblaOptionsType, EmblaPluginType } from "embla-carousel"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button, type ButtonProps } from "@/components/ui/button"
 
 interface CarouselContextProps {
-  carouselRef: ReturnType<UseEmblaCarouselType>[0]
-  api: ReturnType<UseEmblaCarouselType>[1]
+  carouselRef: ReturnType<typeof useEmblaCarousel>[0]
+  api: ReturnType<typeof useEmblaCarousel>[1]
   opts?: EmblaOptionsType
   orientation: "horizontal" | "vertical"
   scrollPrev: () => void
@@ -29,7 +30,7 @@ function useCarousel() {
 interface CarouselProps extends React.HTMLAttributes<HTMLDivElement> {
   orientation?: "horizontal" | "vertical"
   opts?: EmblaOptionsType
-  setApi?: (api: any) => void
+  setApi?: (api: ReturnType<typeof useEmblaCarousel>[1]) => void
   plugins?: EmblaPluginType[]
 }
 
@@ -53,7 +54,7 @@ const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
 
-    const onSelect = React.useCallback((api: any) => {
+    const onSelect = React.useCallback((api: ReturnType<typeof useEmblaCarousel>[1]) => {
       if (!api) return
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
@@ -162,10 +163,7 @@ const CarouselItem = React.forwardRef<HTMLDivElement, CarouselItemProps>(
 )
 CarouselItem.displayName = "CarouselItem"
 
-interface CarouselButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: string
-  size?: string
-}
+type CarouselButtonProps = React.ComponentPropsWithoutRef<"button"> & Pick<ButtonProps, "variant" | "size">
 
 const CarouselPrevious = React.forwardRef<HTMLButtonElement, CarouselButtonProps>(
   ({ className, variant = "outline", size = "icon", ...props }, ref) => {

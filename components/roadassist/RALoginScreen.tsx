@@ -54,7 +54,7 @@ export default function RALoginScreen({ onLogin }) {
     if (!form.email || !form.password) { setError("Ingresa correo y contraseña"); return; }
     setLoading(true);
     try {
-      const data = await supabaseApi.passengers.list({ email: form.email.trim().toLowerCase() });
+      const data = (await supabaseApi.passengers.list()).filter((u) => u.email === form.email.trim().toLowerCase());
       if (!data || data.length === 0) { setError("No existe una cuenta con ese correo"); setLoading(false); return; }
       const u = data[0];
       if (!u.is_active) {
@@ -87,14 +87,14 @@ export default function RALoginScreen({ onLogin }) {
     setLoading(true);
 
     // Check passenger account by email
-    const existingPassenger = await supabaseApi.passengers.list({ email: emailLow });
+    const existingPassenger = (await supabaseApi.passengers.list()).filter((u) => u.email === emailLow);
     if (existingPassenger && existingPassenger.length > 0) {
       setError("Ya existe una cuenta de cliente con ese correo. Inicia sesión.");
       setLoading(false); return;
     }
 
     // Check phone duplicate
-    const existingPhone = await supabaseApi.passengers.list({ phone: form.phone.trim() });
+    const existingPhone = (await supabaseApi.passengers.list()).filter((u) => u.phone === form.phone.trim());
     if (existingPhone && existingPhone.length > 0) {
       setError("Ya existe una cuenta registrada con ese número de teléfono.");
       setLoading(false); return;
@@ -144,7 +144,7 @@ export default function RALoginScreen({ onLogin }) {
       setLoading(false); return;
     }
 
-    const users = await supabaseApi.passengers.list({ email: emailLow });
+    const users = (await supabaseApi.passengers.list()).filter((u) => u.email === emailLow);
     if (!users || users.length === 0) {
       setError("No encontramos ninguna cuenta de cliente con ese correo.");
       setLoading(false); return;
@@ -172,7 +172,7 @@ export default function RALoginScreen({ onLogin }) {
     if (pwdError) { setError(pwdError); return; }
     setLoading(true);
 
-    const resetUsers = await supabaseApi.passengers.list({ email: form.email.trim().toLowerCase() });
+    const resetUsers = (await supabaseApi.passengers.list()).filter((u) => u.email === form.email.trim().toLowerCase());
     const u = resetUsers?.[0];
     if (!u) { setError("Correo no encontrado"); setLoading(false); return; }
 

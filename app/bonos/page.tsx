@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Trophy, Plus, Play, CheckCircle2, XCircle, DollarSign, Trash2, ToggleLeft, ToggleRight, AlertCircle, Clock, Edit2 } from "lucide-react";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 const CONDITION_LABELS = {
@@ -89,8 +89,8 @@ export default function BonosPage() {
     gcTime: 60 * 60 * 1000,
   });
 
-  const saveMutation = useMutation({
-    mutationFn: async (data) => {
+  const saveMutation = useMutation<any, any, any>({
+    mutationFn: async (data: any) => {
       if (editingRule) {
         return supabaseApi.bonusRules.update(editingRule.id, data);
       } else {
@@ -105,8 +105,8 @@ export default function BonosPage() {
     onError: (error: any) => toast.error(error.message || "Error al guardar"),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id) => supabaseApi.bonusRules.delete(id),
+  const deleteMutation = useMutation<any, any, string>({
+    mutationFn: async (id: string) => supabaseApi.bonusRules.delete(id),
     onSuccess: () => { 
       qc.invalidateQueries({ queryKey: ["bonusRules"] });
       toast.success("Regla eliminada");
@@ -120,8 +120,8 @@ export default function BonosPage() {
     onError: (error: any) => toast.error(error.message || "Error al actualizar"),
   });
 
-  const logMutation = useMutation({
-    mutationFn: async (data) => supabaseApi.bonusLogs.create(data),
+  const logMutation = useMutation<any, any, any>({
+    mutationFn: async (data: any) => supabaseApi.bonusLogs.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bonusLogs"] }),
     onError: (error: any) => toast.error(error.message || "Error al crear log"),
   });

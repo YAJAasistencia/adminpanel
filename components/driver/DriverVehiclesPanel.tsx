@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Car, Plus, Upload, X, CheckCircle2, AlertTriangle, FileText, Bike } from "lucide-react";
+import { Car, Plus, X, CheckCircle2, AlertTriangle, FileText, Bike } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +15,7 @@ const DEFAULT_VEHICLE_DOCS = [
 
 function daysUntilExpiry(dateStr) {
   if (!dateStr) return null;
-  return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 function ExpiryBadge({ dateStr }) {

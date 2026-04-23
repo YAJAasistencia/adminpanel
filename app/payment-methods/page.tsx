@@ -1,27 +1,24 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import moment from "moment";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/admin/Layout";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Trash2, CreditCard, Save, Zap, Eye, EyeOff, Shield, ChevronDown, ChevronUp,
   Wallet, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle, AlertTriangle,
   Ban, RefreshCw, TrendingUp, DollarSign, Users, Activity, Search, Filter,
-  Unlock, MessageSquare, Lock
+  Unlock, Lock
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { formatCDMX } from "@/components/shared/dateUtils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -50,7 +47,21 @@ const DRIVER_PAYOUT_STATUS = {
   pagado:    { label: "Pagado",    color: "bg-green-100 text-green-700" },
 };
 
-const defaultMethods = [
+type PaymentMethod = {
+  key: string;
+  label: string;
+  is_active: boolean;
+  require_before_service?: boolean;
+  require_driver_confirmation?: boolean;
+  auto_charge?: boolean;
+  generates_reference?: boolean;
+  bank_name?: string;
+  clabe?: string;
+  account_holder?: string;
+  allowed_service_type_ids?: string[];
+};
+
+const defaultMethods: PaymentMethod[] = [
   { key: "cash",     label: "Efectivo",                 is_active: true },
   { key: "card",     label: "Tarjeta de crédito/débito", is_active: true },
   { key: "transfer", label: "Transferencia bancaria",   is_active: true },
@@ -74,7 +85,7 @@ function StatusBadgePay({ status }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value, sub, color = "bg-slate-100 text-slate-600" }) {
+function StatCard({ icon: Icon, label, value, sub, color = "bg-slate-100 text-slate-600" }: { icon: any; label: any; value: any; sub?: any; color?: string }) {
   return (
     <Card className="p-4 border-0 shadow-sm">
       <div className="flex items-start gap-3">
@@ -89,22 +100,32 @@ function StatCard({ icon: Icon, label, value, sub, color = "bg-slate-100 text-sl
   );
 }
 
+type GatewayConfig = {
+  type: string;
+  api_key: string;
+  webhook_secret: string;
+  public_key: string;
+  linked_to_card_method: boolean;
+  card_commission_pct?: number;
+  wallet_ref_enabled?: boolean;
+};
+
 // ─── Tab: Métodos de pago (config) ────────────────────────────────────────────
 
-function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
-  const [methods, setMethods] = useState(defaultMethods);
+function MethodsConfigTab({ settings, serviceTypes, onSave, saving }: { settings: any; serviceTypes: any[]; onSave: (payload: any) => void; saving: boolean }) {
+  const [methods, setMethods] = useState<PaymentMethod[]>(defaultMethods);
   const [newLabel, setNewLabel] = useState("");
-  const [gateway, setGateway] = useState({ type: "none", api_key: "", webhook_secret: "", public_key: "", linked_to_card_method: true });
+  const [gateway, setGateway] = useState<GatewayConfig>({ type: "none", api_key: "", webhook_secret: "", public_key: "", linked_to_card_method: true });
   const [showKeys, setShowKeys] = useState(false);
-  const [expandedMethod, setExpandedMethod] = useState(null);
+  const [expandedMethod, setExpandedMethod] = useState<number | null>(null);
   const [paymentTimeoutHours, setPaymentTimeoutHours] = useState(24);
   const [walletMinBalance, setWalletMinBalance] = useState(0);
-  const [testResult, setTestResult] = useState(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testTesting, setTestTesting] = useState(false);
 
-  const [pendingPaymentMethods, setPendingPaymentMethods] = useState([]);
+  const [pendingPaymentMethods, setPendingPaymentMethods] = useState<string[]>([]);
   // Track the last settings snapshot we initialized from, to avoid overwriting local edits
-  const lastInitKey = React.useRef(null);
+  const lastInitKey = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (!settings?.id) return;
@@ -173,7 +194,7 @@ function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
 
       // Test connection by attempting basic call (simplified test)
       // In production, this would make actual API calls
-      const encodedKey = btoa(gateway.api_key);
+      btoa(gateway.api_key);
       
       setTestResult({ 
         success: true, 
@@ -308,7 +329,7 @@ function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
                               onClick={() => setMethods(prev => prev.map((m, i) => {
                                 if (i !== idx) return m;
                                 const curr = m.allowed_service_type_ids || [];
-                                return { ...m, allowed_service_type_ids: selected ? curr.filter(id => id !== st.id) : [...curr, st.id] };
+                                return { ...m, allowed_service_type_ids: selected ? curr.filter((id: string) => id !== st.id) : [...curr, st.id] };
                               }))}
                               className={`text-xs px-2.5 py-1.5 rounded-lg border text-left transition-all ${
                                 selected ? "border-blue-400 bg-blue-50 text-blue-700 font-semibold" : "border-slate-200 text-slate-500 hover:border-slate-300"
@@ -344,7 +365,7 @@ function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
             const selected = pendingPaymentMethods.includes(m.key);
             return (
               <button key={m.key}
-                onClick={() => setPendingPaymentMethods(prev => selected ? prev.filter(k => k !== m.key) : [...prev, m.key])}
+                onClick={() => setPendingPaymentMethods(prev => selected ? prev.filter((k: string) => k !== m.key) : [...prev, m.key])}
                 className={`text-sm px-3 py-2 rounded-xl border text-left transition-all font-medium ${
                   selected ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-200 text-slate-500 hover:border-slate-300"
                 }`}>
@@ -476,7 +497,7 @@ function MethodsConfigTab({ settings, serviceTypes, onSave, saving }) {
 
 // ─── Tab: Transacciones ───────────────────────────────────────────────────────
 
-function TransactionsTab({ rides, settings }) {
+function TransactionsTab({ rides, settings }: { rides: any[]; settings: any }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -634,7 +655,7 @@ function TransactionsTab({ rides, settings }) {
 
 // ─── Tab: Wallets ─────────────────────────────────────────────────────────────
 
-function WalletsTab({ users, rides, settings }) {
+function WalletsTab({ users, rides, settings }: { users: any[]; rides: any[]; settings: any }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -775,7 +796,7 @@ function WalletsTab({ users, rides, settings }) {
 
 // ─── Tab: Driver Payouts ──────────────────────────────────────────────────────
 
-function DriverPayoutsTab({ rides, drivers, settings }) {
+function DriverPayoutsTab({ rides, drivers, settings }: { rides: any[]; drivers: any[]; settings: any }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("pendiente");
@@ -792,7 +813,7 @@ function DriverPayoutsTab({ rides, drivers, settings }) {
     const driverEarning = r.driver_earnings != null ? r.driver_earnings : +(amount - commission);
     return {
       id: r.id, service_id: r.service_id || r.id?.slice(0, 8), driver_id: r.driver_id, driver_name: r.driver_name || driverObj.full_name || "—", driver_phone: driverObj.phone,
-      amount, driver_earning, commission, payout_status: r.payment_status === "paid" ? "pagado" : "pendiente", payout_method: r.payment_method || "transfer",
+      amount, driver_earning: driverEarning, commission, payout_status: r.payment_status === "paid" ? "pagado" : "pendiente", payout_method: r.payment_method || "transfer",
       ride_status: r.status, completed_at: r.completed_at, passenger: r.passenger_name || "—", notes: "",
     };
   });
@@ -914,7 +935,7 @@ function DriverPayoutsTab({ rides, drivers, settings }) {
 
 // ─── Tab: Reportes / KPIs ─────────────────────────────────────────────────────
 
-function ReportsTab({ rides, settings }) {
+function ReportsTab({ rides, settings }: { rides: any[]; settings: any }) {
   const currency = settings?.currency || "MXN";
   const commissionPct = settings?.platform_commission_pct || 20;
 
@@ -940,7 +961,7 @@ function ReportsTab({ rides, settings }) {
   }, 0);
 
   // Breakdown by payment method
-  const byMethod = {};
+  const byMethod: Record<string, { count: number; total: number }> = {};
   completedRides.forEach(r => {
     const k = r.payment_method || "unknown";
     if (!byMethod[k]) byMethod[k] = { count: 0, total: 0 };
@@ -949,7 +970,7 @@ function ReportsTab({ rides, settings }) {
   });
 
   // Breakdown by financial status
-  const byFinStatus = {};
+  const byFinStatus: Record<string, number> = {};
   rides.forEach(r => {
     const k = r.status === "completed" ? (r.payment_status === "paid" ? "liquidado" : "completado") : (r.payment_status === "pending" ? "pendiente_pago" : "en_proceso");
     if (!byFinStatus[k]) byFinStatus[k] = 0;
@@ -1077,7 +1098,7 @@ export default function PaymentMethods() {
           <MethodsConfigTab settings={settings} serviceTypes={serviceTypes} onSave={handleSaveSettings} saving={saving} />
         </TabsContent>
         <TabsContent value="transactions" className="mt-6">
-          <TransactionsTab rides={rides} users={users} settings={settings} />
+          <TransactionsTab rides={rides} settings={settings} />
         </TabsContent>
         <TabsContent value="wallets" className="mt-6">
           <WalletsTab users={users} rides={rides} settings={settings} />

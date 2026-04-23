@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { Button } from "@/components/ui/button";
 import { Star, XCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function RatingModal({ ride, raterRole, targetName, targetPhoto, onClose }) {
   const [stars, setStars] = useState(0);

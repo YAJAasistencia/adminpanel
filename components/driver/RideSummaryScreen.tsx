@@ -7,12 +7,11 @@
  *  - Botón "Confirmar pago" si require_driver_confirmation = true
  *  - Calificación del pasajero (solo en viajes completados)
  */
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, DollarSign, Star, AlertTriangle, ThumbsUp, ThumbsDown } from "lucide-react";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { CheckCircle2, XCircle, Star, AlertTriangle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { showDriverNotification } from "@/components/shared/usePushNotifications";
 
 function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
@@ -67,7 +66,7 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
       supabaseApi.rideRequests.update(ride.id, { payment_status: "paid" }).catch(() => {});
       setPaymentAction("auto");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [isCompleted, requireConfirmation]);
 
   // Auto-transition to rating if payment already handled and not yet rated

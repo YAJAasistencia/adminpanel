@@ -8,11 +8,10 @@ import Layout from "@/components/admin/Layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabaseApi } from "@/lib/supabaseApi";
-import { Driver, AppSettings } from "@/types";
 
 interface RejectionStats {
   total_drivers: number;
-  high_rejection_rate: Driver[];
+  high_rejection_rate: any[];
   total_rejections: number;
   rejection_distribution: Record<string, number>;
 }
@@ -27,7 +26,7 @@ const rejectReasonLabels: Record<string, { label: string; emoji: string; color: 
 
 export default function RejectionAnalysis() {
   const [stats, setStats] = useState<RejectionStats | null>(null);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
@@ -86,7 +85,7 @@ export default function RejectionAnalysis() {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout currentPageName="RejectionAnalysis">
         <div className="flex items-center justify-center h-96">
           <p className="text-slate-500">Cargando datos de rechazo...</p>
         </div>
@@ -98,7 +97,7 @@ export default function RejectionAnalysis() {
   const overallRejectionRate = totalOffered > 0 ? ((stats?.total_rejections || 0) / totalOffered) * 100 : 0;
 
   return (
-    <Layout>
+    <Layout currentPageName="RejectionAnalysis">
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
         <div className="max-w-6xl mx-auto">
           {/* Header */}

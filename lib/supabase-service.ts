@@ -57,12 +57,17 @@ export class SupabaseService {
     return getSupabaseServerClient();
   }
 
+  // Dynamic table names are used intentionally; cast query builder to avoid never inference.
+  private fromTable() {
+    return this.getClient().from(this.table as any) as any;
+  }
+
   /**
    * Obtener todos los registros con filtros opcionales
    */
   async getAll(filters?: Record<string, any>, options?: any) {
     try {
-      let query = this.getClient().from(this.table).select(options?.select || '*');
+      let query = this.fromTable().select(options?.select || '*');
 
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -87,8 +92,7 @@ export class SupabaseService {
    */
   async getById(id: string, options?: any) {
     try {
-      const { data, error } = await this.getClient()
-        .from(this.table)
+      const { data, error } = await this.fromTable()
         .select(options?.select || '*')
         .eq('id', id)
         .single();
@@ -106,8 +110,7 @@ export class SupabaseService {
    */
   async create(data: any, options?: any) {
     try {
-      const { data: created, error } = await this.getClient()
-        .from(this.table)
+      const { data: created, error } = await this.fromTable()
         .insert([data])
         .select(options?.select || '*');
 
@@ -124,8 +127,7 @@ export class SupabaseService {
    */
   async update(id: string, data: any, options?: any) {
     try {
-      const { data: updated, error } = await this.getClient()
-        .from(this.table)
+      const { data: updated, error } = await this.fromTable()
         .update(data)
         .eq('id', id)
         .select(options?.select || '*');
@@ -143,8 +145,7 @@ export class SupabaseService {
    */
   async delete(id: string) {
     try {
-      const { error } = await this.getClient()
-        .from(this.table)
+      const { error } = await this.fromTable()
         .delete()
         .eq('id', id);
 
@@ -161,7 +162,7 @@ export class SupabaseService {
    */
   async search(searchTerm: string, columns: string[]) {
     try {
-      let query = this.getClient().from(this.table).select('*');
+      let query = this.fromTable().select('*');
 
       columns.forEach((col, index) => {
         if (index === 0) {
@@ -186,7 +187,7 @@ export class SupabaseService {
    */
   async count(filters?: Record<string, any>) {
     try {
-      let query = this.getClient().from(this.table).select('id', { count: 'exact', head: true });
+      let query = this.fromTable().select('id', { count: 'exact', head: true });
 
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -211,8 +212,7 @@ export class SupabaseService {
    */
   async batchCreate(dataArray: any[]) {
     try {
-      const { data, error } = await this.getClient()
-        .from(this.table)
+      const { data, error } = await this.fromTable()
         .insert(dataArray)
         .select('*');
 
@@ -229,7 +229,7 @@ export class SupabaseService {
    */
   async query(filters: any, options?: any) {
     try {
-      let query = this.getClient().from(this.table).select(options?.select || '*');
+      let query = this.fromTable().select(options?.select || '*');
 
       Object.entries(filters).forEach(([key, value]) => {
         if (Array.isArray(value)) {

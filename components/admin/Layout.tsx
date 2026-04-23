@@ -4,11 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createPageUrl } from "@/utils";
 import { setSystemTimezone } from "@/components/shared/dateUtils";
-import {
-  LayoutDashboard, Users, Car, ShieldAlert, Settings, Menu, X,
-  ChevronRight, Share2, TrendingUp, CreditCard, MapPin, MessageCircle,
-  Siren, Scissors, UserCog, Layers, Building2, LogOut, MessageSquare,
-  Wifi, ChevronDown, Lock, UserCheck, ClipboardList
+import { Menu, X, Share2, LogOut, ChevronDown, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";

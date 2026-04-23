@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { Loader2, MapPin } from "lucide-react";
 
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -85,7 +86,7 @@ async function reverseGeocode(lat, lng) {
 export default function AdminMapPicker({ open, onOpenChange, lat, lon, label, isDropoff, onConfirm }) {
   const defaultLat = lat || 20.967;
   const defaultLon = lon || -89.623;
-  const [pos, setPos] = useState([defaultLat, defaultLon]);
+  const [pos, setPos] = useState<LatLngTuple>([defaultLat, defaultLon]);
   const [address, setAddress] = useState("");
   const [geocoding, setGeocoding] = useState(false);
   const icon = isDropoff ? redIcon : greenIcon;

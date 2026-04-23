@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { toast } from "sonner";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
@@ -274,7 +275,7 @@ function AnalyticsContent() {
   }, [rides, globalRange]);
 
   const demandByHour = useMemo(() => {
-    const hourMap = {};
+    const hourMap: Record<number, number> = {};
     for (let i = 0; i < 24; i++) hourMap[i] = 0;
     filteredRides.forEach(ride => {
       if (ride.requested_at) hourMap[new Date(ride.requested_at).getHours()]++;
@@ -286,7 +287,7 @@ function AnalyticsContent() {
   }, [filteredRides]);
 
   const demandByZone = useMemo(() => {
-    const zoneMap = {};
+    const zoneMap: Record<string, number> = {};
     filteredRides.forEach(ride => {
       const zone = ride.geo_zone_name || "Sin zona";
       zoneMap[zone] = (zoneMap[zone] || 0) + 1;
@@ -338,7 +339,7 @@ function AnalyticsContent() {
   ], [filteredDriversForRating]);
 
   const companies = useMemo(() => {
-    const map = {};
+    const map: Record<string, string> = {};
     rides.forEach(r => { if (r.company_id && r.company_name) map[r.company_id] = r.company_name; });
     return Object.entries(map).map(([id, name]) => ({ id, name }));
   }, [rides]);
@@ -348,11 +349,11 @@ function AnalyticsContent() {
     if (filterService !== "all") filtered = filtered.filter(r => r.service_type_id === filterService);
     if (filterCompany === "general") filtered = filtered.filter(r => !r.company_id);
     else if (filterCompany !== "all") filtered = filtered.filter(r => r.company_id === filterCompany);
-    return filtered.map(r => [r.pickup_lat, r.pickup_lon, 1]);
+    return filtered.map(r => [r.pickup_lat, r.pickup_lon, 1] as [number, number, number]);
   }, [filteredRides, filterService, filterCompany]);
 
   const revenueByServiceType = useMemo(() => {
-    const typeMap = {};
+    const typeMap: Record<string, number> = {};
     filteredRides.forEach(ride => {
       const typeName = ride.service_type_name || "Sin categoría";
       if (!typeMap[typeName]) typeMap[typeName] = 0;
@@ -364,7 +365,7 @@ function AnalyticsContent() {
   }, [filteredRides]);
 
   const topDrivers = useMemo(() => {
-    const driverStats = {};
+    const driverStats: Record<string, { id: string; name: string; rides: number; earnings: number; rating: number; acceptance_rate: number }> = {};
     filteredRides.filter(r => r.status === "completed").forEach(ride => {
       if (!ride.driver_id) return;
       if (!driverStats[ride.driver_id]) {
@@ -386,7 +387,7 @@ function AnalyticsContent() {
       .slice(0, 10);
   }, [filteredRides, drivers]);
 
-  const heatCenter = heatPoints.length > 0 ? [heatPoints[0][0], heatPoints[0][1]] : [19.4326, -99.1332];
+  const heatCenter: LatLngTuple = heatPoints.length > 0 ? [heatPoints[0][0], heatPoints[0][1]] : [19.4326, -99.1332];
 
   const handleDownloadMap = async () => {
     try {

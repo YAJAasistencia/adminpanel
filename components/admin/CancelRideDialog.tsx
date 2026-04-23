@@ -38,7 +38,7 @@ export default function CancelRideDialog({ ride, policies, open, onOpenChange })
 
   const handleCancel = async () => {
     setSaving(true);
-    const updates = {
+    const updates: any = {
       status: "cancelled",
       cancelled_by: "admin",
       cancellation_reason: reason,

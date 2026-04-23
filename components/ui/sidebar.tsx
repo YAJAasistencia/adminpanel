@@ -165,7 +165,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, any>( (
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE
-            }
+            } as React.CSSProperties
           }
           side={side}>
           <div className="flex h-full w-full flex-col">{children}</div>

@@ -9,7 +9,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   MapPin, Phone, Star, Car, CheckCircle, Loader2,
-  XCircle, AlertCircle, User, Navigation, Truck, Clock, MessageCircle, ChevronUp, ChevronDown
+  XCircle, AlertCircle, User, Navigation, Truck, MessageCircle, ChevronUp, ChevronDown
 } from "lucide-react";
 import moment from "moment";
 import { AnimatePresence, motion } from "framer-motion";
@@ -19,7 +19,7 @@ import SearchingPhase from "@/components/roadassist/RASearchingPhase";
 import RAPassengerChat from "@/components/roadassist/RAPassengerChat";
 
 // Fix leaflet default icons
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -71,7 +71,7 @@ function MapFitBounds({ driverLat, driverLon, pickupLat, pickupLon }) {
       map.setView([pickupLat, pickupLon], 14, { animate: true });
       fittedRef.current = true;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [!!driverLat, !!driverLon, !!pickupLat]);
 
   useEffect(() => {
@@ -200,7 +200,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
           setUnreadDriverMessages(prev => prev + 1);
           // Play notification sound
           try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const ctx = new AudioCtx();
             const osc = ctx.createOscillator(); const gain = ctx.createGain();
             osc.connect(gain); gain.connect(ctx.destination);
             osc.frequency.value = 880; gain.gain.setValueAtTime(0.3, ctx.currentTime);
@@ -276,7 +277,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
       setShowSummary(true);
     }
     prevStatusRef.current = status;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [currentRide?.status]);
 
   const isNoDrivers = currentRide?.status === "no_drivers";
