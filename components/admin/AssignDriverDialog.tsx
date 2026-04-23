@@ -171,7 +171,6 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       driver_name: driver.full_name,
       status: "assigned",
       assigned_at: assignedNow,
-      updated_at: assignedNow,
       _excluded_driver_ids: [],
       auction_driver_ids: [],
     };
