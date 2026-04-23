@@ -1064,7 +1064,7 @@ export default function DriverApp() {
           }
 
           // ── 3. Direct assignment (auto/manual): show alert ────────────────────
-          if (["UPDATE", "INSERT"].includes(eventType) && data.status === "assigned" && data.driver_id === driverId) {
+          if (eventType === "UPDATE" && data.status === "assigned" && data.driver_id === driverId) {
             shownRideAssignmentsRef.current[data.id] = getAssignmentSignal(data) || "";
             acceptedRideIdsRef.current.delete(data.id);
             delete rejectedRideSignalsRef.current[data.id];
@@ -1172,10 +1172,8 @@ export default function DriverApp() {
         });
         const current = await supabaseApi.rideRequests.get(rideId).catch(() => null);
         if (current?.status === "assigned" && current?.driver_id === driverId) {
-          // Always show current assigned ride for this driver to avoid stale-signal misses.
-          shownRideAssignmentsRef.current[rideId] = getAssignmentSignal(current) || "";
-          acceptedRideIdsRef.current.delete(rideId);
-          delete rejectedRideSignalsRef.current[rideId];
+          const assignmentSignal = getAssignmentSignal(current);
+          if (rejectedRideSignalsRef.current[rideId] === assignmentSignal) return;
           setIncomingRide(current);
         }
         startNewRideAlarm(rideId);
