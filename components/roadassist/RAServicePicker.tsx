@@ -424,7 +424,6 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
       passenger_phone: user.phone,
       passenger_user_id: user.id,
       passenger_rating: user.rating || null,
-      passenger_photo_url: user.photo_url || null,
       pickup_address: pickupAddress,
       pickup_lat: pickupLat,
       pickup_lon: pickupLon,
