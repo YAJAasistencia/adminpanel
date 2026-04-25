@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import StatusBadge from "@/components/shared/StatusBadge";
 import {
   MapPin, Phone, Navigation, CheckCircle2, Car, Star, Camera,
-  MessageCircle, AlertTriangle, HelpCircle, ChevronUp, ChevronDown
+  MessageCircle, AlertTriangle, HelpCircle, ChevronUp, ChevronDown, Timer
 } from "lucide-react";
 import RideMap from "@/components/driver/RideMap";
 import RideFareBreakdown from "@/components/driver/RideFareBreakdown";
@@ -47,6 +47,48 @@ function CancelRideConfirm({ ride, onConfirm }) {
       className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl mb-2 min-h-[44px] select-none"
       onClick={() => setShowConfirm(true)}>
       Cancelar servicio
+    </Button>
+  );
+}
+
+function WaitTimeCancelConfirm({ ride, fee, onConfirm }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  if (showConfirm) {
+    return (
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 mb-2 space-y-3">
+        <div className="flex items-center gap-2 text-amber-700">
+          <Timer className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm font-bold">¿Cancelar con cargo al pasajero?</p>
+        </div>
+        {fee > 0 && (
+          <div className="bg-amber-100 border border-amber-300 rounded-xl p-2.5 text-center">
+            <p className="text-xs text-amber-600 mb-0.5">Cargo por espera</p>
+            <p className="text-amber-800 font-black text-xl">${fee.toFixed(2)}</p>
+          </div>
+        )}
+        <p className="text-xs text-amber-700">El tiempo de espera se agotó. Se aplicará el cargo según la política de cancelación.</p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1 rounded-xl min-h-[44px] border-slate-200 text-slate-600 select-none"
+            onClick={() => setShowConfirm(false)}>
+            Seguir esperando
+          </Button>
+          <Button size="sm" className="flex-1 rounded-xl min-h-[44px] bg-amber-600 hover:bg-amber-700 text-white select-none"
+            onClick={() => { setShowConfirm(false); onConfirm(fee); }}>
+            Cancelar con cargo
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <Button variant="ghost" size="sm"
+      className="w-full text-amber-600 hover:text-amber-700 hover:bg-amber-50 border border-amber-300 rounded-xl mb-2 min-h-[44px] select-none font-semibold"
+      onClick={() => setShowConfirm(true)}>
+      <Timer className="w-4 h-4 mr-2" />
+      Cancelar servicio con cargo
     </Button>
   );
 }
@@ -191,6 +233,21 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
     return { status: 'alert', color: 'bg-red-500/20 border-red-400/30 text-red-300' };
   };
 
+  // Wait time limit from settings (default 5 min = 300s)
+  const waitTimeLimit = settings?.wait_time_limit_seconds ?? 300;
+  const waitTimeLimitExpired = ride.status === "arrived" && waitTime >= waitTimeLimit;
+
+  // Find applicable cancellation policy for "arrived" status
+  const arrivedPolicy = policies.find((p: any) =>
+    p.is_active && Array.isArray(p.applies_to_status) && p.applies_to_status.includes("arrived")
+  );
+  const ridePrice = ride.final_price || ride.estimated_price || 0;
+  const waitTimeFee = arrivedPolicy
+    ? arrivedPolicy.fee_type === "percentage"
+      ? parseFloat(((arrivedPolicy.fee_amount / 100) * ridePrice).toFixed(2))
+      : parseFloat(arrivedPolicy.fee_amount) || 0
+    : 0;
+
   // ─── Full-screen layout for active rides ──────────────────────────────────
   if (isActive) {
     return (
@@ -295,17 +352,37 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
 
                 {/* Wait time timer at pickup */}
                 {ride.status === "arrived" && (
-                  <div className={`border rounded-xl p-3 flex items-center justify-between ${getWaitTimeStatus().color}`}>
+                  <div className={`border rounded-xl p-3 flex items-center justify-between ${waitTimeLimitExpired ? 'bg-red-500/20 border-red-400/30 text-red-300' : getWaitTimeStatus().color}`}>
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 flex-shrink-0" />
-                      <p className="text-xs font-medium">
-                        {getWaitTimeStatus().status === 'ok' && `Llegaste al punto de recogida`}
-                        {getWaitTimeStatus().status === 'warning' && `Esperando pasajero`}
-                        {getWaitTimeStatus().status === 'alert' && `⏱️ Tiempo de espera excesivo`}
-                      </p>
+                      <Timer className="w-4 h-4 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium">
+                          {waitTimeLimitExpired
+                            ? "⏰ Tiempo de espera agotado"
+                            : getWaitTimeStatus().status === 'ok'
+                              ? "Llegaste al punto de recogida"
+                              : getWaitTimeStatus().status === 'warning'
+                                ? "Esperando pasajero"
+                                : "⏱️ Tiempo de espera excesivo"}
+                        </p>
+                        {!waitTimeLimitExpired && (
+                          <p className="text-[10px] opacity-70">
+                            Cancelación con cargo en: {formatWaitTime(Math.max(0, waitTimeLimit - waitTime))}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <p className="font-mono font-bold text-base">{formatWaitTime(waitTime)}</p>
                   </div>
+                )}
+
+                {/* Wait time cancel with fee button */}
+                {waitTimeLimitExpired && (
+                  <WaitTimeCancelConfirm
+                    ride={ride}
+                    fee={waitTimeFee}
+                    onConfirm={(fee) => onRejectRide(ride, "wait_time_expired", fee)}
+                  />
                 )}
 
                 {/* Main action button */}
@@ -415,6 +492,15 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                 {/* Cancel confirm in expanded */}
                 {allowCancel && ride.status === "assigned" && (
                   <CancelRideConfirm ride={ride} onConfirm={() => onRejectRide(ride, "driver_cancelled")} />
+                )}
+
+                {/* Wait time cancel with fee in expanded */}
+                {waitTimeLimitExpired && (
+                  <WaitTimeCancelConfirm
+                    ride={ride}
+                    fee={waitTimeFee}
+                    onConfirm={(fee) => onRejectRide(ride, "wait_time_expired", fee)}
+                  />
                 )}
 
                 {/* Help */}

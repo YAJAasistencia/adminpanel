@@ -9,7 +9,7 @@
  */
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Star, AlertTriangle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { CheckCircle2, XCircle, Star, AlertTriangle, ThumbsUp, ThumbsDown, Timer, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
 
@@ -34,6 +34,10 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
   const isCompleted = ride.status === "completed";
   const isCancelled = ride.status === "cancelled";
   const hasCancellationFee = (ride.cancellation_fee || 0) > 0;
+  const isWaitTimeExpired = ride.cancellation_reason === "Tiempo de espera agotado";
+  const cancelledByPassenger = ride.cancelled_by === "passenger";
+  const cancelledByAdmin = ride.cancelled_by === "admin";
+  const cancelledByDriver = ride.cancelled_by === "driver";
   const earnings = ride.driver_earnings || 0;
 
   // Wallet + complementary: wallet covered part, remaining paid by another method
@@ -206,17 +210,28 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
           </div>
         ) : isCancelled ? (
           <div className="text-center space-y-3">
-            <div className="w-20 h-20 bg-red-500/20 border-2 border-red-400/40 rounded-3xl flex items-center justify-center mx-auto">
-              <XCircle className="w-10 h-10 text-red-400" />
+            <div className={`w-20 h-20 border-2 rounded-3xl flex items-center justify-center mx-auto ${isWaitTimeExpired ? 'bg-amber-500/20 border-amber-400/40' : 'bg-red-500/20 border-red-400/40'}`}>
+              {isWaitTimeExpired
+                ? <Timer className="w-10 h-10 text-amber-400" />
+                : <XCircle className="w-10 h-10 text-red-400" />}
             </div>
-            <h1 className="text-white font-black text-2xl">Servicio cancelado</h1>
-            {ride.cancelled_by && (
-              <p className="text-white/50 text-sm">
-                Cancelado por: {ride.cancelled_by === "passenger" ? "Pasajero" : ride.cancelled_by === "admin" ? "Administrador" : "Conductor"}
-              </p>
-            )}
-            {ride.cancellation_reason && (
-              <p className="text-red-400/80 text-sm italic">"{ride.cancellation_reason}"</p>
+            <h1 className="text-white font-black text-2xl">
+              {isWaitTimeExpired ? "Tiempo de espera agotado" : "Servicio cancelado"}
+            </h1>
+            {isWaitTimeExpired ? (
+              <p className="text-amber-400/80 text-sm">El pasajero no se presentó a tiempo. Se aplicó cargo por espera.</p>
+            ) : (
+              <>
+                {ride.cancelled_by && (
+                  <p className="text-white/50 text-sm">
+                    Cancelado por:{" "}
+                    {cancelledByPassenger ? "🧑 Pasajero" : cancelledByAdmin ? "🛡️ Administrador" : "🚗 Conductor"}
+                  </p>
+                )}
+                {ride.cancellation_reason && (
+                  <p className="text-red-400/80 text-sm italic">"{ride.cancellation_reason}"</p>
+                )}
+              </>
             )}
           </div>
         ) : null}
@@ -268,15 +283,32 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
 
         {/* Cancellation fee card */}
         {isCancelled && hasCancellationFee && (
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-center">
-            <p className="text-amber-300 text-xs font-medium uppercase tracking-wide mb-1">Cargo por cancelación</p>
+          <div className={`border rounded-2xl p-4 text-center space-y-2 ${isWaitTimeExpired ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+            <p className="text-amber-300 text-xs font-medium uppercase tracking-wide">
+              {isWaitTimeExpired ? "⏰ Cargo por tiempo de espera" : "Cargo por cancelación"}
+            </p>
             <p className="text-amber-400 font-black text-3xl">${ride.cancellation_fee.toFixed(2)}</p>
+            {ride.driver_earnings > 0 && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 mt-1">
+                <p className="text-emerald-300 text-xs">Tu ganancia</p>
+                <p className="text-emerald-400 font-black text-xl">${ride.driver_earnings.toFixed(2)}</p>
+              </div>
+            )}
+            {cancelledByPassenger && !isWaitTimeExpired && (
+              <p className="text-white/40 text-xs">El pasajero canceló con cargo.</p>
+            )}
           </div>
         )}
 
         {isCancelled && !hasCancellationFee && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
             <p className="text-white/40 text-sm">Sin cargo por cancelación</p>
+            {cancelledByPassenger && (
+              <p className="text-white/30 text-xs mt-1">El pasajero canceló sin costo</p>
+            )}
+            {cancelledByAdmin && (
+              <p className="text-white/30 text-xs mt-1">Cancelado por el administrador</p>
+            )}
           </div>
         )}
 

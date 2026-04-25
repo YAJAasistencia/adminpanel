@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import { Plus, Pencil, Trash2, ShieldAlert, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const emptyPolicy = {
@@ -33,12 +33,39 @@ export default function CancellationPoliciesPage() {
   const [editPolicy, setEditPolicy] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [waitLimitSecs, setWaitLimitSecs] = useState<number | "">("");
+  const [savingWait, setSavingWait] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: policies = [] } = useQuery({
     queryKey: ["policies"],
     queryFn: () => supabaseApi.cancellationPolicies.list(),
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ["appSettings"],
+    queryFn: () => supabaseApi.settings.get(),
+  });
+
+  // Sync slider with DB value when settings load
+  React.useEffect(() => {
+    if (settings?.wait_time_limit_seconds != null && waitLimitSecs === "") {
+      setWaitLimitSecs(settings.wait_time_limit_seconds);
+    }
+  }, [settings]);
+
+  const handleSaveWaitTime = async () => {
+    if (!settings?.id) return;
+    setSavingWait(true);
+    try {
+      await supabaseApi.settings.update(settings.id, { wait_time_limit_seconds: Number(waitLimitSecs) || 300 });
+      queryClient.invalidateQueries({ queryKey: ["appSettings"] });
+      toast.success("Tiempo de espera actualizado");
+    } catch (err: any) {
+      toast.error(err.message || "Error al guardar");
+    }
+    setSavingWait(false);
+  };
 
   const handleSave = async () => {
     try {
@@ -98,6 +125,43 @@ export default function CancellationPoliciesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Wait time config card */}
+          <Card className="p-6 border-0 shadow-sm md:col-span-2">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900">Tiempo de espera del conductor</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Tiempo máximo de espera al llegar al punto de recogida. Cuando expire, el conductor podrá cancelar el servicio con cargo al pasajero.
+                  El cargo se toma de la política activa que aplique al estado <strong>"Llegó"</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-end gap-4">
+              <div className="flex-1 max-w-xs">
+                <Label className="text-xs text-slate-500 mb-1 block">Tiempo límite (segundos)</Label>
+                <Input
+                  type="number"
+                  min={30}
+                  step={30}
+                  value={waitLimitSecs}
+                  onChange={e => setWaitLimitSecs(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="300"
+                />
+                {waitLimitSecs !== "" && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    = {Math.floor(Number(waitLimitSecs) / 60)} min {Number(waitLimitSecs) % 60} seg
+                  </p>
+                )}
+              </div>
+              <Button onClick={handleSaveWaitTime} disabled={savingWait} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
+                {savingWait ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </Card>
+
           {policies.map(policy => (
             <Card key={policy.id} className="p-6 border-0 shadow-sm">
               <div className="flex items-start justify-between mb-3">

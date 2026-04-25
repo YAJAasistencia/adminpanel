@@ -1443,13 +1443,50 @@ export default function DriverApp() {
     queryClient.invalidateQueries({ queryKey: ["driverRides", driver?.id] });
   };
 
-  const handleRejectRide = async (ride: Ride | null, reason: string = "driver_declined") => {
+  const handleRejectRide = async (ride: Ride | null, reason: string = "driver_declined", cancellationFeeAmount: number = 0) => {
     if (ride?.id) {
       rejectedRideSignalsRef.current[ride.id] = getAssignmentSignal(ride);
       stopNewRideAlarm(ride.id);
       cancelSWRideTimer(ride.id);
     }
     setIncomingRide(null);
+
+    // ─── Wait time expired cancellation (no suspension, fee applied) ──────────
+    const isWaitTimeExpired = reason === "wait_time_expired" && ride?.id && ride?.status === "arrived";
+    if (isWaitTimeExpired) {
+      const commissionRate = driver?.commission_rate ?? settingsRef.current?.platform_commission_pct ?? 20;
+      const driverEarnings = parseFloat((cancellationFeeAmount * (1 - commissionRate / 100)).toFixed(2));
+      const platformCommission = parseFloat((cancellationFeeAmount * (commissionRate / 100)).toFixed(2));
+      const cancelledRide = {
+        ...ride,
+        status: "cancelled",
+        cancelled_by: "driver",
+        cancellation_reason: "Tiempo de espera agotado",
+        cancellation_fee: cancellationFeeAmount,
+        final_price: cancellationFeeAmount,
+        driver_earnings: driverEarnings,
+        platform_commission: platformCommission,
+      };
+      await supabaseApi.rideRequests.update(ride.id, {
+        status: "cancelled",
+        cancelled_by: "driver",
+        cancellation_reason: "Tiempo de espera agotado",
+        cancellation_fee: cancellationFeeAmount,
+        final_price: cancellationFeeAmount,
+        driver_earnings: driverEarnings,
+        platform_commission: platformCommission,
+      });
+      await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
+      setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
+      const pms = settingsRef.current?.payment_methods || [];
+      const pm = pms.find((m: any) => m.key === (ride?.payment_method || "cash"));
+      const pmConfig = pm
+        ? { auto_charge: !!pm.auto_charge, require_driver_confirmation: pm.require_driver_confirmation !== false && !pm.auto_charge }
+        : { auto_charge: false, require_driver_confirmation: true };
+      setTimeout(() => setRideSummary({ ride: cancelledRide, paymentMethodConfig: pmConfig }), 500);
+      queryClient.invalidateQueries({ queryKey: ["driverRides"] });
+      return;
+    }
 
     const isActiveCancellation =
       reason === "driver_cancelled" &&
