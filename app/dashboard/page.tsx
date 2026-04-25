@@ -180,6 +180,14 @@ export default function Dashboard() {
   driversRef.current = drivers;
   const dismissedEtaRideIdsRef = useRef(new Set<string>());
 
+  const resolveModalDriver = (rideLike: any) => {
+    const id = rideLike?.driver_id;
+    if (!id) return null;
+    const found = driversRef.current.find((dr: any) => dr.id === id);
+    if (found) return found;
+    return { id, full_name: rideLike?.driver_name || "Conductor" };
+  };
+
   useEffect(() => {
     const unsub = supabase.channel("rides_changes").on(
       "postgres_changes",
@@ -264,13 +272,12 @@ export default function Dashboard() {
             
             if (driverAccepted) {
               dismissedEtaRideIdsRef.current.delete(d.id);
-              const driver = driversRef.current.find((dr: any) => dr.id === d.driver_id);
-              if (driver) {
-                setEtaModalData({ ride: fullRide, driver, phase: "assigned" });
-              } else {
-                const fetched = await supabaseApi.drivers.get(d.driver_id);
-                if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
-              }
+              // Mostrar inmediatamente el modal de asignación, incluso si el driver aún no está en caché.
+              const instantDriver = resolveModalDriver(fullRide);
+              if (instantDriver) setEtaModalData({ ride: fullRide, driver: instantDriver, phase: "assigned" });
+
+              const fetched = await supabaseApi.drivers.get(d.driver_id).catch(() => null);
+              if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
             } else {
               if (waitingPhase === "searching" && dismissedEtaRideIdsRef.current.has(d.id)) return;
               setEtaModalData((prev: any) => {
@@ -322,11 +329,8 @@ export default function Dashboard() {
     const driverAccepted = !!(current.driver_accepted_at || current.en_route_at || current.arrived_at || current.in_progress_at);
     if (current.status !== "assigned" || !current.driver_id || !driverAccepted) return;
 
-    const driver = drivers.find((dr: any) => dr.id === current.driver_id);
-    if (driver) {
-      setEtaModalData({ ride: current, driver, phase: "assigned" });
-      return;
-    }
+    const instantDriver = resolveModalDriver(current);
+    if (instantDriver) setEtaModalData({ ride: current, driver: instantDriver, phase: "assigned" });
 
     supabaseApi.drivers.get(current.driver_id)
       .then((fetched) => {
@@ -356,8 +360,10 @@ export default function Dashboard() {
 
     const driverAccepted = !!(active.driver_accepted_at || active.en_route_at || active.arrived_at || active.in_progress_at);
     if (driverAccepted && active.driver_id) {
-      const driver = drivers.find((d: any) => d.id === active.driver_id) || null;
-      setEtaModalData({ ride: active, driver, phase: "assigned" });
+      const instantDriver = resolveModalDriver(active);
+      if (instantDriver) {
+        setEtaModalData({ ride: active, driver: instantDriver, phase: "assigned" });
+      }
       return;
     }
 
