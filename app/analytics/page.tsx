@@ -7,7 +7,7 @@ import { supabaseApi } from "@/lib/supabaseApi";
 import Layout from "@/components/admin/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { TrendingUp, MapPin, Users, Flame, Download, Map, Calendar, ChevronDown, X } from "lucide-react";
+import { TrendingUp, MapPin, Users, Flame, Download, Map, Calendar, ChevronDown, X, Timer, AlertTriangle, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
@@ -324,6 +324,187 @@ function AnalyticsContent() {
     };
   }, [filteredRides, drivers]);
 
+  const funnelData = useMemo(() => {
+    const requested = filteredRides.length;
+    const assigned = filteredRides.filter((r) =>
+      ["assigned", "admin_approved", "en_route", "arrived", "in_progress", "completed"].includes(r.status || "")
+    ).length;
+    const accepted = filteredRides.filter((r) => !!(r.driver_accepted_at || r.en_route_at || r.arrived_at || r.in_progress_at || r.completed_at)).length;
+    const arrived = filteredRides.filter((r) => ["arrived", "in_progress", "completed"].includes(r.status || "")).length;
+    const inProgress = filteredRides.filter((r) => ["in_progress", "completed"].includes(r.status || "")).length;
+    const completed = filteredRides.filter((r) => r.status === "completed").length;
+
+    const pct = (value: number) => (requested > 0 ? ((value / requested) * 100).toFixed(1) : "0.0");
+
+    return [
+      { etapa: "Solicitados", valor: requested, tasa: "100.0" },
+      { etapa: "Asignados", valor: assigned, tasa: pct(assigned) },
+      { etapa: "Aceptados", valor: accepted, tasa: pct(accepted) },
+      { etapa: "Llegada", valor: arrived, tasa: pct(arrived) },
+      { etapa: "En curso", valor: inProgress, tasa: pct(inProgress) },
+      { etapa: "Completados", valor: completed, tasa: pct(completed) },
+    ];
+  }, [filteredRides]);
+
+  const slaMetrics = useMemo(() => {
+    const assignmentTimes: number[] = [];
+    const arrivalTimes: number[] = [];
+
+    filteredRides.forEach((r) => {
+      const requestedAt = r.requested_at ? new Date(r.requested_at).getTime() : null;
+      const acceptedAtRaw = r.driver_accepted_at || r.en_route_at;
+      const acceptedAt = acceptedAtRaw ? new Date(acceptedAtRaw).getTime() : null;
+      const arrivedAt = r.arrived_at ? new Date(r.arrived_at).getTime() : null;
+
+      if (requestedAt && acceptedAt && acceptedAt >= requestedAt) {
+        assignmentTimes.push((acceptedAt - requestedAt) / 60000);
+      }
+      if (acceptedAt && arrivedAt && arrivedAt >= acceptedAt) {
+        arrivalTimes.push((arrivedAt - acceptedAt) / 60000);
+      }
+    });
+
+    const p50 = (arr: number[]) => {
+      if (!arr.length) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    };
+
+    const assignP50 = p50(assignmentTimes);
+    const arrivalP50 = p50(arrivalTimes);
+    const assignOnTimePct = assignmentTimes.length
+      ? (assignmentTimes.filter((m) => m <= 10).length / assignmentTimes.length) * 100
+      : 0;
+    const arrivalOnTimePct = arrivalTimes.length
+      ? (arrivalTimes.filter((m) => m <= 20).length / arrivalTimes.length) * 100
+      : 0;
+
+    return {
+      assignP50: assignP50.toFixed(1),
+      arrivalP50: arrivalP50.toFixed(1),
+      assignOnTimePct: assignOnTimePct.toFixed(1),
+      arrivalOnTimePct: arrivalOnTimePct.toFixed(1),
+      samplesAssign: assignmentTimes.length,
+      samplesArrival: arrivalTimes.length,
+    };
+  }, [filteredRides]);
+
+  const cancellationBreakdown = useMemo(() => {
+    const byActor: Record<string, number> = { passenger: 0, driver: 0, admin: 0, other: 0 };
+    const reasonMap: Record<string, number> = {};
+
+    filteredRides.filter((r) => r.status === "cancelled").forEach((r) => {
+      const actor = r.cancelled_by === "passenger" || r.cancelled_by === "driver" || r.cancelled_by === "admin"
+        ? r.cancelled_by
+        : "other";
+      byActor[actor] += 1;
+      const reason = (r.cancellation_reason || "Sin motivo").trim();
+      reasonMap[reason] = (reasonMap[reason] || 0) + 1;
+    });
+
+    const actorData = [
+      { name: "Pasajero", value: byActor.passenger },
+      { name: "Conductor", value: byActor.driver },
+      { name: "Admin", value: byActor.admin },
+      { name: "Otro", value: byActor.other },
+    ];
+    const topReasons = Object.entries(reasonMap)
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return { actorData, topReasons };
+  }, [filteredRides]);
+
+  const retentionSnapshot = useMemo(() => {
+    const now = Date.now();
+    const rangeStart = globalRange?.from?.getTime() ?? (now - 30 * 24 * 60 * 60 * 1000);
+    const lookbackMs = 60 * 24 * 60 * 60 * 1000;
+
+    const ridesByPassenger: Record<string, any[]> = {};
+    rides.forEach((r) => {
+      const key = r.passenger_user_id || r.passenger_phone;
+      if (!key || !r.requested_at) return;
+      if (!ridesByPassenger[key]) ridesByPassenger[key] = [];
+      ridesByPassenger[key].push(r);
+    });
+
+    let nuevos = 0;
+    let recurrentes = 0;
+    let reactivados = 0;
+
+    Object.values(ridesByPassenger).forEach((prides) => {
+      const sorted = prides
+        .filter((r) => r.requested_at)
+        .sort((a, b) => new Date(a.requested_at).getTime() - new Date(b.requested_at).getTime());
+      if (!sorted.length) return;
+
+      const hasInRange = sorted.some((r) => {
+        const t = new Date(r.requested_at).getTime();
+        return t >= rangeStart;
+      });
+      if (!hasInRange) return;
+
+      const firstRideTs = new Date(sorted[0].requested_at).getTime();
+      const hadBeforeRange = sorted.some((r) => new Date(r.requested_at).getTime() < rangeStart);
+      const hadRecentBeforeRange = sorted.some((r) => {
+        const t = new Date(r.requested_at).getTime();
+        return t < rangeStart && t >= rangeStart - lookbackMs;
+      });
+
+      if (firstRideTs >= rangeStart) {
+        nuevos += 1;
+      } else if (hadRecentBeforeRange) {
+        recurrentes += 1;
+      } else if (hadBeforeRange) {
+        reactivados += 1;
+      }
+    });
+
+    const totalActivos = nuevos + recurrentes + reactivados;
+    const pct = (n: number) => (totalActivos ? ((n / totalActivos) * 100).toFixed(1) : "0.0");
+    return {
+      nuevos,
+      recurrentes,
+      reactivados,
+      totalActivos,
+      nuevosPct: pct(nuevos),
+      recurrentesPct: pct(recurrentes),
+      reactivadosPct: pct(reactivados),
+    };
+  }, [rides, globalRange]);
+
+  const actionInsights = useMemo(() => {
+    const insights: string[] = [];
+    const assigned = funnelData[1]?.valor || 0;
+    const requested = funnelData[0]?.valor || 0;
+    const assignRate = requested ? (assigned / requested) * 100 : 0;
+    const cancellationRate = requested ? ((kpis.cancelledRides / requested) * 100) : 0;
+
+    if (assignRate < 85) {
+      insights.push("Baja cobertura de asignación. Recomendación: activar subasta por zonas críticas y revisar conductores disponibles por franja.");
+    }
+    if (Number(slaMetrics.assignOnTimePct) < 70) {
+      insights.push("SLA de asignación por debajo de objetivo. Recomendación: aumentar prioridad de despacho en picos y ajustar radio de búsqueda.");
+    }
+    if (Number(slaMetrics.arrivalOnTimePct) < 70) {
+      insights.push("SLA de llegada bajo. Recomendación: revisar tiempos ETA por zona y priorizar conductores cercanos con mejor aceptación.");
+    }
+    if (cancellationRate > 20) {
+      insights.push("Cancelación elevada. Recomendación: auditar top motivos de cancelación y aplicar política específica por actor.");
+    }
+    if (retentionSnapshot.totalActivos > 0 && Number(retentionSnapshot.recurrentesPct) < 50) {
+      insights.push("Retención recurrente baja. Recomendación: campaña de recompra para pasajeros de los últimos 30-60 días.");
+    }
+
+    if (!insights.length) {
+      insights.push("Operación estable en el período. Recomendación: mantener monitoreo de SLA y escalar acciones solo en horas pico.");
+    }
+
+    return insights;
+  }, [funnelData, kpis.cancelledRides, slaMetrics.assignOnTimePct, slaMetrics.arrivalOnTimePct, retentionSnapshot.totalActivos, retentionSnapshot.recurrentesPct]);
+
   const [ratingDriverFilter, setRatingDriverFilter] = useState("all");
 
   const filteredDriversForRating = useMemo(() => {
@@ -444,6 +625,131 @@ function AnalyticsContent() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" />
+              Embudo Operativo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={funnelData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="etapa" fontSize={12} />
+                <YAxis />
+                <Tooltip formatter={(v, name, item) => [v, `${item?.payload?.tasa || "0.0"}% del total`]} />
+                <Bar dataKey="valor" fill="#3B82F6" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
+              {funnelData.slice(1).map((s) => (
+                <div key={s.etapa} className="bg-slate-50 rounded-lg px-3 py-2">
+                  <p className="text-[11px] text-slate-500">{s.etapa}</p>
+                  <p className="text-sm font-bold text-slate-900">{s.tasa}%</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Timer className="w-5 h-5 text-emerald-600" />
+              SLA Operativo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="p-3 rounded-lg bg-emerald-50">
+              <p className="text-xs text-emerald-700">Asignación p50</p>
+              <p className="text-2xl font-black text-emerald-700">{slaMetrics.assignP50} min</p>
+              <p className="text-[11px] text-emerald-600">{slaMetrics.assignOnTimePct}% dentro de 10 min</p>
+            </div>
+            <div className="p-3 rounded-lg bg-blue-50">
+              <p className="text-xs text-blue-700">Llegada p50</p>
+              <p className="text-2xl font-black text-blue-700">{slaMetrics.arrivalP50} min</p>
+              <p className="text-[11px] text-blue-600">{slaMetrics.arrivalOnTimePct}% dentro de 20 min</p>
+            </div>
+            <div className="text-[11px] text-slate-400">
+              Muestras: {slaMetrics.samplesAssign} asignaciones · {slaMetrics.samplesArrival} llegadas
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-violet-600" />
+              Retención de Pasajeros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { label: "Nuevos", value: retentionSnapshot.nuevos, pct: retentionSnapshot.nuevosPct, color: "text-blue-600" },
+              { label: "Recurrentes", value: retentionSnapshot.recurrentes, pct: retentionSnapshot.recurrentesPct, color: "text-emerald-600" },
+              { label: "Reactivados", value: retentionSnapshot.reactivados, pct: retentionSnapshot.reactivadosPct, color: "text-amber-600" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-xs text-slate-500">{row.label}</p>
+                  <p className={`text-xl font-black ${row.color}`}>{row.value}</p>
+                </div>
+                <span className="text-xs text-slate-500">{row.pct}%</span>
+              </div>
+            ))}
+            <p className="text-[11px] text-slate-400 pt-1">Activos en período: {retentionSnapshot.totalActivos}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Cancelaciones por Actor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={cancellationBreakdown.actorData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={78} label>
+                  {["#ef4444", "#f59e0b", "#3b82f6", "#94a3b8"].map((color, idx) => <Cell key={idx} fill={color} />)}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="space-y-1.5 mt-2">
+              {cancellationBreakdown.topReasons.map((r) => (
+                <div key={r.reason} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 truncate pr-2">{r.reason}</span>
+                  <span className="font-bold text-slate-900">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-orange-600" />
+              Acciones Recomendadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {actionInsights.map((insight, idx) => (
+              <div key={idx} className="text-xs text-slate-700 bg-orange-50 border border-orange-100 rounded-lg p-2.5">
+                {insight}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
