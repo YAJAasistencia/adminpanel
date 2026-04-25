@@ -9,7 +9,7 @@
  */
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Star, AlertTriangle, ThumbsUp, ThumbsDown, Timer, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Star, AlertTriangle, ThumbsUp, ThumbsDown, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
 

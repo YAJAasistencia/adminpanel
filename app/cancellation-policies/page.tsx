@@ -42,10 +42,11 @@ export default function CancellationPoliciesPage() {
     queryFn: () => supabaseApi.cancellationPolicies.list(),
   });
 
-  const { data: settings } = useQuery({
+  const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
-    queryFn: () => supabaseApi.settings.get(),
+    queryFn: () => supabaseApi.settings.list(),
   });
+  const settings = settingsList[0];
 
   // Sync slider with DB value when settings load
   React.useEffect(() => {

@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   FileText, Building2, Search, Download, Plus, CheckCircle2, Eye, Trash2, Send, Clock, XCircle
 } from "lucide-react";
-import moment from "moment";
 import { formatCDMX, todayCDMX, startOfDayCDMX, endOfDayCDMX, nowCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 

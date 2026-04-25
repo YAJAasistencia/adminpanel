@@ -13,7 +13,6 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
-import moment from "moment";
 import { formatCDMX, todayCDMX, startOfDayCDMX, endOfDayCDMX } from "@/components/shared/dateUtils";
 import { TrendingUp, DollarSign, Car, Receipt } from "lucide-react";
 

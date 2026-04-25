@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Download, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
-import { todayCDMX, startOfDayCDMX, endOfDayCDMX, formatCDMX } from "@/components/shared/dateUtils";
+import { todayCDMX, startOfDayCDMX, formatCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 function getWeekBounds(weeksBack = 0) {
@@ -117,6 +117,13 @@ export default function Liquidaciones() {
   };
 
   const exportCSV = () => {
+    const weekStartFile = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Mexico_City",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(weekStart);
+
     const rows = [
       ["Folio", "Pasajero", "Origen", "Destino", "Fecha", "Método", "Precio", "Comisión", "Ganancia conductor", "Pagado"],
       ...weekRides.map(r => [
@@ -137,7 +144,7 @@ export default function Liquidaciones() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `liquidacion_${driver?.full_name?.replace(/\s+/g, "_") || "conductor"}_${weekStart.format("YYYY-MM-DD")}.csv`;
+    a.download = `liquidacion_${driver?.full_name?.replace(/\s+/g, "_") || "conductor"}_${weekStartFile}.csv`;
     a.click();
   };
 
