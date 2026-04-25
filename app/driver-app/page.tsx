@@ -1030,18 +1030,28 @@ export default function DriverApp() {
         },
         (payload: any) => {
           const eventType = payload.eventType || payload.type;
-          const data = payload.new as Ride;
-          if (!data) return;
+          const data = (payload.new || null) as Ride | null;
+          const oldData = (payload.old || null) as Ride | null;
+          const rideId = data?.id || oldData?.id;
+          if (!rideId) return;
+          const belongsNow = data?.driver_id === driverId;
+          const belongedBefore = oldData?.driver_id === driverId;
+          const belongsToDriver = belongsNow || belongedBefore;
 
           // ── 1. Sync cache for rides belonging to this driver ──────────────────
-          if (eventType === "UPDATE" && data.driver_id && data.driver_id !== driverId) {
+          if (eventType === "DELETE") {
             queryClient.setQueryData(["driverRides", driverId], (old: any[] = []) =>
-              old.filter((r) => r.id !== data.id)
+              old.filter((r) => r.id !== rideId)
             );
           }
-          if (data.driver_id === driverId || eventType === "INSERT") {
+          if (eventType === "UPDATE" && belongedBefore && !belongsNow) {
+            queryClient.setQueryData(["driverRides", driverId], (old: any[] = []) =>
+              old.filter((r) => r.id !== rideId)
+            );
+          }
+          if ((eventType === "INSERT" || eventType === "UPDATE") && belongsNow && data) {
             queryClient.setQueryData(["driverRides", driverId], (old: any[] = []) => {
-              if (eventType === "DELETE") return old.filter((r) => r.id !== data.id);
+              if (eventType === "DELETE") return old.filter((r) => r.id !== rideId);
               const idx = old.findIndex((r) => r.id === data.id);
               if (idx === -1) return data.driver_id === driverId ? [data, ...old] : old;
               return old.map((r) => (r.id === data.id ? { ...r, ...data } : r));
@@ -1049,11 +1059,36 @@ export default function DriverApp() {
           }
           if (
             eventType === "UPDATE" &&
-            data.driver_id === driverId &&
+            belongsNow &&
+            data &&
             !["completed", "cancelled"].includes(data.status)
           ) {
             queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
           }
+
+          // Cancellation from passenger/admin should always release the driver.
+          if (eventType === "UPDATE" && data?.status === "cancelled" && belongsToDriver) {
+            setIncomingRide((prev) => {
+              if (prev?.id === rideId) {
+                stopNewRideAlarm(prev.id);
+              }
+              return prev?.id === rideId ? null : prev;
+            });
+
+            if (data.cancelled_by !== "driver" && data.cancellation_reason) {
+              const pmConfig = { auto_charge: false, require_driver_confirmation: false };
+              setRideSummary({ ride: data, paymentMethodConfig: pmConfig });
+            }
+
+            supabaseApi.drivers.update(driverId, { status: "available" });
+            setDriver((prev) => (prev ? { ...prev, status: "available", suspended_until: null } : prev));
+            setSuspendedUntil(null);
+            localStorage.removeItem("driver_suspended_until");
+            queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
+            return;
+          }
+
+          if (!data) return;
 
           // ── 2. Auction ride: show alert to this driver ────────────────────────
           if (
@@ -1115,22 +1150,6 @@ export default function DriverApp() {
               delete shownRideAssignmentsRef.current[data.id];
               acceptedRideIdsRef.current.delete(data.id);
               delete rejectedRideSignalsRef.current[data.id];
-            }
-
-            if (data.status === "cancelled" && data.driver_id === driverId) {
-              setIncomingRide((prev) => {
-                if (prev?.id === data.id) {
-                  stopNewRideAlarm(prev.id);
-                }
-                return prev?.id === data.id ? null : prev;
-              });
-              if (data.cancelled_by !== "driver") {
-                const pmConfig = { auto_charge: false, require_driver_confirmation: false };
-                setRideSummary({ ride: data, paymentMethodConfig: pmConfig });
-              }
-              supabaseApi.drivers.update(driverId, { status: "available" });
-              setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
-              return;
             }
 
             setIncomingRide((prev) => {
