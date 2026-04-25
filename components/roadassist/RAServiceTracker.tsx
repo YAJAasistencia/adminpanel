@@ -17,6 +17,7 @@ import PassengerRideSummary from "@/components/roadassist/PassengerRideSummary";
 import { getRoute, getHaverDist } from "@/components/shared/mapsUtils";
 import SearchingPhase from "@/components/roadassist/RASearchingPhase";
 import RAPassengerChat from "@/components/roadassist/RAPassengerChat";
+import { nowCDMX } from "@/components/shared/dateUtils";
 
 // Fix leaflet default icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -325,7 +326,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
         status: "pending",
         assignment_mode: "manual",
         cancellation_reason: null,
-        manual_assignment_requested_at: new Date().toISOString(),
+        manual_assignment_requested_at: nowCDMX(),
       };
       await supabaseApi.rideRequests.update(currentRide.id, {
         status: "pending", assignment_mode: "manual",

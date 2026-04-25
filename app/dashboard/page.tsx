@@ -17,7 +17,7 @@ import AssignDriverDialog from "@/components/admin/AssignDriverDialog";
 import CreateRideDialog from "@/components/admin/CreateRideDialog";
 import CancelRideDialog from "@/components/admin/CancelRideDialog";
 import ETAModal from "@/components/admin/ETAModal";
-import { todayCDMX, startOfDayCDMX, endOfDayCDMX, formatCDMX } from "@/components/shared/dateUtils";
+import { todayCDMX, startOfDayCDMX, endOfDayCDMX, formatCDMX, nowCDMX, futureCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 export default function Dashboard() {
@@ -366,7 +366,7 @@ export default function Dashboard() {
   }, [etaModalData, rides, drivers]);
 
   const handleUpdateStatus = async (ride: any, newStatus: string) => {
-    const now = new Date().toISOString();
+    const now = nowCDMX();
     const updates: any = { status: newStatus };
     if (newStatus === "en_route") updates.en_route_at = now;
     if (newStatus === "arrived") updates.arrived_at = now;
@@ -390,7 +390,7 @@ export default function Dashboard() {
       updates.platform_commission = commission;
       updates.commission_rate = commissionRate;
       const ratingWindowMinutes = (settings as any)?.rating_window_minutes ?? 60;
-      updates.rating_window_expires_at = new Date(Date.now() + ratingWindowMinutes * 60 * 1000).toISOString();
+      updates.rating_window_expires_at = futureCDMX(ratingWindowMinutes * 60 * 1000);
     }
     try {
       await supabaseApi.rideRequests.update(ride.id, updates);

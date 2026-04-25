@@ -47,7 +47,35 @@ export function formatCDMX(date: Date | string, format: DateFormatKind = "dateti
 }
 
 export function nowCDMX() {
-  return new Date().toISOString();
+  return toSystemISO(new Date());
+}
+
+export function futureCDMX(msFromNow: number) {
+  return toSystemISO(new Date(Date.now() + msFromNow));
+}
+
+function toSystemISO(date: Date) {
+  const tz = getTZ();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value || "0000";
+  const month = parts.find((part) => part.type === "month")?.value || "00";
+  const day = parts.find((part) => part.type === "day")?.value || "00";
+  const hour = parts.find((part) => part.type === "hour")?.value || "00";
+  const minute = parts.find((part) => part.type === "minute")?.value || "00";
+  const second = parts.find((part) => part.type === "second")?.value || "00";
+  const offset = getTimezoneOffsetStr(tz, date);
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`;
 }
 
 export function formatStoredLocal(date: Date | string, format: DateFormatKind = "datetime") {
@@ -82,6 +110,13 @@ export function startOfDayCDMX(dateStr: string) {
 
 export function endOfDayCDMX(dateStr: string) {
   return localDateTimeToUTC(dateStr, "23:59:59", getTZ());
+}
+
+export function systemLocalToISO(localDateTime: string) {
+  if (!localDateTime || !localDateTime.includes("T")) return "";
+  const [datePart, timePartRaw] = localDateTime.split("T");
+  const timePart = timePartRaw.length === 5 ? `${timePartRaw}:00` : timePartRaw;
+  return localDateTimeToUTC(datePart, timePart, getTZ()).toISOString();
 }
 
 function localDateTimeToUTC(dateStr: string, timeStr: string, timezone: string) {

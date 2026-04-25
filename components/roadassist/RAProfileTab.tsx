@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { futureCDMX } from "@/components/shared/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Phone, Mail, LogOut, Lock, KeyRound, CheckCircle, X, Trash2, ChevronRight, Star, MessageSquare, AlertCircle, Wallet, Camera } from "lucide-react";
@@ -120,7 +121,7 @@ export default function RAProfileTab({ user, rides, onLogout, onUserUpdate, onDe
     setPwLoading(true);
     setPwError("");
     const code = genToken();
-    const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const expires = futureCDMX(30 * 60 * 1000);
     await supabaseApi.passengers.update(user.id, { reset_token: code, reset_token_expires: expires });
     console.warn("Email sending requires Edge Function implementation. Code:", code);
     setPwLoading(false);

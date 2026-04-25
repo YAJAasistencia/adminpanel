@@ -20,6 +20,7 @@ import LandingEditor from "@/components/settings/LandingEditor";
 import NavConfigEditor from "@/components/admin/NavConfigEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { setNotificationSettings } from "@/components/shared/useRideNotifications";
+import { nowCDMX } from "@/components/shared/dateUtils";
 
 const TIMEZONES = [
   { value: "America/Mexico_City",   label: "Ciudad de México (GMT-6)" },
@@ -144,7 +145,7 @@ const defaults = {
   pending_payment_methods: [],
   
   // Metadata
-  updated_at: new Date().toISOString(),
+  updated_at: nowCDMX(),
 };
 
 export default function SettingsPage() {
@@ -292,7 +293,7 @@ export default function SettingsPage() {
         // Convertir porcentaje (UI 0-100) → decimal (DB 0.0-1.0)
         rejection_rate_warning_threshold: (form.rejection_rate_warning_threshold ?? 60) / 100,
         low_acceptance_rate_threshold: (form.low_acceptance_rate_threshold ?? 60) / 100,
-        updated_at: new Date().toISOString(),
+        updated_at: nowCDMX(),
       };
 
       console.log("[Settings] Guardando configuración:", { existingId, payload });

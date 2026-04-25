@@ -285,7 +285,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     await supabaseApi.passengers.update(user.id, {
       wallet_pending_ref: ref,
       wallet_pending_amount: amount,
-      wallet_pending_ref_created: new Date().toISOString(),
+      wallet_pending_ref_created: nowCDMX(),
     });
     setTransferRefGenerated({ ref, amount });
     setGeneratingTransferRef(false);
@@ -381,7 +381,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     await supabaseApi.passengers.update(user.id, {
       wallet_pending_ref: ref,
       wallet_pending_amount: +walletRechargeAmount,
-      wallet_pending_ref_created: new Date().toISOString(),
+      wallet_pending_ref_created: nowCDMX(),
     });
     setWalletRefGenerated({ ref, amount: +walletRechargeAmount });
     setGeneratingRef(false);

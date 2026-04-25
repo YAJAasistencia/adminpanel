@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
+import { nowCDMX, futureCDMX } from "@/components/shared/dateUtils";
 
 interface City {
   id: string;
@@ -65,7 +66,7 @@ function getRideCreatedTs(ride: Ride) {
 }
 
 function getRideUpdatedIso(ride: Ride) {
-  return ride.assigned_at || ride.updated_at || ride.requested_at || new Date().toISOString();
+  return ride.assigned_at || ride.updated_at || ride.requested_at || nowCDMX();
 }
 
 function getSearchWindowMs(s: any) {
@@ -253,7 +254,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       return;
     }
 
-    const now = new Date().toISOString();
+    const now = nowCDMX();
     const manualPayload = {
       status: "pending",
       assignment_mode: "manual",
@@ -307,7 +308,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     }
 
     const best = sorted[0];
-    const assignedNow = new Date().toISOString();
+    const assignedNow = nowCDMX();
     queryClient.setQueryData(["lastAssignedDriver"], best);
     queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
       old.map((r) => r.id === ride.id
@@ -364,7 +365,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     const sorted = sortDriversForAuction(candidates, ride, priorityMode);
 
     const notifyDrivers = sorted.slice(0, maxDrivers);
-    const auctionExpiresAt = new Date(Date.now() + (s?.auction_timeout_seconds ?? 30) * 1000).toISOString();
+    const auctionExpiresAt = futureCDMX((s?.auction_timeout_seconds ?? 30) * 1000);
 
     await supabaseApi.rideRequests.update(ride.id, {
       auction_driver_ids: notifyDrivers.map((driver) => driver.id),

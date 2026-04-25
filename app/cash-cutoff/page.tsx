@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 
 import moment from "moment";
+import { nowCDMX, startOfDayCDMX, endOfDayCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 interface Ride {
@@ -140,9 +141,9 @@ export default function CashCutoffPage() {
     const totalDriverPayouts = filteredRides.reduce((s, r) => s + (r.driver_earnings || 0), 0);
     const totalCommission = filteredRides.reduce((s, r) => s + (r.platform_commission || 0), 0);
     await supabaseApi.cashCutoffs.create({
-      cutoff_date: new Date().toISOString(),
-      period_start: new Date(dateFrom).toISOString(),
-      period_end: new Date(dateTo).toISOString(),
+      cutoff_date: nowCDMX(),
+      period_start: startOfDayCDMX(dateFrom).toISOString(),
+      period_end: endOfDayCDMX(dateTo).toISOString(),
       total_rides: filteredRides.length,
       total_revenue: totalRevenue,
       platform_commission: totalCommission,

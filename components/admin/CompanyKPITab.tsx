@@ -62,9 +62,7 @@ export default function CompanyKPITab({ company, rides }) {
     : 0;
 
   const tableRows = useMemo(() => filtered.map(r => {
-    const requestedAtCorrected = r.requested_at
-      ? new Date(new Date(r.requested_at).getTime() + 6 * 3600 * 1000).toISOString()
-      : r.created_date;
+    const requestedAtCorrected = r.requested_at || r.created_date;
     return {
       ...r,
       tAsignacion: diffMin(requestedAtCorrected, r.en_route_at),

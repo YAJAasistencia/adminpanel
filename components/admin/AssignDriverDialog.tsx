@@ -9,6 +9,7 @@ import { Star, Car, AlertCircle, MapPin, Navigation, List, Map as MapIcon } from
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { nowCDMX } from "@/components/shared/dateUtils";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -165,7 +166,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       await supabaseApi.drivers.update(previousDriverId, { status: "available" });
     }
 
-    const assignedNow = new Date().toISOString();
+    const assignedNow = nowCDMX();
     const updatedRide = {
       driver_id: selectedDriverId,
       driver_name: driver.full_name,

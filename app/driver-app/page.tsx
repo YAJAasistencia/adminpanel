@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 // Leaflet CSS is imported via npm package
 import L from "leaflet";
-import { setSystemTimezone } from "@/components/shared/dateUtils";
+import { setSystemTimezone, nowCDMX, futureCDMX } from "@/components/shared/dateUtils";
 import IncomingRideAlert, { playAcceptedSound } from "@/components/driver/IncomingRideAlert";
 import DriverSurveyModal from "@/components/driver/DriverSurveyModal";
 import DriverHelpTicket from "@/components/driver/DriverHelpTicket";
@@ -801,7 +801,7 @@ export default function DriverApp() {
       _lastActivity.t = now;
       setInactivityWarning(false);
     }
-    supabaseApi.drivers.update(d.id, { latitude: lat, longitude: lon, last_seen_at: new Date().toISOString() }).catch(() => {});
+    supabaseApi.drivers.update(d.id, { latitude: lat, longitude: lon, last_seen_at: nowCDMX() }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1245,7 +1245,7 @@ export default function DriverApp() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ ride, newStatus }: { ride: Ride; newStatus: string }) => {
-      const now = new Date().toISOString();
+      const now = nowCDMX();
       const updates: any = { status: newStatus };
       if (newStatus === "en_route") {
         updates.driver_accepted_at = ride.driver_accepted_at || now;
@@ -1261,9 +1261,7 @@ export default function DriverApp() {
         updates.final_price = price;
         updates.driver_earnings = driverEarnings;
         updates.platform_commission = parseFloat((price * (commissionRate / 100)).toFixed(2));
-        updates.rating_window_expires_at = new Date(
-          Date.now() + (settings?.rating_window_minutes ?? 1440) * 60000
-        ).toISOString();
+        updates.rating_window_expires_at = futureCDMX((settings?.rating_window_minutes ?? 1440) * 60000);
 
         await supabaseApi.drivers.update(driver?.id || "", {
             status: "available",
@@ -1364,7 +1362,7 @@ export default function DriverApp() {
   const handleAcceptRide = async () => {
     if (!incomingRide) return;
     const ride = incomingRide;
-    const acceptedAt = new Date().toISOString();
+    const acceptedAt = nowCDMX();
     stopNewRideAlarm(ride.id);
     cancelSWRideTimer(ride.id);
     setIncomingRide(null);
@@ -1468,7 +1466,7 @@ export default function DriverApp() {
         });
 
       const suspendUntil = Date.now() + 30 * 60 * 1000;
-      const suspendUntilISO = new Date(suspendUntil).toISOString();
+      const suspendUntilISO = futureCDMX(30 * 60 * 1000);
       await supabaseApi.drivers.update(driver?.id || "", { status: "offline", suspended_until: suspendUntilISO });
 
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
@@ -1501,7 +1499,7 @@ export default function DriverApp() {
 
     if (isCancelByDriver) {
       const suspendUntil = Date.now() + 30 * 60 * 1000;
-      const suspendUntilISO = new Date(suspendUntil).toISOString();
+      const suspendUntilISO = futureCDMX(30 * 60 * 1000);
       await supabaseApi.drivers.update(driver?.id || "", { status: "offline", suspended_until: suspendUntilISO });
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
       setSuspendedUntil(suspendUntil);
@@ -1624,7 +1622,7 @@ export default function DriverApp() {
       }
 
       try {
-        await supabaseApi.drivers.update(driver?.id || "", { status: "available", online_since: new Date().toISOString(), ...vf });
+        await supabaseApi.drivers.update(driver?.id || "", { status: "available", online_since: nowCDMX(), ...vf });
         setDriver((prev) => (prev ? { ...prev, status: "available", ...vf } : prev));
       } catch (e) {
         import("sonner").then(({ toast }) =>
@@ -1655,12 +1653,12 @@ export default function DriverApp() {
       let resetAccumulated = false;
 
       if (newAccumulated >= workMaxMins) {
-        restUntil = new Date(Date.now() + longRestMins * 60000).toISOString();
+        restUntil = futureCDMX(longRestMins * 60000);
         resetAccumulated = true;
       } else {
         const earnedRestMins = Math.floor(worked / restTriggerMins) * restRatioMins;
         if (earnedRestMins > 0) {
-          restUntil = new Date(Date.now() + earnedRestMins * 60000).toISOString();
+          restUntil = futureCDMX(earnedRestMins * 60000);
         }
       }
 

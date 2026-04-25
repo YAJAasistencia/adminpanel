@@ -14,7 +14,7 @@ import AdminMapPicker from "./AdminMapPicker";
 import { detectZone, calcZonePrice, detectRedZone } from "@/components/shared/geozone";
 import { Gavel, Car, AlertTriangle, Camera, Calendar, Phone } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { nowCDMX } from "@/components/shared/dateUtils";
+import { nowCDMX, futureCDMX, todayCDMX, systemLocalToISO } from "@/components/shared/dateUtils";
 
 export default function CreateRideDialog({ open, onOpenChange, serviceTypes, paymentMethods, onRideCreated }) {
   const queryClient = useQueryClient();
@@ -277,7 +277,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     const company = form.company_id ? companies.find(c => c.id === form.company_id) : null;
     const isAuction = form.assignment_mode === "auction";
     const auctionExpiresAt = isAuction
-      ? new Date(Date.now() + (settings?.auction_timeout_seconds || 30) * 1000).toISOString()
+      ? futureCDMX((settings?.auction_timeout_seconds || 30) * 1000)
       : undefined;
 
     // Corporate vs normal pricing
@@ -319,7 +319,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
       dropoff_lat: dropoffCoords?.lat || undefined,
       dropoff_lon: dropoffCoords?.lon || dropoffCoords?.lng || undefined,
       scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
-        ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
+        ? systemLocalToISO(`${form.scheduled_date}T${form.scheduled_time}`)
         : undefined,
       questionnaire_answers: isGrua && Object.keys(questionnaireAnswers).length > 0
         ? Object.entries(questionnaireAnswers).map(([i, v]) => ({
@@ -826,7 +826,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                   <Input
                     type="date"
                     value={form.scheduled_date}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={todayCDMX()}
                     onChange={e => update("scheduled_date", e.target.value)}
                     className={`mt-1 ${!form.scheduled_date ? "border-red-300" : "border-blue-300"}`}
                   />

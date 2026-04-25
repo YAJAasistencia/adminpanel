@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { futureCDMX } from "@/components/shared/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
@@ -151,7 +152,7 @@ export default function RALoginScreen({ onLogin }) {
     }
 
     const token = genToken();
-    const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min
+    const expires = futureCDMX(30 * 60 * 1000); // 30 min
 
     await supabaseApi.passengers.update(users[0].id, {
       reset_token: token,

@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, DollarSign, AlertCircle, Save, Calendar, Lock } from "lucide-react";
 import AddressSearch from "@/components/admin/AddressSearch";
+import { systemLocalToISO } from "@/components/shared/dateUtils";
 
 interface RideFormData {
   passenger_name: string;
@@ -258,7 +259,7 @@ export default function EditRideDialog({ ride, open, onOpenChange, onSaved }) {
       commission_rate: commissionRate,
       paid_by: form.paid_by || "company",
       scheduled_time: form.is_scheduled && form.scheduled_date && form.scheduled_time
-        ? new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
+        ? systemLocalToISO(`${form.scheduled_date}T${form.scheduled_time}`)
         : (ride.scheduled_time || undefined),
       // El precio estimado NO se modifica — se conserva el original
       estimated_price: estimatedPrice,

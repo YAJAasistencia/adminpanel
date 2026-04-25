@@ -16,7 +16,7 @@ import {
   FileText, Building2, Search, Download, Plus, CheckCircle2, Eye, Trash2, Send, Clock, XCircle
 } from "lucide-react";
 import moment from "moment";
-import { formatCDMX, todayCDMX, startOfDayCDMX, endOfDayCDMX } from "@/components/shared/dateUtils";
+import { formatCDMX, todayCDMX, startOfDayCDMX, endOfDayCDMX, nowCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 const STATUS_MAP = {
@@ -77,8 +77,8 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
         company_name: company.razon_social,
         ride_ids: selectedRides.map(r => r.id),
         service_ids: selectedRides.map(r => r.service_id).filter(Boolean),
-        period_from: new Date(dateFrom).toISOString(),
-        period_to: new Date(dateTo).toISOString(),
+        period_from: startOfDayCDMX(dateFrom).toISOString(),
+        period_to: endOfDayCDMX(dateTo).toISOString(),
         subtotal, tax_pct: taxPct, tax_amount: taxAmount, total,
         ride_count: selectedRides.length,
         status: "draft",
@@ -366,7 +366,7 @@ export default function Invoices() {
 
   const handleStatusChange = async (invoice, newStatus) => {
     const updates: any = { status: newStatus };
-    if (newStatus === "paid") updates.paid_at = new Date().toISOString();
+    if (newStatus === "paid") updates.paid_at = nowCDMX();
     const res = await fetch(`/api/invoices?id=${invoice.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

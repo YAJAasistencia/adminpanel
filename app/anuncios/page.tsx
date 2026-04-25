@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Megaphone, Plus, Pencil, Trash2, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
-import { formatCDMX } from "@/components/shared/dateUtils";
+import { formatCDMX, systemLocalToISO } from "@/components/shared/dateUtils";
 
 const AUDIENCE_LABELS = { drivers: "Conductores", passengers: "Pasajeros", all: "Todos" };
 const AUDIENCE_COLORS = { drivers: "bg-blue-100 text-blue-700", passengers: "bg-violet-100 text-violet-700", all: "bg-emerald-100 text-emerald-700" };
@@ -82,8 +82,8 @@ function AnunciosContent() {
         filter_city_name: form.filter_city_name || null,
         filter_service_type_id: form.filter_service_type_id || null,
         filter_service_type_name: form.filter_service_type_name || null,
-        show_from: form.show_from ? new Date(form.show_from).toISOString() : null,
-        expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+        show_from: form.show_from ? systemLocalToISO(form.show_from) : null,
+        expires_at: form.expires_at ? systemLocalToISO(form.expires_at) : null,
         is_active: form.is_active,
       };
       if (editId) {

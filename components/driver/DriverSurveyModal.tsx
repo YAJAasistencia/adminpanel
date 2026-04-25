@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { CheckCircle2, Star, ClipboardList, PenLine, X } from "lucide-react";
+import { nowCDMX } from "@/components/shared/dateUtils";
 
 function SignaturePad({ onCapture }) {
   const canvasRef = useRef(null);
@@ -146,7 +147,7 @@ export default function DriverSurveyModal({ survey, ride, driver, onComplete, on
       answers: answersArr,
       signature_name: signatureName,
       signature_url,
-      completed_at: new Date().toISOString(),
+      completed_at: nowCDMX(),
     });
 
     setSubmitting(false);

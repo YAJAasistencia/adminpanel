@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { futureCDMX } from "@/components/shared/dateUtils";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000;
@@ -47,7 +48,7 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
     const drivers = await supabaseApi.drivers.list({ email: email.trim().toLowerCase() });
     if (drivers.length === 0) { setError("No existe una cuenta de conductor con ese correo"); setLoading(false); return; }
     const token = genToken();
-    const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const expires = futureCDMX(30 * 60 * 1000);
     await supabaseApi.drivers.update(drivers[0].id, { reset_token: token, reset_token_expires: expires });
     // NOTE: Email sending requires Supabase Edge Function or external service implementation.
     setLoading(false);
