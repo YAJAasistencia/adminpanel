@@ -21,7 +21,7 @@ function sanitizeDriver(d) {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Car, LogIn, UserPlus, ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Car, LogIn, UserPlus, ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DriverRegisterScreen from "@/components/driver/DriverRegisterScreen";
 import { SESSION_KEY, SESSION_TOKEN_KEY } from "@/components/driver/driverUtils";
@@ -39,6 +39,8 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
   const [forgotMsg, setForgotMsg] = useState("");
   const [forgotToken, setForgotToken] = useState("");
   const [forgotNewPass, setForgotNewPass] = useState("");
+  // Session conflict state: pending driver found with active session
+  const [sessionConflict, setSessionConflict] = useState<any>(null);
 
   const goLogin = () => { setMode("login"); setError(""); setForgotMsg(""); setForgotToken(""); setForgotNewPass(""); };
 
@@ -97,11 +99,23 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
       return;
     }
 
+    // If there's already an active session on another device, warn before proceeding
+    if (found.access_code) {
+      setLoading(false);
+      setSessionConflict(found);
+      return;
+    }
+
+    await finishLogin(found);
+  };
+
+  const finishLogin = async (found: any) => {
     resetAttempts();
     const token = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
     await supabaseApi.drivers.update(found.id, { access_code: token });
     localStorage.setItem(SESSION_KEY, found.id);
     localStorage.setItem(SESSION_TOKEN_KEY, token);
+    setSessionConflict(null);
     setLoading(false);
     // Never pass password or access_code to app state
     onLogin({ ...sanitizeDriver(found), access_code: token });
@@ -109,6 +123,51 @@ export default function DriverLoginScreen({ onLogin, prefilledEmail = "", appLog
 
   if (showRegister) {
     return <DriverRegisterScreen onBack={() => setShowRegister(false)} prefilledEmail={email} onLogin={onLogin} />;
+  }
+
+  // SESSION CONFLICT — active session on another device
+  if (sessionConflict) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 select-none"
+        style={{ paddingTop: "max(24px, env(safe-area-inset-top))", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm space-y-4">
+          <div className="text-center space-y-3">
+            <div className="w-20 h-20 bg-amber-500/20 border-2 border-amber-400/40 rounded-3xl flex items-center justify-center mx-auto">
+              <Smartphone className="w-10 h-10 text-amber-400" />
+            </div>
+            <h2 className="text-white font-black text-xl">Sesión activa detectada</h2>
+            <p className="text-white/60 text-sm leading-relaxed">
+              Ya existe una sesión abierta en otro dispositivo para la cuenta<br />
+              <span className="text-amber-300 font-semibold">{sessionConflict.full_name}</span>
+            </p>
+          </div>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-amber-300 text-sm">
+                Si continúas, la sesión anterior será <strong>cerrada automáticamente</strong> y ese dispositivo perderá el acceso.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Button
+              onClick={() => { setLoading(true); finishLogin(sessionConflict); }}
+              disabled={loading}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-2xl min-h-[52px] font-bold text-base"
+            >
+              {loading ? "Iniciando sesión..." : "Cerrar sesión anterior y continuar"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setSessionConflict(null)}
+              className="w-full text-white/50 hover:text-white rounded-2xl min-h-[44px]"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
   }
 
   // FORGOT PASSWORD

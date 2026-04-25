@@ -609,6 +609,7 @@ const slideVariants = {
 export default function DriverApp() {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [sessionLoading, setSessionLoading] = useState(() => typeof window !== 'undefined' ? !!localStorage.getItem(SESSION_KEY) : false);
+  const [sessionKickedOut, setSessionKickedOut] = useState(false);
   const [incomingRide, setIncomingRide] = useState<Ride | null>(null);
   const [activeTab, setActiveTab] = useState<"rides" | "earnings" | "profile">("rides");
   const [tabDir, setTabDir] = useState(0);
@@ -944,11 +945,7 @@ export default function DriverApp() {
               localStorage.removeItem(SESSION_KEY);
               localStorage.removeItem(SESSION_TOKEN_KEY);
               setDriver(null);
-              import("sonner").then(({ toast }) =>
-                toast.error("⚠️ Tu sesión fue cerrada porque iniciaste sesión en otro dispositivo.", {
-                  duration: 10000,
-                })
-              );
+              setSessionKickedOut(true);
               return;
             }
             setDriver((prev) => (prev ? { ...prev, ...evt } : prev));
@@ -973,11 +970,7 @@ export default function DriverApp() {
         localStorage.removeItem(SESSION_KEY);
         localStorage.removeItem(SESSION_TOKEN_KEY);
         setDriver(null);
-        import("sonner").then(({ toast }) =>
-          toast.error("⚠️ Tu sesión fue cerrada porque iniciaste sesión en otro dispositivo.", {
-            duration: 10000,
-          })
-        );
+        setSessionKickedOut(true);
       }
     };
 
@@ -1880,7 +1873,7 @@ export default function DriverApp() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_TOKEN_KEY);
     if (driver?.id) {
-      await supabaseApi.drivers.update(driver.id, { status: "offline" });
+      await supabaseApi.drivers.update(driver.id, { status: "offline", access_code: null });
     }
     setDriver(null);
   };
@@ -1936,6 +1929,27 @@ export default function DriverApp() {
     return (
       <div className="fixed inset-0 bg-slate-900 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-slate-600 border-t-emerald-400 rounded-full animate-spin" />
+      </div>
+    );
+  if (sessionKickedOut)
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center px-6 text-center"
+        style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="w-20 h-20 bg-red-500/20 border-2 border-red-400/40 rounded-3xl flex items-center justify-center mb-5">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <h2 className="text-white font-black text-2xl mb-2">Sesión cerrada</h2>
+        <p className="text-white/50 text-sm mb-8 leading-relaxed max-w-xs">
+          Tu sesión fue cerrada porque ingresaste desde otro dispositivo. Solo se permite una sesión activa a la vez.
+        </p>
+        <button
+          onClick={() => setSessionKickedOut(false)}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl text-base min-h-[52px]"
+        >
+          Iniciar sesión nuevamente
+        </button>
       </div>
     );
   if (!driver) return <DriverLoginScreen onLogin={setDriver} prefilledEmail={prefilledEmail} appLogo={appLogo} appName={appName} />;
