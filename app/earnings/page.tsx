@@ -14,7 +14,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 import moment from "moment";
-import { formatCDMX } from "@/components/shared/dateUtils";
+import { formatCDMX, todayCDMX, startOfDayCDMX, endOfDayCDMX } from "@/components/shared/dateUtils";
 import { TrendingUp, DollarSign, Car, Receipt } from "lucide-react";
 
 const COLORS = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"];
@@ -22,8 +22,8 @@ const COLORS = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"];
 export default function Earnings() {
   const [filterMode, setFilterMode] = useState("days");
   const [daysCount, setDaysCount] = useState(1);
-  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dateFrom, setDateFrom] = useState(() => todayCDMX());
+  const [dateTo, setDateTo] = useState(() => todayCDMX());
   const [ivaPct, setIvaPct] = useState(16);
   const [isrPct, setIsrPct] = useState(10);
   const [driverFilter, setDriverFilter] = useState("all");
@@ -39,14 +39,15 @@ export default function Earnings() {
   });
 
   const since = filterMode === "days"
-    ? moment().subtract(Math.max(1, daysCount), "days").startOf("day")
-    : moment(dateFrom).startOf("day");
-  const until = filterMode === "range" ? moment(dateTo).endOf("day") : null;
+    ? new Date(startOfDayCDMX(todayCDMX()).getTime() - Math.max(1, daysCount) * 24 * 60 * 60 * 1000)
+    : startOfDayCDMX(dateFrom);
+  const until = filterMode === "range" ? endOfDayCDMX(dateTo) : null;
   const filtered = rides.filter(r => {
     if (r.status !== "completed") return false;
-    const d = moment(r.requested_at);
-    if (!d.isAfter(since)) return false;
-    if (until && d.isAfter(until)) return false;
+    const d = new Date(r.requested_at || "");
+    if (Number.isNaN(d.getTime())) return false;
+    if (d <= since) return false;
+    if (until && d > until) return false;
     return true;
   });
 
@@ -104,9 +105,10 @@ export default function Earnings() {
   const avgRide = driverFilteredRides.length ? totalRevenue / driverFilteredRides.length : 0;
   const cancelledCount = rides.filter(r => {
     if (r.status !== "cancelled") return false;
-    const d = moment(r.requested_at);
-    if (!d.isAfter(since)) return false;
-    if (until && d.isAfter(until)) return false;
+    const d = new Date(r.requested_at || "");
+    if (Number.isNaN(d.getTime())) return false;
+    if (d <= since) return false;
+    if (until && d > until) return false;
     return true;
   }).length;
 

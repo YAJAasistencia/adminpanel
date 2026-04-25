@@ -16,7 +16,7 @@ import {
   FileText, Building2, Search, Download, Plus, CheckCircle2, Eye, Trash2, Send, Clock, XCircle
 } from "lucide-react";
 import moment from "moment";
-import { formatCDMX } from "@/components/shared/dateUtils";
+import { formatCDMX, todayCDMX, startOfDayCDMX, endOfDayCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 const STATUS_MAP = {
@@ -29,8 +29,8 @@ const STATUS_MAP = {
 function NewInvoiceDialog({ open, onClose, companies, rides }) {
   const queryClient = useQueryClient();
   const [companyId, setCompanyId] = useState("");
-  const [dateFrom, setDateFrom] = useState(moment().startOf("month").format("YYYY-MM-DD"));
-  const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
+  const [dateFrom, setDateFrom] = useState(() => `${todayCDMX().slice(0, 8)}01`);
+  const [dateTo, setDateTo] = useState(() => todayCDMX());
   const [selectedRideIds, setSelectedRideIds] = useState([]);
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
   const [notes, setNotes] = useState("");
@@ -41,11 +41,14 @@ function NewInvoiceDialog({ open, onClose, companies, rides }) {
 
   const availableRides = useMemo(() => {
     if (!companyId) return [];
+    const from = startOfDayCDMX(dateFrom);
+    const to = endOfDayCDMX(dateTo);
     return rides.filter(r => {
       if (r.company_id !== companyId) return false;
       if (r.status !== "completed") return false;
-      const d = moment(r.requested_at);
-      return d.isSameOrAfter(dateFrom, "day") && d.isSameOrBefore(dateTo, "day");
+      const d = new Date(r.requested_at || "");
+      if (Number.isNaN(d.getTime())) return false;
+      return d >= from && d <= to;
     });
   }, [companyId, dateFrom, dateTo, rides]);
 

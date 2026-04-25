@@ -8,12 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Download, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
-import moment from "moment";
+import { todayCDMX, startOfDayCDMX, endOfDayCDMX, formatCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
 
 function getWeekBounds(weeksBack = 0) {
-  const start = moment().subtract(weeksBack, 'weeks').startOf('isoWeek');
-  const end = moment().subtract(weeksBack, 'weeks').endOf('isoWeek');
+  const todayStart = startOfDayCDMX(todayCDMX());
+  const day = todayStart.getUTCDay(); // 0=Sun, 1=Mon...
+  const mondayDelta = day === 0 ? -6 : 1 - day;
+  const start = new Date(todayStart.getTime() + (mondayDelta - weeksBack * 7) * 24 * 60 * 60 * 1000);
+  const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000 + (23 * 60 * 60 + 59 * 60 + 59) * 1000);
   return { start, end };
 }
 
@@ -65,12 +68,13 @@ export default function Liquidaciones() {
 
   const { start: weekStart, end: weekEnd } = getWeekBounds(weekOffset);
 
-  const weekLabel = `${weekStart.format("D MMM")} – ${weekEnd.format("D MMM YYYY")}${weekOffset === 0 ? " (Esta semana)" : ""}`;
+  const weekLabel = `${formatCDMX(weekStart, "daymonth")} – ${formatCDMX(weekEnd, "date")}${weekOffset === 0 ? " (Esta semana)" : ""}`;
 
   const weekRides = allRides.filter(r => {
     if (r.driver_id !== selectedDriverId) return false;
-    const d = moment(r.requested_at);
-    return d.isSameOrAfter(weekStart) && d.isSameOrBefore(weekEnd);
+    const d = new Date(r.requested_at || "");
+    if (Number.isNaN(d.getTime())) return false;
+    return d >= weekStart && d <= weekEnd;
   });
 
   const allPaid = weekRides.length > 0 && weekRides.every(r => r.payment_status === "paid");

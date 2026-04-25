@@ -406,7 +406,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               if (current.driver_id || current.status !== "auction") return;
               const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
               await startAuction(current, prevNotified);
-            }, 0);
+            }, 250);
             return;
           }
 
