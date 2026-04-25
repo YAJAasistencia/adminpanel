@@ -293,9 +293,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     }
 
     if (candidates.length === 0) {
-      if (isSearchWindowExceeded(ride, s)) {
-        await moveRideToFallback(ride, fallbackReason);
-      }
+      // Sin conductores disponibles en ningún radio → mostrar banner inmediatamente
+      await moveRideToFallback(ride, "Sin conductores disponibles");
       return;
     }
 
@@ -357,9 +356,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     }
 
     if (candidates.length === 0) {
-      if (isSearchWindowExceeded(ride, s)) {
-        await moveRideToFallback(ride, fallbackReason);
-      }
+      // Sin conductores disponibles en ningún radio → mostrar banner inmediatamente
+      await moveRideToFallback(ride, "Sin conductores disponibles");
       return;
     }
 
@@ -414,9 +412,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
           if (data.status === "pending" && data.assignment_mode !== "manual") {
             if (data.awaiting_payment_confirmation) return;
-            const searchDelaySec = settingsRef.current?.search_phase_seconds ?? 5;
             const createdRideId = data.id;
 
+            // Asignar inmediatamente sin espera
             setTimeout(async () => {
               const current = await supabaseApi.rideRequests.get(createdRideId).catch(() => null);
               if (!current) return;
@@ -433,7 +431,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               } else {
                 await autoAssignDriver(current);
               }
-            }, searchDelaySec * 1000);
+            }, 0);
           }
         }
 
@@ -497,7 +495,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       }
 
       const s = settingsRef.current;
-      const searchDelaySec = s?.search_phase_seconds ?? 5;
       const rescueRides = rides.filter((r) =>
         (r.status === "pending" || r.status === "auction") &&
         !r.driver_id &&
@@ -505,7 +502,6 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         !r.scheduled_time &&
         !r.awaiting_payment_confirmation &&
         r.payment_status !== "awaiting_payment" &&
-        (now - getRideCreatedTs(r)) > searchDelaySec * 1000 &&
         !processingRideIds.has(r.id)
       );
 

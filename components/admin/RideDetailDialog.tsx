@@ -237,21 +237,37 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           </div>
 
           {/* Assign button for rides without driver (manual mode or unassigned) */}
-          {!ride.driver_id && !['completed','cancelled'].includes(ride.status) && onAssign && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-amber-800">Sin conductor asignado</p>
-                <p className="text-xs text-amber-600 mt-0.5">Asigna un conductor manualmente o por geocerca</p>
+          {!ride.driver_id && !['completed','cancelled'].includes(ride.status) && onAssign && (() => {
+            const searchWindowSec = settings?.total_search_window_seconds ?? 180;
+            const isAutoSearching =
+              (ride.assignment_mode === "auto" || ride.assignment_mode === "auction") &&
+              !!ride.requested_at &&
+              !ride.driver_accepted_at && !ride.en_route_at &&
+              Date.now() - new Date(ride.requested_at).getTime() < searchWindowSec * 1000;
+            const remainingSec = isAutoSearching
+              ? Math.ceil(searchWindowSec - (Date.now() - new Date(ride.requested_at).getTime()) / 1000)
+              : 0;
+            return (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Sin conductor asignado</p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    {isAutoSearching
+                      ? `Búsqueda automática en curso — disponible en ~${remainingSec}s si no hay asignación`
+                      : "Asigna un conductor manualmente o por geocerca"}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={isAutoSearching}
+                  className="bg-amber-600 hover:bg-amber-700 rounded-xl text-xs flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => { if (!isAutoSearching) { onOpenChange(false); setTimeout(() => onAssign(ride), 100); } }}
+                >
+                  <UserCheck className="w-3.5 h-3.5 mr-1" /> Asignar conductor
+                </Button>
               </div>
-              <Button
-                size="sm"
-                className="bg-amber-600 hover:bg-amber-700 rounded-xl text-xs flex-shrink-0"
-                onClick={() => { onOpenChange(false); setTimeout(() => onAssign(ride), 100); }}
-              >
-                <UserCheck className="w-3.5 h-3.5 mr-1" /> Asignar conductor
-              </Button>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Live map for active rides */}
           {isActiveRide && <RideLiveMap ride={ride} settings={settings} />}

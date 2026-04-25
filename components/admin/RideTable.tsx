@@ -41,6 +41,15 @@ function hasDriverAccepted(ride) {
   return !!(ride?.driver_accepted_at || ride?.en_route_at || ride?.arrived_at || ride?.in_progress_at);
 }
 
+/** Devuelve true si el ride auto/auction aún está dentro de la ventana de búsqueda de 3 minutos */
+function isAutoSearching(ride, searchWindowSeconds = 180) {
+  if (ride.assignment_mode !== "auto" && ride.assignment_mode !== "auction") return false;
+  if (!ride.requested_at) return false;
+  if (ride.driver_accepted_at || ride.en_route_at) return false;
+  const ageMs = Date.now() - new Date(ride.requested_at).getTime();
+  return ageMs < searchWindowSeconds * 1000;
+}
+
 export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, onDelete, canEdit = true, canDelete = true, drivers = [], settings }) {
   const [rateRide, setRateRide] = useState(null);
   const [detailRide, setDetailRide] = useState(null);
@@ -180,11 +189,21 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                  {! ["completed", "cancelled"].includes(ride.status) && (
-                    <Button size="sm" className="h-8 text-xs bg-slate-800 hover:bg-slate-700 rounded-xl" onClick={() => onAssign(ride)}>
-                      <UserCheck className="w-3.5 h-3.5 mr-1" /> {ride.driver_id ? "Reasignar" : "Asignar"}
-                    </Button>
-                  )}
+                  {! ["completed", "cancelled"].includes(ride.status) && (() => {
+                    const searching = isAutoSearching(ride, settings?.total_search_window_seconds ?? 180);
+                    return (
+                      <div title={searching ? `Búsqueda automática en curso — disponible en ${Math.ceil((settings?.total_search_window_seconds ?? 180) - (Date.now() - new Date(ride.requested_at).getTime()) / 1000)}s si no hay asignación` : undefined}>
+                        <Button
+                          size="sm"
+                          disabled={searching}
+                          className="h-8 text-xs bg-slate-800 hover:bg-slate-700 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => !searching && onAssign(ride)}
+                        >
+                          <UserCheck className="w-3.5 h-3.5 mr-1" /> {ride.driver_id ? "Reasignar" : "Asignar"}
+                        </Button>
+                      </div>
+                    );
+                  })()}
                   {action && (
                     <Button size="sm" className={`h-8 text-xs rounded-xl text-white ${action.color}`} onClick={() => onUpdateStatus(ride, action.next)}>
                       <action.icon className="w-3.5 h-3.5 mr-1" /> {action.label}
