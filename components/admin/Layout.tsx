@@ -19,12 +19,51 @@ import { supabaseApi } from "@/lib/supabaseApi";
 // ─── Update PWA title per app context ────────────────────────────────────────
 // The static /public/manifest.json handles the full PWA definition.
 // This hook only updates the iOS title meta tag dynamically.
+const PAGE_TITLES: Record<string, string> = {
+  Dashboard: "Panel de control",
+  Analytics: "Analíticas",
+  LiveDrivers: "En vivo",
+  Drivers: "Conductores",
+  Passengers: "Clientes / Pasajeros",
+  Chats: "Chats",
+  SOSAlerts: "Alertas SOS",
+  SupportTickets: "Tickets de soporte",
+  Notificaciones: "Notificaciones",
+  Anuncios: "Anuncios",
+  DriverEarnings: "Ganancias conductores",
+  Earnings: "Ganancias plataforma",
+  CashCutoff: "Corte de caja",
+  Liquidaciones: "Liquidaciones",
+  Invoices: "Facturación",
+  Bonos: "Bonos por desempeño",
+  Cities: "Ciudades",
+  ServiceTypes: "Tipos de servicio",
+  CancellationPolicies: "Políticas de cancelación",
+  PaymentMethods: "Métodos de pago",
+  GeoZones: "Zonas tarifarias",
+  RedZones: "Zonas rojas",
+  Companies: "Empresas (B2B)",
+  Surveys: "Encuestas",
+  AdminUsers: "Usuarios admin",
+  Settings: "Configuración",
+  Landing: "Inicio",
+  RejectionAnalysis: "Análisis de rechazos",
+  Health: "Estado del sistema",
+};
+
 function usePWAManifest(currentPageName: string, companyName?: string) {
   useEffect(() => {
     const isPassenger = currentPageName === "RoadAssistApp";
     const isDriver = currentPageName === "DriverApp";
     const company = (companyName && companyName !== "RideFlow") ? companyName : "YAJA Asistencia";
-    const appTitle = isPassenger ? "Pasajero" : isDriver ? `${company} Conductor` : company;
+
+    let appTitle: string;
+    if (isPassenger) appTitle = "Pasajero";
+    else if (isDriver) appTitle = `${company} Conductor`;
+    else {
+      const pageName = PAGE_TITLES[currentPageName];
+      appTitle = pageName ? `${pageName} — ${company}` : company;
+    }
 
     // Update iOS PWA title (does not affect the manifest — that is static)
     let el = document.querySelector('meta[name="apple-mobile-web-app-title"]');

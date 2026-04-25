@@ -2,10 +2,11 @@ import {
   LayoutDashboard, Users, Car, ShieldAlert, Settings, TrendingUp, CreditCard,
   MapPin, MessageCircle, Siren, Scissors, UserCog, Layers, Building2,
   MessageSquare, Wifi, UserCheck, ClipboardList, FileText, BellRing, Trophy,
-  BarChart3, Megaphone
+  BarChart3, Megaphone, Globe
 } from "lucide-react";
 
 export const ALL_PAGES = [
+  { name: "Inicio (Landing)", page: "Landing", icon: Globe },
   { name: "Panel de control", page: "Dashboard", icon: LayoutDashboard },
   { name: "Analíticas", page: "Analytics", icon: BarChart3 },
   { name: "EN VIVO", page: "LiveDrivers", icon: Wifi, live: true },
@@ -37,7 +38,7 @@ export const ALL_PAGES = [
 export const DEFAULT_NAV_CONFIG = [
   {
     label: "Operaciones",
-    pages: ["Dashboard", "Analytics", "LiveDrivers", "Drivers", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "Notificaciones", "Anuncios"],
+    pages: ["Landing", "Dashboard", "Analytics", "LiveDrivers", "Drivers", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "Notificaciones", "Anuncios"],
   },
   {
     label: "Finanzas",
