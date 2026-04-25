@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -86,6 +87,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 export default function RideLiveMap({ ride, settings }) {
   const [route, setRoute] = useState(null);
   const [routeMeta, setRouteMeta] = useState(null); // { distanceKm, durationMin }
+  const [liveDriver, setLiveDriver] = useState<any>(null);
   const refetchInterval = (settings?.driver_location_update_interval_seconds ?? 20) * 1000;
   const isActive = ride && !["completed", "cancelled"].includes(ride.status);
 
@@ -96,7 +98,31 @@ export default function RideLiveMap({ ride, settings }) {
     refetchInterval,
   });
 
-  const driver = driverArr?.[0];
+  useEffect(() => {
+    setLiveDriver(null);
+    if (!ride?.driver_id || !isActive) return;
+    const channel = supabase
+      .channel(`gps_driver_${ride.driver_id}`)
+      .on("broadcast", { event: "location" }, ({ payload }: any) => {
+        if (payload?.driver_id !== ride.driver_id) return;
+        setLiveDriver({
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          status: payload.status,
+          sent_at: payload.sent_at,
+        });
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [ride?.driver_id, isActive]);
+
+  const driver = {
+    ...(driverArr?.[0] || {}),
+    ...(liveDriver || {}),
+  };
   const hasDriverLoc = driver?.latitude && driver?.longitude;
   const hasPickup = ride?.pickup_lat && ride?.pickup_lon;
   const hasDropoff = ride?.dropoff_lat && ride?.dropoff_lon;

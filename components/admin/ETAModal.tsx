@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Button } from "@/components/ui/button";
 import { Car, MapPin, Clock, Navigation, X, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { supabase } from "@/lib/supabase";
 import { getRoute, getHaverDist } from "@/components/shared/mapsUtils";
 
 function formatETA(minutes) {
@@ -15,7 +16,7 @@ function formatETA(minutes) {
 }
 
 // ─── Searching Phase: compact modal ─────────────────────────────────────────
-function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = false, onAssignManual }) {
+function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = false, onAssignManual = undefined }) {
   const [dots, setDots] = useState(0);
   const [auctionSecsLeft, setAuctionSecsLeft] = useState(null);
 
@@ -121,6 +122,8 @@ function AssignedPhase({ ride, driver, settings, onClose }) {
   const [distKm, setDistKm] = useState(null);
   const [countdown, setCountdown] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [liveDriver, setLiveDriver] = useState<any>(null);
+  const liveDriverRef = useRef<any>(null);
   const intervalRef = useRef(null);
   const countdownRef = useRef(null);
 
@@ -141,16 +144,16 @@ function AssignedPhase({ ride, driver, settings, onClose }) {
 
   const refreshETA = async () => {
     if (!driver) return;
-    // Always fetch fresh driver coords from DB
-    const d = await supabaseApi.drivers.get(driver.id);
-
-    console.log("[ETAModal] refreshETA — driver coords:", d.latitude, d.longitude, "| pickup coords:", ride.pickup_lat, ride.pickup_lon);
+    const currentLive = liveDriverRef.current;
+    const hasLive = !!(currentLive?.latitude && currentLive?.longitude);
+    const d = hasLive
+      ? { ...driver, latitude: currentLive.latitude, longitude: currentLive.longitude }
+      : await supabaseApi.drivers.get(driver.id);
 
     if (d.latitude && d.longitude && ride.pickup_lat && ride.pickup_lon) {
       const mapsProvider = settings?.maps_provider || "osrm";
       const apiKey = settings?.google_maps_api_key;
       const route = await getRoute(d.latitude, d.longitude, ride.pickup_lat, ride.pickup_lon, mapsProvider, apiKey);
-      console.log("[ETAModal] route result:", route);
       if (route) {
         setDistKm(route.distKm);
         setEtaMinutes(route.durationMin);
@@ -160,11 +163,35 @@ function AssignedPhase({ ride, driver, settings, onClose }) {
     }
     // Fallback: Haversine estimate
     const km = getHaverDist(d?.latitude, d?.longitude, ride.pickup_lat, ride.pickup_lon);
-    console.log("[ETAModal] haversine fallback km:", km);
     setDistKm(km);
     setEtaMinutes(km && km !== Infinity ? Math.ceil((km / speedKmh) * 60) : null);
     setLastUpdated(new Date());
   };
+
+  useEffect(() => {
+    if (!driver?.id) return;
+    const channel = supabase
+      .channel(`gps_driver_${driver.id}`)
+      .on("broadcast", { event: "location" }, ({ payload }: any) => {
+        if (payload?.driver_id !== driver.id) return;
+        const nextLive = { latitude: payload.latitude, longitude: payload.longitude, status: payload.status, sent_at: payload.sent_at };
+        liveDriverRef.current = nextLive;
+        setLiveDriver(nextLive);
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [driver?.id]);
+
+  useEffect(() => {
+    if (!liveDriver?.latitude || !liveDriver?.longitude || !ride?.pickup_lat || !ride?.pickup_lon) return;
+    const km = getHaverDist(liveDriver.latitude, liveDriver.longitude, ride.pickup_lat, ride.pickup_lon);
+    setDistKm(km);
+    setEtaMinutes(km && km !== Infinity ? Math.ceil((km / speedKmh) * 60) : null);
+    setLastUpdated(new Date());
+  }, [liveDriver?.latitude, liveDriver?.longitude, ride?.pickup_lat, ride?.pickup_lon, speedKmh]);
 
   useEffect(() => {
     refreshETA();

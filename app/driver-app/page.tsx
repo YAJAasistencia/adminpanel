@@ -781,6 +781,7 @@ export default function DriverApp() {
   const lastLocationSaveRef = useRef(0);
   const watchIdRef = useRef<number | null>(null);
   const backupIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const gpsChannelRef = useRef<any>(null);
   const [inactivityWarning, setInactivityWarning] = useState(false);
   const driverRef = useRef(driver);
   useEffect(() => {
@@ -801,8 +802,33 @@ export default function DriverApp() {
       _lastActivity.t = now;
       setInactivityWarning(false);
     }
+
+    // Stream GPS instantly to admin UIs via websocket broadcast.
+    gpsChannelRef.current?.send({
+      type: "broadcast",
+      event: "location",
+      payload: {
+        driver_id: d.id,
+        latitude: lat,
+        longitude: lon,
+        status: d.status,
+        sent_at: nowCDMX(),
+      },
+    }).catch(() => {});
+
+    // Keep DB persistence as fallback/audit.
     supabaseApi.drivers.update(d.id, { latitude: lat, longitude: lon, last_seen_at: nowCDMX() }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!driver?.id) return;
+    const channel = supabase.channel(`gps_driver_${driver.id}`).subscribe();
+    gpsChannelRef.current = channel;
+    return () => {
+      gpsChannelRef.current = null;
+      channel.unsubscribe();
+    };
+  }, [driver?.id]);
 
   useEffect(() => {
     if (!driver?.id) return;
