@@ -27,6 +27,14 @@ function urlBase64ToUint8Array(base64String: string) {
 
 let serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
 
+async function getActiveServiceWorker() {
+  if (typeof window === "undefined") return null;
+  const reg = serviceWorkerRegistration || (await registerDriverSW());
+  if (!reg) return null;
+  const readyReg = await navigator.serviceWorker.ready.catch(() => reg);
+  return readyReg?.active || reg.active || null;
+}
+
 export async function registerDriverSW() {
   if (serviceWorkerRegistration) return serviceWorkerRegistration;
   if (typeof window === "undefined") return null;
@@ -200,7 +208,7 @@ export async function startSWRideTimer(
   passengerName?: string,
   pickupAddress?: string,
 ) {
-  const sw = serviceWorkerRegistration?.active || (await registerDriverSW())?.active;
+  const sw = await getActiveServiceWorker();
   if (!sw) return;
 
   sw.postMessage({
@@ -213,19 +221,19 @@ export async function startSWRideTimer(
 }
 
 export async function cancelSWRideTimer(rideId: string) {
-  const sw = serviceWorkerRegistration?.active;
+  const sw = await getActiveServiceWorker();
   if (!sw) return;
   sw.postMessage({ type: "CANCEL_RIDE_TIMER", rideId });
 }
 
 export async function sendDriverHeartbeat(timeoutMs: number) {
-  const sw = serviceWorkerRegistration?.active;
+  const sw = await getActiveServiceWorker();
   if (!sw) return;
   sw.postMessage({ type: "DRIVER_HEARTBEAT", timeoutMs });
 }
 
 export async function stopDriverHeartbeat() {
-  const sw = serviceWorkerRegistration?.active;
+  const sw = await getActiveServiceWorker();
   if (!sw) return;
   sw.postMessage({ type: "STOP_HEARTBEAT" });
 }

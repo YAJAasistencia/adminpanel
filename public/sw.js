@@ -43,27 +43,55 @@ self.addEventListener("notificationclick", (event) => {
 
 // ─── Message handler (timers from app) ───────────────────────────────────────
 const rideTimers = {};
+let inactivityTimer = null;
+
+async function broadcastToClients(message) {
+  const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  clients.forEach((client) => client.postMessage(message));
+}
 
 self.addEventListener("message", (event) => {
-  const { type, rideId, durationSeconds } = event.data || {};
+  const { type, rideId, timeoutMs, passengerName, pickupAddress } = event.data || {};
 
   if (type === "START_RIDE_TIMER" && rideId) {
     if (rideTimers[rideId]) clearTimeout(rideTimers[rideId]);
     rideTimers[rideId] = setTimeout(() => {
+      broadcastToClients({ type: "RIDE_TIMEOUT", rideId });
       self.registration.showNotification("⏱️ Tiempo de espera", {
-        body: "El pasajero no ha abordado. Puedes cancelar el viaje.",
+        body: `No se acepto a tiempo: ${passengerName || "Pasajero"}${pickupAddress ? ` · ${pickupAddress}` : ""}`,
         tag: `ride-timer-${rideId}`,
         icon: "/icon-192.png",
         data: { url: "/driver-app" },
       });
       delete rideTimers[rideId];
-    }, (durationSeconds || 300) * 1000);
+    }, timeoutMs || 30000);
   }
 
   if (type === "CANCEL_RIDE_TIMER" && rideId) {
     if (rideTimers[rideId]) {
       clearTimeout(rideTimers[rideId]);
       delete rideTimers[rideId];
+    }
+  }
+
+  if (type === "DRIVER_HEARTBEAT") {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      broadcastToClients({ type: "INACTIVITY_TIMEOUT" });
+      self.registration.showNotification("⚠️ Desconexion por inactividad", {
+        body: "No detectamos actividad del conductor. Se desconectara automaticamente.",
+        tag: "driver-inactivity-timeout",
+        icon: "/icon-192.png",
+        data: { url: "/driver-app" },
+      });
+      inactivityTimer = null;
+    }, timeoutMs || 30 * 60 * 1000);
+  }
+
+  if (type === "STOP_HEARTBEAT") {
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = null;
     }
   }
 });

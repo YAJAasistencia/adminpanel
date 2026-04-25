@@ -1811,8 +1811,15 @@ export default function DriverApp() {
       return;
     }
     const inactivityMs = (settings?.driver_inactivity_timeout_minutes ?? 30) * 60 * 1000;
-    sendDriverHeartbeat(inactivityMs);
-    const iv = setInterval(() => sendDriverHeartbeat(inactivityMs), 60 * 1000);
+
+    const syncHeartbeat = () => {
+      const idleMs = Date.now() - _lastActivity.t;
+      const remainingMs = Math.max(1000, inactivityMs - idleMs);
+      sendDriverHeartbeat(remainingMs);
+    };
+
+    syncHeartbeat();
+    const iv = setInterval(syncHeartbeat, 60 * 1000);
     return () => {
       clearInterval(iv);
     };
