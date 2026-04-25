@@ -34,7 +34,7 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/driver-app";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      const existing = clients.find((c) => c.url.includes("/driver-app"));
+      const existing = clients.find((c) => c.url.includes(url));
       if (existing) return existing.focus();
       return self.clients.openWindow(url);
     })
@@ -52,6 +52,28 @@ async function broadcastToClients(message) {
 
 self.addEventListener("message", (event) => {
   const { type, rideId, timeoutMs, passengerName, pickupAddress } = event.data || {};
+
+  if (type === "SHOW_NOTIFICATION") {
+    const data = event.data || {};
+    self.registration.showNotification(data.title || "YAJA", {
+      body: data.body || "",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: data.tag || `notif-${Date.now()}`,
+      requireInteraction: true,
+      data: { url: data.url || "/driver-app", ride: data.ride || null },
+    });
+    return;
+  }
+
+  if (type === "DISMISS") {
+    const tag = event.data?.tag;
+    if (!tag) return;
+    self.registration.getNotifications({ tag }).then((notifs) => {
+      notifs.forEach((n) => n.close());
+    });
+    return;
+  }
 
   if (type === "START_RIDE_TIMER" && rideId) {
     if (rideTimers[rideId]) clearTimeout(rideTimers[rideId]);
