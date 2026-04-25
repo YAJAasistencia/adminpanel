@@ -43,6 +43,12 @@ const TIMEZONES = [
   { value: "UTC",                   label: "UTC (GMT+0)" },
 ];
 
+const AUCTION_PRIORITY_OPTIONS = [
+  { value: "distance", label: "Mas cercanos primero" },
+  { value: "rating", label: "Mejor calificados primero" },
+  { value: "experience", label: "Mas experiencia primero" },
+];
+
 const defaults = {
   // Información general
   company_name: "", primary_color: "#0F172A", accent_color: "#3B82F6",
@@ -55,7 +61,7 @@ const defaults = {
   // Control de funciones
   require_admin_approval_to_start: true, auto_assign_nearest_driver: true,
   destination_required: false, allow_driver_cancel: true,
-  features_enabled: { scheduling: true, promotions: true, driver_earnings_panel: true, proof_photo: true, geo_assignment: true, show_app_install_section: false },
+  features_enabled: { scheduling: true, promotions: true, driver_earnings_panel: true, proof_photo: true, geo_assignment: true, show_app_install_section: false, auction_priority_mode: "distance" },
   promotions: [],
   
   // Configuración regional
@@ -628,6 +634,23 @@ export default function SettingsPage() {
                       <Label>Máximo conductores notificados</Label>
                       <Input type="number" min={1} value={form.auction_max_drivers ?? 5} onChange={e => update("auction_max_drivers", parseFloat(e.target.value) || 5)} />
                       <p className="text-xs text-slate-500 mt-1">Cuántos se notificarán simultáneamente</p>
+                    </div>
+                    <div>
+                      <Label>Prioridad para mostrar primero</Label>
+                      <Select
+                        value={form.features_enabled?.auction_priority_mode || "distance"}
+                        onValueChange={value => updateFeature("auction_priority_mode", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona una prioridad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AUCTION_PRIORITY_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500 mt-1">Define qué conductores reciben primero la subasta antes de aplicar el límite configurado.</p>
                     </div>
                     <div>
                       <Label>Máximo viajes simultáneos por conductor</Label>

@@ -231,7 +231,13 @@ export default function Dashboard() {
 
           if (d?.status === "pending" && d?.assignment_mode === "manual" && d?.manual_assignment_requested_at) {
             const fullRide = prevRide ? { ...prevRide, ...d } : d;
-            setAssignRide(fullRide);
+            const noAcceptanceFallback = /nadie\s+acepto\s+el\s+viaje/i.test(d?.cancellation_reason || "");
+
+            if (noAcceptanceFallback) {
+              setEtaModalData({ ride: fullRide, driver: null, phase: "no_acceptance" });
+            } else {
+              setAssignRide(fullRide);
+            }
             return;
           }
 
@@ -986,7 +992,7 @@ export default function Dashboard() {
           onClose={() => {
             const currentRide = etaModalData?.ride;
             const currentPhase = etaModalData?.phase;
-            if (currentRide?.id && ["searching", "waiting_acceptance"].includes(currentPhase || "")) {
+            if (currentRide?.id && ["searching", "waiting_acceptance", "no_acceptance"].includes(currentPhase || "")) {
               dismissedEtaRideIdsRef.current.add(currentRide.id);
             }
             setEtaModalData(null);

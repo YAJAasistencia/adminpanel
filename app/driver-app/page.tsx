@@ -1488,11 +1488,15 @@ export default function DriverApp() {
       return;
     }
 
+    const prevExcluded = Array.isArray(ride?._excluded_driver_ids) ? ride._excluded_driver_ids : [];
+    const excludedIds = [...new Set([...(prevExcluded || []), ride?.driver_id || driver?.id].filter(Boolean))];
+
     // Reset ride to pending so it can be reassigned
     await supabaseApi.rideRequests.update(ride?.id || "", {
         status: "pending",
         driver_id: null,
         driver_name: null,
+        _excluded_driver_ids: excludedIds,
       });
 
     if (isCancelByDriver) {

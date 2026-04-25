@@ -72,6 +72,11 @@ function getSearchWindowMs(s: any) {
   return Math.max(30, Number(s?.total_search_window_seconds ?? 180)) * 1000;
 }
 
+function getFallbackReason(ride: Ride, excludedCount = 0) {
+  if (excludedCount > 0) return "Nadie acepto el viaje";
+  return "Sin conductores disponibles";
+}
+
 function isSearchWindowExceeded(ride: Ride, s: any) {
   const rideAge = Date.now() - getRideCreatedTs(ride);
   return rideAge >= getSearchWindowMs(s);
@@ -90,6 +95,33 @@ function getHaverDist(lat1?: number, lon1?: number, lat2?: number, lon2?: number
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getDriverDistanceToRide(ride: Ride, driver: Driver) {
+  return getHaverDist(ride.pickup_lat, ride.pickup_lon, driver.latitude, driver.longitude);
+}
+
+function sortDriversForAuction(candidates: Driver[], ride: Ride, priorityMode = "distance") {
+  const ranked = [...candidates];
+  ranked.sort((left, right) => {
+    const leftDist = getDriverDistanceToRide(ride, left);
+    const rightDist = getDriverDistanceToRide(ride, right);
+
+    if (priorityMode === "rating") {
+      const ratingDiff = (right.rating || 0) - (left.rating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return leftDist - rightDist;
+    }
+
+    if (priorityMode === "experience") {
+      const ridesDiff = (right.total_rides || 0) - (left.total_rides || 0);
+      if (ridesDiff !== 0) return ridesDiff;
+      return leftDist - rightDist;
+    }
+
+    return leftDist - rightDist;
+  });
+  return ranked;
 }
 
 export default function useRideAutoAssign(settings: AppSettings | undefined, cities: City[], enabled = true) {
@@ -243,9 +275,10 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     const allRides = ridesRef.current;
     const primaryRadius = s?.auto_primary_radius_km ?? 5;
     const secondaryRadius = s?.auto_secondary_radius_km ?? 8;
+    const fallbackReason = getFallbackReason(ride, excludeDriverIds.length);
 
     if (isSearchWindowExceeded(ride, s)) {
-      await moveRideToFallback(ride, "Sin conductores disponibles");
+      await moveRideToFallback(ride, fallbackReason);
       return;
     }
 
@@ -261,7 +294,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
     if (candidates.length === 0) {
       if (isSearchWindowExceeded(ride, s)) {
-        await moveRideToFallback(ride, "Sin conductores disponibles");
+        await moveRideToFallback(ride, fallbackReason);
       }
       return;
     }
@@ -299,9 +332,11 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     const secondaryRadius = s?.auction_secondary_radius_km ?? 15;
     const maxDrivers = s?.auction_max_drivers ?? 5;
     const isSecondRound = excludeDriverIds.length > 0;
+    const fallbackReason = getFallbackReason(ride, excludeDriverIds.length);
+    const priorityMode = s?.features_enabled?.auction_priority_mode || "distance";
 
     if (isSearchWindowExceeded(ride, s)) {
-      await moveRideToFallback(ride, "Sin conductores disponibles");
+      await moveRideToFallback(ride, fallbackReason);
       return;
     }
 
@@ -323,18 +358,12 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
     if (candidates.length === 0) {
       if (isSearchWindowExceeded(ride, s)) {
-        await moveRideToFallback(ride, "Sin conductores disponibles");
+        await moveRideToFallback(ride, fallbackReason);
       }
       return;
     }
 
-    let sorted = candidates;
-    if (ride.pickup_lat && ride.pickup_lon) {
-      sorted = [...candidates].sort((left, right) =>
-        getHaverDist(ride.pickup_lat, ride.pickup_lon, left.latitude, left.longitude) -
-        getHaverDist(ride.pickup_lat, ride.pickup_lon, right.latitude, right.longitude)
-      );
-    }
+    const sorted = sortDriversForAuction(candidates, ride, priorityMode);
 
     const notifyDrivers = sorted.slice(0, maxDrivers);
     const auctionExpiresAt = new Date(Date.now() + (s?.auction_timeout_seconds ?? 30) * 1000).toISOString();
@@ -414,6 +443,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             const excludeIds = data._excluded_driver_ids || [];
             if (data.assignment_mode === "auto" || !data.assignment_mode) {
               await autoAssignDriver(data, excludeIds);
+            } else if (data.assignment_mode === "manual") {
+              await autoAssignDriver(data, excludeIds);
             } else if (data.assignment_mode === "auction") {
               const prevNotified = Array.isArray(data.auction_driver_ids) ? data.auction_driver_ids : [];
               await startAuction(data, prevNotified);
@@ -480,7 +511,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
       for (const ride of rescueRides) {
         if (isSearchWindowExceeded(ride, s)) {
-          await moveRideToFallback(ride, "Sin conductores disponibles");
+          await moveRideToFallback(ride, getFallbackReason(ride, Array.isArray(ride._excluded_driver_ids) ? ride._excluded_driver_ids.length : 0));
           processingRideIds.delete(ride.id);
           continue;
         }
@@ -548,8 +579,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           ride.status === "assigned" &&
           ride.driver_id &&
           !ride.en_route_at &&
-          !ride.driver_accepted_at &&
-          ride.assignment_mode !== "manual"
+          !ride.driver_accepted_at
         ) {
           if (assignedRideTimersRef.current[ride.id]) continue;
 
@@ -563,7 +593,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             if (!current || current.status !== "assigned" || current.en_route_at || current.driver_accepted_at) return;
 
             if (isSearchWindowExceeded(current, settingsRef.current)) {
-              await moveRideToFallback(current, "Sin conductores disponibles");
+              const prevExcludedCount = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids.length : 0;
+              await moveRideToFallback(current, getFallbackReason(current, prevExcludedCount + 1));
               return;
             }
 
@@ -622,7 +653,9 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             if (!current || current.status !== "auction") return;
 
             if (isSearchWindowExceeded(current, settingsRef.current)) {
-              await moveRideToFallback(current, "Sin conductores disponibles");
+              const notifiedIds = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
+              const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
+              await moveRideToFallback(current, getFallbackReason(current, uniqueIds([...prevExcluded, ...notifiedIds]).length));
               return;
             }
 

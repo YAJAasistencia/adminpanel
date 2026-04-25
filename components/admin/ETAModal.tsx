@@ -15,7 +15,7 @@ function formatETA(minutes) {
 }
 
 // ─── Searching Phase: compact modal ─────────────────────────────────────────
-function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
+function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = false, onAssignManual }) {
   const [dots, setDots] = useState(0);
   const [auctionSecsLeft, setAuctionSecsLeft] = useState(null);
 
@@ -38,7 +38,9 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
 
   const modeLabels = { auto: "Automática", auction: "Subasta", manual: "Manual" };
   const mode = ride?.assignment_mode || "auto";
-  const bgStyle = waitingAcceptance
+  const bgStyle = rejected
+    ? { background: "linear-gradient(135deg,#b91c1c,#7f1d1d)" }
+    : waitingAcceptance
     ? { background: "linear-gradient(135deg,#059669,#065f46)" }
     : mode === "auction"
     ? { background: "linear-gradient(135deg,#d97706,#92400e)" }
@@ -46,10 +48,14 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
     ? { background: "linear-gradient(135deg,#4f46e5,#312e81)" }
     : { background: "linear-gradient(135deg,#2563eb,#1e40af)" };
 
-  const headingText = waitingAcceptance
+  const headingText = rejected
+    ? `Conductor no acepto el viaje${".".repeat(dots)}`
+    : waitingAcceptance
     ? `Conductor encontrado · Esperando aceptación${".".repeat(dots)}`
     : `Buscando conductor${".".repeat(dots)}`;
-  const subText = waitingAcceptance
+  const subText = rejected
+    ? "Se requiere reasignar manualmente"
+    : waitingAcceptance
     ? `Conductor: ${ride?.driver_name || "Asignado"} — esperando que confirme`
     : `Modo: ${modeLabels[mode] || "Auto"}`;
 
@@ -66,7 +72,7 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
         <div className="relative flex-shrink-0 w-14 h-14">
           <div className="absolute inset-0 rounded-full bg-white/10 animate-ping" />
           <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center relative z-10">
-            {waitingAcceptance ? <Car className="w-6 h-6 text-white" /> : <Search className="w-6 h-6 text-white" />}
+            {rejected ? <AlertTriangle className="w-6 h-6 text-white" /> : waitingAcceptance ? <Car className="w-6 h-6 text-white" /> : <Search className="w-6 h-6 text-white" />}
           </div>
         </div>
 
@@ -96,6 +102,15 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false }) {
           </div>
         </div>
       </div>
+
+      {rejected && (
+        <Button
+          onClick={() => onAssignManual?.(ride)}
+          className="w-full mt-4 bg-white text-red-700 hover:bg-red-50 rounded-xl font-bold h-10"
+        >
+          <UserCheck className="w-4 h-4 mr-2" /> Reasignar ahora
+        </Button>
+      )}
     </div>
   );
 }
@@ -267,6 +282,38 @@ function NoDriversPhase({ ride, onClose, onAssignManual }) {
   );
 }
 
+function NoAcceptancePhase({ ride, onClose, onAssignManual }) {
+  return (
+    <div className="bg-gradient-to-br from-red-700 to-red-900 p-5 text-white relative">
+      <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20">
+        <X className="w-4 h-4" />
+      </button>
+      <div className="flex items-center gap-3 pr-8 mb-4">
+        <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <AlertTriangle className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <p className="font-bold text-base">Nadie acepto el viaje</p>
+          <p className="text-red-200 text-xs mt-0.5">Se alcanzo el tiempo maximo de busqueda</p>
+        </div>
+      </div>
+      <div className="bg-black/20 rounded-xl p-3 text-sm mb-4">
+        <p className="text-white/80 font-medium">{ride?.passenger_name}</p>
+        <div className="flex items-start gap-1.5 mt-1">
+          <MapPin className="w-3 h-3 text-red-300 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-200 line-clamp-2">{ride?.pickup_address}</p>
+        </div>
+      </div>
+      <Button
+        onClick={onAssignManual}
+        className="w-full bg-white text-red-700 hover:bg-red-50 rounded-xl font-bold h-10"
+      >
+        <UserCheck className="w-4 h-4 mr-2" /> Asignar conductor manualmente
+      </Button>
+    </div>
+  );
+}
+
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 export default function ETAModal({ ride, driver, phase, settings, open, onClose, onAssignManual }) {
   if (!open || !ride) return null;
@@ -274,6 +321,8 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
   const isAssigned = phase === "assigned" && driver;
   const isNoDrivers = phase === "no_drivers";
   const isWaitingAcceptance = phase === "waiting_acceptance";
+  const isDriverRejected = phase === "driver_rejected";
+  const isNoAcceptance = phase === "no_acceptance";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -284,8 +333,20 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
         </DialogDescription>
         {isNoDrivers ? (
           <NoDriversPhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />
+        ) : isNoAcceptance ? (
+          <NoAcceptancePhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />
         ) : isAssigned ? (
           <AssignedPhase ride={ride} driver={driver} settings={settings} onClose={onClose} />
+        ) : isDriverRejected ? (
+          <SearchingPhase
+            ride={ride}
+            onClose={onClose}
+            rejected={true}
+            onAssignManual={(r) => {
+              onClose();
+              onAssignManual?.(r);
+            }}
+          />
         ) : isWaitingAcceptance ? (
           <SearchingPhase ride={ride} onClose={onClose} waitingAcceptance={true} />
         ) : (
