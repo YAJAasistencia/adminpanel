@@ -44,6 +44,7 @@ function hasDriverAccepted(ride) {
 /** Devuelve true si el ride auto/auction aún está dentro de la ventana de búsqueda de 3 minutos */
 function isAutoSearching(ride, searchWindowSeconds = 180) {
   if (ride.assignment_mode !== "auto" && ride.assignment_mode !== "auction") return false;
+  if (ride.status === "no_drivers") return false; // Si no hay conductores, habilitar botón
   if (!ride.requested_at) return false;
   if (ride.driver_accepted_at || ride.en_route_at) return false;
   const ageMs = Date.now() - new Date(ride.requested_at).getTime();

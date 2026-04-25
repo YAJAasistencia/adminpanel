@@ -241,6 +241,7 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             const searchWindowSec = settings?.total_search_window_seconds ?? 180;
             const isAutoSearching =
               (ride.assignment_mode === "auto" || ride.assignment_mode === "auction") &&
+              ride.status !== "no_drivers" && // Si no hay conductores, habilitar botón
               !!ride.requested_at &&
               !ride.driver_accepted_at && !ride.en_route_at &&
               Date.now() - new Date(ride.requested_at).getTime() < searchWindowSec * 1000;
@@ -252,7 +253,9 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
                 <div>
                   <p className="text-sm font-semibold text-amber-800">Sin conductor asignado</p>
                   <p className="text-xs text-amber-600 mt-0.5">
-                    {isAutoSearching
+                    {ride.status === "no_drivers"
+                      ? "No hay conductores disponibles — asigna uno manualmente"
+                      : isAutoSearching
                       ? `Búsqueda automática en curso — disponible en ~${remainingSec}s si no hay asignación`
                       : "Asigna un conductor manualmente o por geocerca"}
                   </p>
