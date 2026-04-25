@@ -1033,7 +1033,7 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: opt.color || '#111827', color: '#fff' }}>
-                        {opt.icon || <CreditCard className="w-4 h-4" />}
+                        {opt.icon ? <opt.icon className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
                       </div>
                       <div>
                         <p className="text-white font-semibold text-sm">{opt.label}</p>
