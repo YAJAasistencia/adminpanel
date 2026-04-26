@@ -120,17 +120,18 @@ export default function Dashboard() {
     gcTime: 60 * 60 * 1000,
   });
 
-  const { data: settings = {} } = useQuery({
+  const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const data = await supabaseApi.settings.list();
-        return data?.[0] || {};
-      } catch { return {}; }
+        return await supabaseApi.settings.list();
+      } catch { return []; }
     },
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
     gcTime: 60 * 60 * 1000,
   });
+
+  const settings = settingsList[0] || {};
 
   useEffect(() => {
     const channel = supabase.channel("drivers_changes").on(

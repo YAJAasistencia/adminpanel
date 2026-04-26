@@ -95,17 +95,18 @@ export default function DriversPage() {
     gcTime: 10 * 60 * 1000,
   });
 
-  const { data: settings = null } = useQuery({
+  const { data: settingsList = [] } = useQuery({
     queryKey: ["appSettings"],
     queryFn: async () => {
       try {
-        const data = await supabaseApi.settings.list();
-        return data?.[0] || null;
-      } catch { return null; }
+        return await supabaseApi.settings.list();
+      } catch { return []; }
     },
     staleTime: 60 * 60 * 1000,
     gcTime: 120 * 60 * 1000,
   });
+
+  const settings = settingsList[0] || null;
 
   const handleApprove = async (driver: any) => {
     try {
