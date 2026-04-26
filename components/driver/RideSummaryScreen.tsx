@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Star, AlertTriangle, ThumbsUp, ThumbsDown, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabaseApi } from "@/lib/supabaseApi";
+import { toast } from "sonner";
 
 function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
@@ -83,6 +84,10 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
   }, [paymentAction]);
 
   const handleConfirmPaid = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast.error("Sin internet: no puedes confirmar pago offline por seguridad.");
+      return;
+    }
     setSaving(true);
     try {
       await supabaseApi.rideRequests.update(ride.id, {
@@ -101,6 +106,10 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
   };
 
   const handleReportUnpaid = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast.error("Sin internet: no puedes reportar adeudo offline por seguridad.");
+      return;
+    }
     setSaving(true);
     try {
       const price = ride.final_price || ride.estimated_price || 0;

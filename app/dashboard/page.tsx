@@ -631,6 +631,38 @@ export default function Dashboard() {
           );
         })()}
 
+        {(() => {
+          const reconciliationRides = rides.filter((r: any) => {
+            const sec = r?.extra_charges?.offline_security;
+            return !!sec?.reconciliation_required;
+          });
+          if (reconciliationRides.length === 0) return null;
+          return (
+            <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-amber-200">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white">
+                  {reconciliationRides.length} viaje{reconciliationRides.length > 1 ? "s" : ""} requiere{reconciliationRides.length > 1 ? "n" : ""} conciliación offline
+                </p>
+                <p className="text-sm text-amber-100 truncate">
+                  {reconciliationRides.slice(0, 2).map((r: any) => `${r.passenger_name || "Pasajero"} · #${r.service_id || r.id?.slice(-6)}`).join(", ")}
+                  {reconciliationRides.length > 2 ? ` y ${reconciliationRides.length - 2} más` : ""}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setStatusFilter("all")}
+                className="border-white/40 text-white hover:bg-white/20 rounded-xl text-xs flex-shrink-0"
+              >
+                Revisar
+              </Button>
+            </div>
+          );
+        })()}
+
         {sosAlerts.length > 0 && (
           <Link href="/sos-alerts" className="block">
             <div className="bg-gradient-to-r from-red-500 to-rose-600 rounded-2xl p-4 flex items-center gap-3 hover:opacity-95 transition-opacity shadow-lg shadow-red-200">

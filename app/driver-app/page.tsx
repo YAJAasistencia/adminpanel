@@ -32,6 +32,8 @@ import { LocationPermissionScreen, SuspendedScreen, AdminSuspendedScreen } from 
 import AnnouncementModal from "@/components/shared/AnnouncementModal";
 import RideSummaryScreen from "@/components/driver/RideSummaryScreen";
 import RideHistoryModal from "@/components/driver/RideHistoryModal";
+import { toast } from "sonner";
+import { enqueueRideUpdateOffline, flushOfflineOutbox, buildReconciliationExtra, isOnlineNow, type OfflineOutboxAction } from "@/lib/offlineSecurity";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Driver = {
@@ -1281,8 +1283,49 @@ export default function DriverApp() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const processOfflineAction = useCallback(async (action: OfflineOutboxAction) => {
+    if (action.actionType !== "ride_update") return true;
+    const currentRide = await supabaseApi.rideRequests.get(action.rideId).catch(() => null);
+    if (!currentRide) return false;
+    const mergedExtra = buildReconciliationExtra(currentRide.extra_charges, action);
+    await supabaseApi.rideRequests.update(action.rideId, {
+      ...action.updates,
+      extra_charges: mergedExtra,
+    });
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (!driver?.id) return;
+
+    const sync = async () => {
+      if (!isOnlineNow()) return;
+      await flushOfflineOutbox(processOfflineAction);
+      queryClient.invalidateQueries({ queryKey: ["driverRides", driver.id] });
+    };
+
+    sync();
+    const onOnline = () => {
+      sync();
+      toast.success("Conexion recuperada. Sincronizando acciones pendientes...");
+    };
+    window.addEventListener("online", onOnline);
+    const iv = setInterval(sync, 45 * 1000);
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      clearInterval(iv);
+    };
+  }, [driver?.id, processOfflineAction, queryClient]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ ride, newStatus }: { ride: Ride; newStatus: string }) => {
+      const online = isOnlineNow();
+      const irreversible = newStatus === "completed";
+      if (!online && irreversible) {
+        throw new Error("Sin internet: no puedes completar un viaje offline por seguridad.");
+      }
+
       const now = nowCDMX();
       const updates: any = { status: newStatus };
       if (newStatus === "en_route") {
@@ -1318,7 +1361,18 @@ export default function DriverApp() {
         );
       }
 
+      if (!online) {
+        await enqueueRideUpdateOffline({
+          role: "driver",
+          rideId: ride.id,
+          updates,
+        });
+        toast.warning("Sin internet: accion guardada para sincronizacion.");
+        return { queued: true };
+      }
+
       await supabaseApi.rideRequests.update(ride.id, updates);
+      return { queued: false };
     },
     onMutate: async ({ ride, newStatus }) => {
       await queryClient.cancelQueries({ queryKey: ["driverRides", driver?.id] });
@@ -1331,7 +1385,11 @@ export default function DriverApp() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["driverRides", driver?.id], ctx.prev);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["driverRides"] }),
+    onSettled: (data) => {
+      if (!data?.queued) {
+        queryClient.invalidateQueries({ queryKey: ["driverRides"] });
+      }
+    },
   });
 
   const getPaymentMethodConfig = useCallback(
@@ -1463,6 +1521,12 @@ export default function DriverApp() {
     }
     setIncomingRide(null);
 
+    const online = isOnlineNow();
+    if (!online && (reason === "wait_time_expired" || reason === "driver_cancelled")) {
+      toast.error("Sin internet: no puedes cancelar este viaje offline por seguridad.");
+      return;
+    }
+
     // ─── Wait time expired cancellation (no suspension, fee applied) ──────────
     const isWaitTimeExpired = reason === "wait_time_expired" && ride?.id && ride?.status === "arrived";
     if (isWaitTimeExpired) {
@@ -1565,12 +1629,23 @@ export default function DriverApp() {
     const excludedIds = [...new Set([...(prevExcluded || []), ride?.driver_id || driver?.id].filter(Boolean))];
 
     // Reset ride to pending so it can be reassigned
-    await supabaseApi.rideRequests.update(ride?.id || "", {
-        status: "pending",
-        driver_id: null,
-        driver_name: null,
-        _excluded_driver_ids: excludedIds,
+    const pendingUpdate = {
+      status: "pending",
+      driver_id: null,
+      driver_name: null,
+      _excluded_driver_ids: excludedIds,
+    };
+
+    if (!online) {
+      await enqueueRideUpdateOffline({
+        role: "driver",
+        rideId: ride?.id || "",
+        updates: pendingUpdate,
       });
+      toast.warning("Sin internet: rechazo guardado para sincronizacion.");
+    } else {
+      await supabaseApi.rideRequests.update(ride?.id || "", pendingUpdate);
+    }
 
     if (isCancelByDriver) {
       const suspendUntil = Date.now() + 30 * 60 * 1000;

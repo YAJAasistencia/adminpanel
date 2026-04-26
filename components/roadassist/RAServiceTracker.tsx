@@ -18,6 +18,8 @@ import { getRoute, getHaverDist } from "@/components/shared/mapsUtils";
 import SearchingPhase from "@/components/roadassist/RASearchingPhase";
 import RAPassengerChat from "@/components/roadassist/RAPassengerChat";
 import { nowCDMX } from "@/components/shared/dateUtils";
+import { toast } from "sonner";
+import { enqueueRideUpdateOffline, flushOfflineOutbox, buildReconciliationExtra, isOnlineNow, type OfflineOutboxAction } from "@/lib/offlineSecurity";
 
 // Fix leaflet default icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -126,6 +128,38 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const [etaMinutes, setEtaMinutes] = useState(null);
   const [distKm, setDistKm] = useState(null);
   const queryClient = useQueryClient();
+
+  const processOfflineAction = React.useCallback(async (action: OfflineOutboxAction) => {
+    if (action.actionType !== "ride_update") return true;
+    const current = await supabaseApi.rideRequests.get(action.rideId).catch(() => null);
+    if (!current) return false;
+    const mergedExtra = buildReconciliationExtra(current.extra_charges, action);
+    await supabaseApi.rideRequests.update(action.rideId, {
+      ...action.updates,
+      extra_charges: mergedExtra,
+    });
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const sync = async () => {
+      if (!isOnlineNow()) return;
+      await flushOfflineOutbox(processOfflineAction);
+      queryClient.invalidateQueries({ queryKey: ["ra_active_rides"] });
+    };
+    sync();
+    const onOnline = () => {
+      sync();
+      toast.success("Conexion recuperada. Sincronizando acciones pendientes...");
+    };
+    window.addEventListener("online", onOnline);
+    const iv = setInterval(sync, 45 * 1000);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      clearInterval(iv);
+    };
+  }, [user?.id, processOfflineAction, queryClient]);
 
   const { data: liveRide } = useQuery({
     queryKey: ["ra_live_ride", ride?.id],
@@ -303,14 +337,31 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const handleCancel = async () => {
     setCancelling(true);
     const fee = calcCancellationFee();
+    const online = isOnlineNow();
+    if (!online && fee > 0) {
+      toast.error("Sin internet: no puedes cancelar con costo offline por seguridad.");
+      setCancelling(false);
+      return;
+    }
     const cancelledRide = { ...currentRide, status: "cancelled", cancelled_by: "passenger", cancellation_fee: fee, cancellation_reason: "Cancelado por el pasajero" };
-    await supabaseApi.rideRequests.update(currentRide.id, {
+    const cancelUpdates = {
       status: "cancelled", cancelled_by: "passenger",
       cancellation_fee: fee, cancellation_reason: "Cancelado por el pasajero",
       payment_status: fee > 0 ? "debt" : "not_required",
-    });
-    if (currentRide.driver_id) await supabaseApi.drivers.update(currentRide.driver_id, { status: "available" });
-    if (fee > 0 && user?.id) await supabaseApi.passengers.update(user.id, { pending_balance: (user.pending_balance || 0) + fee });
+    };
+
+    if (!online) {
+      await enqueueRideUpdateOffline({
+        role: "passenger",
+        rideId: currentRide.id,
+        updates: cancelUpdates,
+      });
+      toast.warning("Sin internet: cancelacion guardada para sincronizacion.");
+    } else {
+      await supabaseApi.rideRequests.update(currentRide.id, cancelUpdates);
+      if (currentRide.driver_id) await supabaseApi.drivers.update(currentRide.driver_id, { status: "available" });
+      if (fee > 0 && user?.id) await supabaseApi.passengers.update(user.id, { pending_balance: (user.pending_balance || 0) + fee });
+    }
     setCancelling(false);
     setShowCancelConfirm(false);
     setSummaryRide(cancelledRide);
@@ -340,10 +391,16 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   };
 
   const handleCancelNoDrivers = async () => {
-    await supabaseApi.rideRequests.update(currentRide.id, {
+    const updates = {
       status: "cancelled", cancelled_by: "passenger",
       cancellation_reason: "Sin conductores disponibles — cancelado por pasajero",
-    });
+    };
+    if (!isOnlineNow()) {
+      await enqueueRideUpdateOffline({ role: "passenger", rideId: currentRide.id, updates });
+      toast.warning("Sin internet: cancelacion guardada para sincronizacion.");
+    } else {
+      await supabaseApi.rideRequests.update(currentRide.id, updates);
+    }
     queryClient.invalidateQueries({ queryKey: ["ra_active_rides"] });
     onRideEnded();
   };
