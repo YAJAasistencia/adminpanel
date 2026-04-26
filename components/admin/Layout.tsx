@@ -28,6 +28,7 @@ const PAGE_TITLES: Record<string, string> = {
   Chats: "Chats",
   SOSAlerts: "Alertas SOS",
   SupportTickets: "Tickets de soporte",
+  OfflineReconciliation: "Conciliación offline",
   Notificaciones: "Notificaciones",
   Anuncios: "Anuncios",
   DriverEarnings: "Ganancias conductores",

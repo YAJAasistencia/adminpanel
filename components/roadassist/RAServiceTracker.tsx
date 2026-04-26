@@ -166,8 +166,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     enabled: !!ride?.id,
     refetchInterval: 30000,
     queryFn: async () => {
-      const list = await supabaseApi.rideRequests.list({ id: ride.id });
-      return list[0] || ride;
+      const byId = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
+      return byId || ride;
     },
   });
 
@@ -179,6 +179,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
       if (data?.id !== ride.id) return;
       queryClient.setQueryData(["ra_live_ride", ride.id], data);
       setRideSnapshot(data);
+      queryClient.invalidateQueries({ queryKey: ["ra_active_rides"] });
     }).subscribe();
     return () => { channel.unsubscribe(); };
   }, [ride?.id, queryClient]);

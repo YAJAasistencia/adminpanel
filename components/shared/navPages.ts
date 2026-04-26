@@ -15,6 +15,7 @@ export const ALL_PAGES = [
   { name: "Chats", page: "Chats", icon: MessageCircle },
   { name: "Alertas SOS", page: "SOSAlerts", icon: Siren, alert: true },
   { name: "Tickets de soporte", page: "SupportTickets", icon: MessageSquare },
+  { name: "Conciliación offline", page: "OfflineReconciliation", icon: ClipboardList },
   { name: "Notificaciones", page: "Notificaciones", icon: BellRing },
   { name: "Anuncios", page: "Anuncios", icon: Megaphone },
   { name: "Ganancias conductores", page: "DriverEarnings", icon: TrendingUp },
@@ -38,7 +39,7 @@ export const ALL_PAGES = [
 export const DEFAULT_NAV_CONFIG = [
   {
     label: "Operaciones",
-    pages: ["Landing", "Dashboard", "Analytics", "LiveDrivers", "Drivers", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "Notificaciones", "Anuncios"],
+    pages: ["Landing", "Dashboard", "Analytics", "LiveDrivers", "Drivers", "Passengers", "Chats", "SOSAlerts", "SupportTickets", "OfflineReconciliation", "Notificaciones", "Anuncios"],
   },
   {
     label: "Finanzas",

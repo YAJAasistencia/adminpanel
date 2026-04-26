@@ -639,7 +639,8 @@ export default function Dashboard() {
           });
           if (reconciliationRides.length === 0) return null;
           return (
-            <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-amber-200">
+            <Link href="/offline-reconciliation" className="block">
+              <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-amber-200 hover:opacity-95 transition-opacity">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-5 h-5 text-white" />
               </div>
@@ -655,12 +656,12 @@ export default function Dashboard() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setStatusFilter("all")}
                 className="border-white/40 text-white hover:bg-white/20 rounded-xl text-xs flex-shrink-0"
               >
                 Revisar
               </Button>
-            </div>
+              </div>
+            </Link>
           );
         })()}
 

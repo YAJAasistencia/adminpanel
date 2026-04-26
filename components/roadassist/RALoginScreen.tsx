@@ -18,7 +18,7 @@ const validatePassword = (pwd) => {
   return null;
 };
 
-export default function RALoginScreen({ onLogin }) {
+export default function RALoginScreen({ onLogin, appName, appLogo }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ email: "", password: "", new_password: "", full_name: "", phone: "", token: "" });
   const [error, setError] = useState("");
@@ -201,10 +201,14 @@ export default function RALoginScreen({ onLogin }) {
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-blue-500/40">
-            <Truck className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 bg-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-blue-500/40 overflow-hidden">
+            {appLogo ? (
+              <img src={appLogo} alt="Logo" className="w-full h-full object-contain bg-white/10 p-3" />
+            ) : (
+              <Truck className="w-10 h-10 text-white" />
+            )}
           </div>
-          <h1 className="text-2xl font-black text-white">Pasajero</h1>
+          <h1 className="text-2xl font-black text-white">{appName || "Pasajero"}</h1>
           <p className="text-blue-300 text-sm mt-1">Solicita asistencia cuando más lo necesitas</p>
         </div>
 

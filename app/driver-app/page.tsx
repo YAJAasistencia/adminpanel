@@ -32,8 +32,10 @@ import { LocationPermissionScreen, SuspendedScreen, AdminSuspendedScreen } from 
 import AnnouncementModal from "@/components/shared/AnnouncementModal";
 import RideSummaryScreen from "@/components/driver/RideSummaryScreen";
 import RideHistoryModal from "@/components/driver/RideHistoryModal";
+import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
 import { toast } from "sonner";
 import { enqueueRideUpdateOffline, flushOfflineOutbox, buildReconciliationExtra, isOnlineNow, type OfflineOutboxAction } from "@/lib/offlineSecurity";
+import { clearLiveLocationWatch, getCurrentLiveLocation, getLocationPermissionState, getNotificationPermissionState, requestLocationPermissionAccess, watchLiveLocation, type LiveLocationWatchHandle } from "@/lib/nativeMobile";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Driver = {
@@ -142,25 +144,17 @@ type AppSettings = {
 function useLocationPermission() {
   const [permission, setPermission] = useState("checking");
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setPermission("denied");
-      return;
-    }
-    if (navigator.permissions) {
-      navigator.permissions
-        .query({ name: "geolocation" })
-        .then((result) => {
-          setPermission(result.state);
-          result.onchange = () => setPermission(result.state);
-        })
-        .catch(() => setPermission("prompt"));
-    } else {
-      navigator.geolocation.getCurrentPosition(
-        () => setPermission("granted"),
-        (err) => setPermission(err.code === 1 ? "denied" : "prompt"),
-        { timeout: 3000 }
-      );
-    }
+    let cancelled = false;
+    const syncPermission = async () => {
+      const state = await getLocationPermissionState();
+      if (!cancelled) setPermission(state);
+    };
+    syncPermission();
+    window.addEventListener("focus", syncPermission);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", syncPermission);
+    };
   }, []);
   return permission;
 }
@@ -628,16 +622,9 @@ export default function DriverApp() {
 
   useEffect(() => {
     const checkPermissions = async () => {
-      let locGranted = false;
-      let notifGranted = typeof Notification === "undefined" || Notification.permission === "granted";
-      if (navigator.permissions) {
-        try {
-          const r = await navigator.permissions.query({ name: "geolocation" });
-          locGranted = r.state === "granted";
-        } catch {
-          locGranted = false;
-        }
-      }
+      const locGranted = (await getLocationPermissionState()) === "granted";
+      const notifState = await getNotificationPermissionState();
+      const notifGranted = notifState === "granted" || notifState === "unsupported";
       if (!locGranted || !notifGranted) {
         setShowPermissionsOnboarding(true);
       }
@@ -782,7 +769,7 @@ export default function DriverApp() {
   }, [driver?.id]);
 
   const lastLocationSaveRef = useRef(0);
-  const watchIdRef = useRef<number | null>(null);
+  const watchIdRef = useRef<LiveLocationWatchHandle | null>(null);
   const backupIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const gpsChannelRef = useRef<any>(null);
   const [inactivityWarning, setInactivityWarning] = useState(false);
@@ -835,31 +822,28 @@ export default function DriverApp() {
 
   useEffect(() => {
     if (!driver?.id) return;
-    const startWatch = () => {
-      if (watchIdRef.current != null) navigator.geolocation?.clearWatch(watchIdRef.current);
-      watchIdRef.current = navigator.geolocation?.watchPosition(
+    const startWatch = async () => {
+      await clearLiveLocationWatch(watchIdRef.current);
+      watchIdRef.current = await watchLiveLocation(
         (pos) => saveLocation(pos.coords.latitude, pos.coords.longitude),
-        (err) => console.warn("GPS error:", err.message),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-      ) as any;
+        (err) => console.warn("GPS error:", err.message)
+      );
     };
-    startWatch();
+    void startWatch();
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        startWatch();
-        navigator.geolocation?.getCurrentPosition(
-          (pos) => {
+        void startWatch();
+        void getCurrentLiveLocation()
+          .then((pos) => {
             lastLocationSaveRef.current = 0;
             saveLocation(pos.coords.latitude, pos.coords.longitude);
-          },
-          () => {},
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+          })
+          .catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      if (watchIdRef.current != null) navigator.geolocation?.clearWatch(watchIdRef.current);
+      void clearLiveLocationWatch(watchIdRef.current);
       document.removeEventListener("visibilitychange", onVisibility);
       if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
     };
@@ -875,6 +859,7 @@ export default function DriverApp() {
     staleTime: 5 * 60 * 1000,
   });
   const settings = settingsList[0] as AppSettings | undefined;
+
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
@@ -907,11 +892,9 @@ export default function DriverApp() {
     const intervalMs = (settings?.driver_location_update_interval_seconds ?? 20) * 1000;
     if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
     backupIntervalRef.current = setInterval(() => {
-      navigator.geolocation?.getCurrentPosition(
-        (pos) => saveLocation(pos.coords.latitude, pos.coords.longitude),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+      void getCurrentLiveLocation()
+        .then((pos) => saveLocation(pos.coords.latitude, pos.coords.longitude))
+        .catch(() => {});
     }, intervalMs);
     return () => {
       if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
@@ -928,6 +911,9 @@ export default function DriverApp() {
     refetchOnWindowFocus: false,
     staleTime: 10 * 60 * 1000,
   });
+
+  // Auto-asignacion activa tambien desde app conductor (no depende del panel admin abierto).
+  useRideAutoAssign(settings as any, cities as any, true);
 
   const outsideGeofence = useGeofenceCheck(driver, cities);
 
@@ -1683,18 +1669,15 @@ export default function DriverApp() {
   const toggleOnline = async () => {
     if (driver?.status === "suspended" || driver?.status === "blocked") return;
     if (driver?.status !== "available") {
-      if (
-        locationPermission === "denied" ||
-        locationPermission === "prompt" ||
-        locationPermission === "unknown" ||
-        locationPermission === "checking"
-      ) {
+      // Revalida en tiempo real para evitar bloqueos falsos por estado local desactualizado.
+      const liveLocationPermission = await getLocationPermissionState();
+      if (liveLocationPermission !== "granted") {
         setShowPermissionsOnboarding(true);
         return;
       }
 
-      if (typeof Notification !== "undefined" && Notification.permission === "default") {
-        await Notification.requestPermission().catch(() => {});
+      if ((await getNotificationPermissionState()) !== "granted") {
+        await requestNotificationPermission(driver?.id || undefined);
       }
 
       const personalDocs = settings?.driver_required_docs || [];
@@ -1782,11 +1765,9 @@ export default function DriverApp() {
       }
 
       lastLocationSaveRef.current = 0;
-      navigator.geolocation?.getCurrentPosition(
-        (pos) => saveLocation(pos.coords.latitude, pos.coords.longitude),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+      void getCurrentLiveLocation()
+        .then((pos) => saveLocation(pos.coords.latitude, pos.coords.longitude))
+        .catch(() => {});
       return;
     }
 
@@ -1984,9 +1965,7 @@ export default function DriverApp() {
     let lat = null,
       lon = null;
     try {
-      const pos = await new Promise<GeolocationPosition>((res, rej) =>
-        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 })
-      );
+      const pos = await getCurrentLiveLocation();
       lat = pos.coords.latitude;
       lon = pos.coords.longitude;
     } catch {}
@@ -2057,6 +2036,7 @@ export default function DriverApp() {
   if (showPermissionsOnboarding)
     return (
       <PermissionsOnboarding
+        driverId={driver?.id}
         onDone={() => {
           localStorage.setItem("driver_perms_done", "1");
           setShowPermissionsOnboarding(false);
@@ -2426,7 +2406,13 @@ export default function DriverApp() {
             driver={driver}
             paymentMethodConfig={rideSummary.paymentMethodConfig}
             onDone={() => {
+              const finishedRideId = rideSummary.ride?.id;
               setRideSummary(null);
+              if (finishedRideId) {
+                queryClient.setQueryData(["driverRides", driver?.id], (old: any[] = []) =>
+                  old.filter((r) => r.id !== finishedRideId)
+                );
+              }
               queryClient.invalidateQueries({ queryKey: ["driverRides", driver?.id] });
             }}
           />

@@ -1,4 +1,5 @@
 import { supabaseApi } from "@/lib/supabaseApi";
+import { initNativeDriverPush, isNativePlatform, showNativeDriverNotification } from "@/lib/nativeMobile";
 
 const VAPID_PUBLIC_KEY =
   "BJAiNTakC4wPq6j1Lv0xAPTvkybNTCga9BcPYSMzzrhjILPv88w8pQMyZTW7D1Qa25de5oLjcnlrRkboGFyq15w";
@@ -36,6 +37,7 @@ async function getActiveServiceWorker() {
 }
 
 export async function registerDriverSW() {
+  if (isNativePlatform()) return null;
   if (serviceWorkerRegistration) return serviceWorkerRegistration;
   if (typeof window === "undefined") return null;
   if (!("serviceWorker" in navigator)) return null;
@@ -66,6 +68,9 @@ async function getOrCreateSubscription(swReg: ServiceWorkerRegistration) {
 }
 
 export async function initDriverPush(driverId?: string): Promise<PushPermissionResult> {
+  if (isNativePlatform()) {
+    return initNativeDriverPush(driverId) as Promise<PushPermissionResult>;
+  }
   if (typeof window === "undefined") return "unsupported";
   if (!("Notification" in window)) return "unsupported";
 
@@ -162,6 +167,10 @@ export async function initPassengerPush(userId?: string): Promise<PushPermission
 }
 
 export async function showDriverNotification({ title, body, rideId, tag, url }: NotificationPayload) {
+  if (isNativePlatform()) {
+    await showNativeDriverNotification({ title, body, url: url || "/driver-app" });
+    return;
+  }
   if (typeof window === "undefined") return;
   if (!("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
@@ -173,7 +182,7 @@ export async function showDriverNotification({ title, body, rideId, tag, url }: 
     body,
     tag: tag || (rideId ? `ride-${rideId}` : `notif-${Date.now()}`),
     ride: { id: rideId },
-    url: url || "/DriverApp",
+    url: url || "/driver-app",
   };
 
   if (swReg?.active) {
@@ -193,7 +202,7 @@ export async function showDriverNotification({ title, body, rideId, tag, url }: 
 }
 
 export async function showPassengerNotification({ title, body, rideId, tag }: NotificationPayload) {
-  return showDriverNotification({ title, body, rideId, tag, url: "/RoadAssistApp" });
+  return showDriverNotification({ title, body, rideId, tag, url: "/road-assist-app" });
 }
 
 export async function dismissDriverNotification(tag: string) {
@@ -208,6 +217,7 @@ export async function startSWRideTimer(
   passengerName?: string,
   pickupAddress?: string,
 ) {
+  if (isNativePlatform()) return;
   const sw = await getActiveServiceWorker();
   if (!sw) return;
 
@@ -221,18 +231,21 @@ export async function startSWRideTimer(
 }
 
 export async function cancelSWRideTimer(rideId: string) {
+  if (isNativePlatform()) return;
   const sw = await getActiveServiceWorker();
   if (!sw) return;
   sw.postMessage({ type: "CANCEL_RIDE_TIMER", rideId });
 }
 
 export async function sendDriverHeartbeat(timeoutMs: number) {
+  if (isNativePlatform()) return;
   const sw = await getActiveServiceWorker();
   if (!sw) return;
   sw.postMessage({ type: "DRIVER_HEARTBEAT", timeoutMs });
 }
 
 export async function stopDriverHeartbeat() {
+  if (isNativePlatform()) return;
   const sw = await getActiveServiceWorker();
   if (!sw) return;
   sw.postMessage({ type: "STOP_HEARTBEAT" });

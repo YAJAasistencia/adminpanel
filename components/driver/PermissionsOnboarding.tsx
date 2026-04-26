@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Bell, CheckCircle2, AlertTriangle, Settings, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getLocationPermissionState, getNotificationPermissionState, openNativeAppSettings, requestLocationPermissionAccess } from "@/lib/nativeMobile";
+import { initDriverPush } from "@/components/shared/usePushNotifications";
 
 // Try to open system settings — works on iOS, shows instructions on Android
 function openAppSettings() {
@@ -9,28 +11,29 @@ function openAppSettings() {
   try { window.location.href = "app-settings:"; } catch {}
 }
 
-export default function PermissionsOnboarding({ onDone }) {
+type PermissionsOnboardingProps = {
+  onDone: () => void;
+  driverId?: string;
+};
+
+export default function PermissionsOnboarding({ onDone, driverId }: PermissionsOnboardingProps) {
   const [step, setStep] = useState("location"); // "location" | "notifications" | "done"
   const [requesting, setRequesting] = useState(false);
   const [locationStatus, setLocationStatus] = useState("unknown");
   const [notifStatus, setNotifStatus] = useState("unknown");
 
   useEffect(() => {
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: "geolocation" }).then(r => {
-        setLocationStatus(r.state);
-        r.onchange = () => setLocationStatus(r.state);
-      }).catch(() => setLocationStatus("prompt"));
-    }
-    if (typeof Notification !== "undefined") {
-      setNotifStatus(Notification.permission);
-    }
+    const loadStates = async () => {
+      setLocationStatus(await getLocationPermissionState());
+      setNotifStatus(await getNotificationPermissionState());
+    };
+    loadStates();
   }, []);
 
   // Auto-skip si ambos permisos ya están activos
   useEffect(() => {
     const locOk = locationStatus === "granted";
-    const notifOk = notifStatus === "granted" || typeof Notification === "undefined";
+    const notifOk = notifStatus === "granted" || notifStatus === "unsupported";
     if (locOk && notifOk) {
       localStorage.setItem("driver_perms_done", "1");
       onDone();
@@ -39,16 +42,17 @@ export default function PermissionsOnboarding({ onDone }) {
 
   const requestLocation = () => {
     setRequesting(true);
-    navigator.geolocation.getCurrentPosition(
-      () => { setLocationStatus("granted"); setRequesting(false); },
-      (err) => { setLocationStatus(err.code === 1 ? "denied" : "prompt"); setRequesting(false); },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
+    requestLocationPermissionAccess()
+      .then((state) => setLocationStatus(state))
+      .finally(() => setRequesting(false));
   };
 
   const requestNotifications = async () => {
     setRequesting(true);
-    try { const r = await Notification.requestPermission(); setNotifStatus(r); } catch {}
+    try {
+      const r = await initDriverPush(driverId);
+      setNotifStatus(r);
+    } catch {}
     setRequesting(false);
   };
 
@@ -109,7 +113,7 @@ export default function PermissionsOnboarding({ onDone }) {
                   <p>📱 <strong className="text-slate-300">iOS Safari:</strong> Configuración → Safari → Ubicación → Permitir</p>
                 </div>
                 <button
-                  onClick={() => { openAppSettings(); setTimeout(requestLocation, 3000); }}
+                  onClick={async () => { const opened = await openNativeAppSettings(); if (!opened) openAppSettings(); setTimeout(requestLocation, 3000); }}
                   className="w-full flex items-center justify-center gap-2 bg-red-500/20 border border-red-500/40 text-red-300 rounded-xl py-2.5 text-xs font-semibold"
                 >
                   <Settings className="w-4 h-4" /> Abrir configuración del sistema

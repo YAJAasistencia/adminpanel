@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { initDriverPush, showDriverNotification } from "@/components/shared/usePushNotifications";
+import { isNativePlatform, showNativeDriverNotification } from "@/lib/nativeMobile";
 
 type NotificationColor = "blue" | "indigo" | "amber" | "emerald" | "green" | "red";
 type SoundKind = "new_ride" | "status" | "complete" | "cancel" | "message";
@@ -327,6 +328,11 @@ function showNotification({ title, msg, color, sound }: StatusMessage) {
   });
 
   if (sound) playSoundOnce(sound);
+
+  if (isNativePlatform()) {
+    showNativeDriverNotification({ title, body: msg, url: "/driver-app" }).catch(() => {});
+    return;
+  }
 
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
     new Notification(title, { body: msg, icon: "/favicon.ico" });

@@ -162,8 +162,8 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
     if (!waitingForPayment || !ride?.id) return;
 
     // Subscribe to real-time updates
-    const channel = supabase.channel(`rt:RideRequest:${ride.id}`);
-    const sub = channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "RideRequest", filter: `id=eq.${ride.id}` }, (event) => {
+    const channel = supabase.channel(`rt:ride_requests:${ride.id}`);
+    const sub = channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "ride_requests", filter: `id=eq.${ride.id}` }, (event) => {
       if (event.new?.id === ride.id) {
         setRide(prev => ({ ...prev, ...event.new }));
       }

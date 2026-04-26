@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Palette, Building2, Phone, Mail, DollarSign, Settings2, Zap, Tag, Plus, Trash2, Bell, Scissors, Users, Clock, Shield, Truck, Globe, LayoutDashboard, Map, Layout as LayoutIcon, AlertTriangle } from "lucide-react";
+import { Save, Palette, Building2, Phone, Mail, DollarSign, Settings2, Zap, Tag, Plus, Trash2, Bell, Scissors, Users, Clock, Shield, Truck, Globe, LayoutDashboard, Map, Layout as LayoutIcon, AlertTriangle, KeyRound, Eye, EyeOff, Copy, CheckCheck } from "lucide-react";
 import LandingEditor from "@/components/settings/LandingEditor";
 import NavConfigEditor from "@/components/admin/NavConfigEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -144,6 +144,9 @@ const defaults = {
   payment_gateway: null,
   pending_payment_methods: [],
   
+  // APIs adicionales gestionadas dinámicamente
+  extra_api_keys: [] as Array<{ id: string; name: string; key: string; description: string; is_active: boolean }>,
+
   // Metadata
   updated_at: nowCDMX(),
 };
@@ -153,6 +156,15 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...defaults });
   const [copied, setCopied] = useState(null);
+  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
+
+  const toggleKeyVisibility = (id: string) => setVisibleKeys(prev => ({ ...prev, [id]: !prev[id] }));
+
+  const copyApiKey = (value: string, id: string) => {
+    navigator.clipboard.writeText(value);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   const getAppOrigin = () => {
     try { return window.top.location.origin; } catch { return window.location.origin; }
@@ -211,6 +223,9 @@ export default function SettingsPage() {
           ...defaults.landing_config,
           ...(settings.landing_config || {}),
         },
+        extra_api_keys: (settings.extra_api_keys && settings.extra_api_keys.length > 0)
+          ? settings.extra_api_keys
+          : defaults.extra_api_keys,
       });
       console.log("[Settings] Datos cargados desde Supabase:", settings);
     }
@@ -403,6 +418,7 @@ export default function SettingsPage() {
             <TabsTrigger value="driverdocs">Docs Conductores</TabsTrigger>
             <TabsTrigger value="navconfig">Menú lateral</TabsTrigger>
             <TabsTrigger value="landing"><LayoutIcon className="w-3.5 h-3.5 mr-1" />Landing</TabsTrigger>
+            <TabsTrigger value="api"><KeyRound className="w-3.5 h-3.5 mr-1" />API</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-5 mt-5">
@@ -1256,6 +1272,274 @@ export default function SettingsPage() {
                 value={form.nav_config || []}
                 onChange={v => update("nav_config", v)}
               />
+            </Card>
+          </TabsContent>
+          <TabsContent value="api" className="space-y-5 mt-5">
+            {/* ── Google Maps ── */}
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600"><Map className="w-5 h-5" /></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Google Maps</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Clave API para mapas, geocodificación y rutas de Google</p>
+                </div>
+              </div>
+              <div>
+                <Label>API Key de Google Maps</Label>
+                <div className="flex gap-2 mt-1">
+                  <div className="relative flex-1">
+                    <Input
+                      type={visibleKeys["google_maps"] ? "text" : "password"}
+                      value={form.google_maps_api_key || ""}
+                      onChange={e => update("google_maps_api_key", e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="pr-10 font-mono text-sm"
+                    />
+                    <button type="button" onClick={() => toggleKeyVisibility("google_maps")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {visibleKeys["google_maps"] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => copyApiKey(form.google_maps_api_key || "", "google_maps")}>
+                    {copied === "google_maps" ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Requerida si el proveedor de mapas es Google Maps</p>
+              </div>
+            </Card>
+
+            {/* ── Pasarela de pago ── */}
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><DollarSign className="w-5 h-5" /></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Pasarela de pago</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Proveedor y claves para procesar cobros en línea</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>Proveedor</Label>
+                  <Select value={form.payment_gateway || "none"} onValueChange={v => update("payment_gateway", v === "none" ? null : v)}>
+                    <SelectTrigger className="mt-1 max-w-xs"><SelectValue placeholder="Sin pasarela" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin pasarela</SelectItem>
+                      <SelectItem value="stripe">Stripe</SelectItem>
+                      <SelectItem value="conekta">Conekta</SelectItem>
+                      <SelectItem value="openpay">OpenPay</SelectItem>
+                      <SelectItem value="paypal">PayPal</SelectItem>
+                      <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.payment_gateway && form.payment_gateway !== "none" && (
+                  <>
+                    <div>
+                      <Label>Clave pública (Public Key)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <div className="relative flex-1">
+                          <Input
+                            type={visibleKeys["pg_public"] ? "text" : "password"}
+                            value={(form as any).payment_gateway_public_key || ""}
+                            onChange={e => update("payment_gateway_public_key" as any, e.target.value)}
+                            placeholder="pk_live_..."
+                            className="pr-10 font-mono text-sm"
+                          />
+                          <button type="button" onClick={() => toggleKeyVisibility("pg_public")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {visibleKeys["pg_public"] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => copyApiKey((form as any).payment_gateway_public_key || "", "pg_public")}>
+                          {copied === "pg_public" ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Clave secreta (Secret Key)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <div className="relative flex-1">
+                          <Input
+                            type={visibleKeys["pg_secret"] ? "text" : "password"}
+                            value={(form as any).payment_gateway_secret_key || ""}
+                            onChange={e => update("payment_gateway_secret_key" as any, e.target.value)}
+                            placeholder="sk_live_..."
+                            className="pr-10 font-mono text-sm"
+                          />
+                          <button type="button" onClick={() => toggleKeyVisibility("pg_secret")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {visibleKeys["pg_secret"] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => copyApiKey((form as any).payment_gateway_secret_key || "", "pg_secret")}>
+                          {copied === "pg_secret" ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><Shield className="w-3 h-3" />Nunca compartas esta clave — se guarda cifrada en la base de datos</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+
+            {/* ── Firebase / FCM ── */}
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-orange-50 text-orange-600"><Bell className="w-5 h-5" /></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Firebase / FCM</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Claves del servidor para enviar push notifications remotas al app del conductor</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>FCM Server Key</Label>
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <Input
+                        type={visibleKeys["fcm"] ? "text" : "password"}
+                        value={(form as any).fcm_server_key || ""}
+                        onChange={e => update("fcm_server_key" as any, e.target.value)}
+                        placeholder="AAAA..."
+                        className="pr-10 font-mono text-sm"
+                      />
+                      <button type="button" onClick={() => toggleKeyVisibility("fcm")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        {visibleKeys["fcm"] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <Button variant="outline" size="icon" onClick={() => copyApiKey((form as any).fcm_server_key || "", "fcm")}>
+                      {copied === "fcm" ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Label>Sender ID</Label>
+                  <Input
+                    value={(form as any).fcm_sender_id || ""}
+                    onChange={e => update("fcm_sender_id" as any, e.target.value)}
+                    placeholder="123456789012"
+                    className="font-mono text-sm mt-1 max-w-xs"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Se obtiene desde Firebase Console → Configuración del proyecto</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* ── Gestión de APIs adicionales ── */}
+            <Card className="p-6 border-0 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-violet-50 text-violet-600"><KeyRound className="w-5 h-5" /></div>
+                  <div>
+                    <h2 className="font-semibold text-slate-900">Gestión de APIs</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Agrega y gestiona claves de APIs externas (SMS, analítica, logística, etc.)</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const keys = form.extra_api_keys || [];
+                    update("extra_api_keys", [
+                      ...keys,
+                      { id: `api_${Date.now()}`, name: "", key: "", description: "", is_active: true },
+                    ]);
+                  }}
+                  className="rounded-lg"
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Agregar API
+                </Button>
+              </div>
+
+              {(!form.extra_api_keys || form.extra_api_keys.length === 0) && (
+                <div className="text-center py-10 text-slate-400">
+                  <KeyRound className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm">No hay APIs adicionales configuradas</p>
+                  <p className="text-xs mt-1">Haz clic en "Agregar API" para registrar la primera integración</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {(form.extra_api_keys || []).map((api, i) => (
+                  <div key={api.id || i} className="border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Nombre de la integración</Label>
+                          <Input
+                            value={api.name}
+                            onChange={e => {
+                              const keys = [...(form.extra_api_keys || [])];
+                              keys[i] = { ...keys[i], name: e.target.value };
+                              update("extra_api_keys", keys);
+                            }}
+                            placeholder="Ej: Twilio, SendGrid..."
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Descripción (opcional)</Label>
+                          <Input
+                            value={api.description}
+                            onChange={e => {
+                              const keys = [...(form.extra_api_keys || [])];
+                              keys[i] = { ...keys[i], description: e.target.value };
+                              update("extra_api_keys", keys);
+                            }}
+                            placeholder="Para qué se usa..."
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 pt-1 flex-shrink-0">
+                        <span className="text-xs text-slate-500">Activa</span>
+                        <Switch
+                          checked={!!api.is_active}
+                          onCheckedChange={v => {
+                            const keys = [...(form.extra_api_keys || [])];
+                            keys[i] = { ...keys[i], is_active: v };
+                            update("extra_api_keys", keys);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Clave API</Label>
+                      <div className="flex gap-2 mt-1">
+                        <div className="relative flex-1">
+                          <Input
+                            type={visibleKeys[api.id || String(i)] ? "text" : "password"}
+                            value={api.key}
+                            onChange={e => {
+                              const keys = [...(form.extra_api_keys || [])];
+                              keys[i] = { ...keys[i], key: e.target.value };
+                              update("extra_api_keys", keys);
+                            }}
+                            placeholder="sk_..."
+                            className="pr-10 font-mono text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleKeyVisibility(api.id || String(i))}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            {visibleKeys[api.id || String(i)] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => copyApiKey(api.key, `extra_${api.id || i}`)} className="flex-shrink-0">
+                          {copied === `extra_${api.id || i}` ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-400 hover:text-red-600 flex-shrink-0"
+                          onClick={() => {
+                            update("extra_api_keys", (form.extra_api_keys || []).filter((_, idx) => idx !== i));
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </Card>
           </TabsContent>
         </Tabs>

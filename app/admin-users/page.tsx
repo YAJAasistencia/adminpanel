@@ -32,6 +32,7 @@ const ALL_PAGES = [
   { page: "GeoZones", label: "Zonas tarifarias" },
   { page: "RedZones", label: "Zonas rojas" },
   { page: "SupportTickets", label: "Tickets de soporte" },
+  { page: "OfflineReconciliation", label: "Conciliación offline" },
   { page: "Companies", label: "Empresas (B2B)" },
   { page: "AdminUsers", label: "Usuarios admin" },
   { page: "Settings", label: "Configuración" },

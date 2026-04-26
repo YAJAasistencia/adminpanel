@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Truck, User, Clock, HelpCircle, LogOut, X, History, Star, Wallet, Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import useAppSettings from "@/components/shared/useAppSettings";
+import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
 import { formatCDMX, setSystemTimezone } from "@/components/shared/dateUtils";
 import TicketsPanel from "@/components/shared/TicketsPanel";
 import AnnouncementModal from "@/components/shared/AnnouncementModal";
@@ -252,9 +253,47 @@ export default function RoadAssistApp() {
   const prevStatusRef = useRef(null);
   useWakeLock();
 
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: async () => {
+      try {
+        return await supabaseApi.cities.list();
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
+
+  // Watchdog de auto-asignación también en app pasajero.
+  // Así la búsqueda/asignación corre sin requerir una sesión abierta en el panel.
+  useRideAutoAssign(settings as any, cities as any, true);
+
   useEffect(() => {
     if (settings?.timezone) setSystemTimezone(settings.timezone);
   }, [settings?.timezone]);
+
+  useEffect(() => {
+    const company = settings?.company_name?.trim() || "Pasajero";
+    document.title = `${company} Pasajero`;
+
+    const logoUrl = settings?.logo_url;
+    if (!logoUrl) return;
+
+    const updateLink = (selector: string, href: string) => {
+      let el = document.querySelector(selector) as HTMLLinkElement | null;
+      if (!el) {
+        el = document.createElement("link");
+        el.rel = selector.includes("apple-touch-icon") ? "apple-touch-icon" : "icon";
+        document.head.appendChild(el);
+      }
+      el.href = href;
+    };
+
+    updateLink('link[rel="icon"]', logoUrl);
+    updateLink('link[rel="apple-touch-icon"]', logoUrl);
+  }, [settings?.company_name, settings?.logo_url]);
 
   const { playSound } = usePassengerSounds();
 
@@ -310,7 +349,29 @@ export default function RoadAssistApp() {
     return () => { channel.unsubscribe(); };
   }, [user?.id, setUser]);
 
-  const activeRide = activeRides[0] || null;
+  const activeRide = React.useMemo(() => {
+    if (!activeRides.length) return null;
+    const priority: Record<string, number> = {
+      in_progress: 6,
+      arrived: 5,
+      en_route: 4,
+      admin_approved: 3,
+      assigned: 2,
+      auction: 1,
+      pending: 0,
+      no_drivers: -1,
+      completed: -2,
+      cancelled: -3,
+    };
+    return [...activeRides].sort((a: any, b: any) => {
+      const pa = priority[a.status || "pending"] ?? 0;
+      const pb = priority[b.status || "pending"] ?? 0;
+      if (pb !== pa) return pb - pa;
+      const ta = new Date(a.updated_at || a.requested_at || a.created_at || 0).getTime();
+      const tb = new Date(b.updated_at || b.requested_at || b.created_at || 0).getTime();
+      return tb - ta;
+    })[0];
+  }, [activeRides]);
 
   // Capture ride when completed/cancelled so tracker stays mounted until user dismisses
   useEffect(() => {
@@ -359,7 +420,7 @@ export default function RoadAssistApp() {
   }
 
   if (!user) {
-    return <RALoginScreen onLogin={login} />;
+    return <RALoginScreen onLogin={login} appName={settings?.company_name} appLogo={settings?.logo_url} />;
   }
 
   const trackerRide = activeRide || endedRide;
