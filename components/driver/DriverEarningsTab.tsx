@@ -7,8 +7,10 @@ import DriverWeeklyEarnings from "@/components/driver/DriverWeeklyEarnings";
 
 export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
   const completedOnly = rides.filter(r => r.status === "completed");
+  const cancelledWithFeeOnly = rides.filter(r => r.status === "cancelled" && (r.cancellation_fee || 0) > 0);
   const thisMonth = completedOnly.filter(r => moment(r.created_date).isSame(moment(), "month"));
   const monthEarnings = thisMonth.reduce((s, r) => s + (r.driver_earnings || r.final_price || 0), 0);
+  const totalCountableTrips = completedOnly.length + cancelledWithFeeOnly.length;
 
   // Today's earnings — timezone-aware
   const todayStr = todayCDMX();
@@ -22,6 +24,7 @@ export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
 
   // Today's rides list (completed + cancelled)
   const todayRides = rides.filter(r => {
+    if (r.status === "cancelled" && (r.cancellation_fee || 0) <= 0) return false;
     if (!["completed", "cancelled"].includes(r.status)) return false;
     const d = new Date(r.completed_at || r.updated_date || r.created_date);
     return d >= todayStartUTC && d <= todayEndUTC;
@@ -43,7 +46,7 @@ export default function DriverEarningsTab({ driver, rides, onShowHistory }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-50 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-slate-800">{driver.total_rides || 0}</p>
+          <p className="text-xl font-bold text-slate-800">{totalCountableTrips}</p>
           <p className="text-xs text-slate-500">Viajes totales</p>
         </div>
         <div className="bg-amber-50 rounded-xl p-3 text-center">

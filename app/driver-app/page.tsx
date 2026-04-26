@@ -291,6 +291,7 @@ function HomeMap({
   const lon = driver?.longitude;
   const center = lat && lon ? [lat, lon] : [19.4326, -99.1332];
   const isOnline = driver?.status === "available";
+  const mapRef = useRef<any>(null);
 
   // Flow data: fetch ALL platform rides periodically
   const [flowRides, setFlowRides] = React.useState<Ride[]>([]);
@@ -358,6 +359,7 @@ function HomeMap({
         style={{ height: "100%", width: "100%", zIndex: 1 }}
         zoomControl={false}
         attributionControl={false}
+        ref={mapRef as any}
       >
         <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
         <MapRecenter lat={lat} lon={lon} />
@@ -388,7 +390,6 @@ function HomeMap({
       {/* Overlay: Ganancias del día */}
       <div className="absolute left-0 right-0 z-10 flex justify-center pointer-events-none" style={{ top: 12 }}>
         <div className="bg-black/70 backdrop-blur-md rounded-2xl px-5 py-2.5 flex items-center gap-2.5 shadow-xl border border-white/10 pointer-events-auto">
-          <DollarSign className="w-4 h-4 text-emerald-400" />
           <div>
             <p className="text-[10px] text-slate-400 leading-none">Ganancias de hoy</p>
             <p className="text-base font-black text-emerald-400 leading-tight">${todayEarnings.toFixed(2)}</p>
@@ -399,9 +400,19 @@ function HomeMap({
       {/* Overlay: botón GPS */}
       {lat && lon && (
         <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-1.5">
-          <div className="w-10 h-10 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              const map = mapRef.current;
+              if (!map || !lat || !lon) return;
+              const targetZoom = Math.max(map.getZoom?.() || 14, 14);
+              map.setView([lat, lon], targetZoom, { animate: true });
+            }}
+            className="w-10 h-10 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center"
+            aria-label="Recentrar mapa a mi ubicación"
+          >
             <Navigation className="w-4 h-4 text-white" />
-          </div>
+          </button>
         </div>
       )}
 
@@ -450,7 +461,6 @@ function DriverMenu({
   driver,
   onClose,
   onOpenEarnings,
-  onOpenHistory,
   onOpenProfile,
   onOpenTickets,
   onLogout,
@@ -460,7 +470,6 @@ function DriverMenu({
   driver: Driver;
   onClose: () => void;
   onOpenEarnings: () => void;
-  onOpenHistory: () => void;
   onOpenProfile: () => void;
   onOpenTickets: () => void;
   onLogout: () => void;
@@ -524,13 +533,6 @@ function DriverMenu({
               color: "text-emerald-400",
               bg: "bg-emerald-500/15",
               onPress: onOpenEarnings,
-            },
-            {
-              icon: History,
-              label: "Historial de viajes",
-              color: "text-blue-400",
-              bg: "bg-blue-500/15",
-              onPress: onOpenHistory,
             },
             {
               icon: User,
@@ -619,6 +621,38 @@ export default function DriverApp() {
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showPermissionsOnboarding, setShowPermissionsOnboarding] = useState(false);
+
+  const releaseDriverToAvailable = useCallback(async () => {
+    if (!driver?.id) return;
+    try {
+      await supabaseApi.drivers.update(driver.id, { status: "available", suspended_until: null });
+    } catch {}
+    setDriver((prev) => (prev ? { ...prev, status: "available", suspended_until: null } : prev));
+    setSuspendedUntil(null);
+    localStorage.removeItem("driver_suspended_until");
+  }, [driver?.id]);
+
+  const registerDriverOfferResult = useCallback(
+    async (kind: "accepted" | "rejected", reasonKey?: string) => {
+      if (!driver?.id) return;
+      try {
+        const fresh = await supabaseApi.drivers.get(driver.id);
+        if (!fresh) return;
+        const accepted = Number(fresh.accepted_offers_count || 0);
+        const rejected = Number(fresh.rejection_count || 0);
+        const updates: any = {};
+        if (kind === "accepted") {
+          updates.accepted_offers_count = accepted + 1;
+        } else {
+          updates.rejection_count = rejected + 1;
+          updates.last_rejection_reason = reasonKey || "other";
+        }
+        await supabaseApi.drivers.update(driver.id, updates);
+        setDriver((prev: any) => (prev ? { ...prev, ...updates } : prev));
+      } catch {}
+    },
+    [driver?.id]
+  );
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -1068,10 +1102,7 @@ export default function DriverApp() {
               setRideSummary({ ride: data, paymentMethodConfig: pmConfig });
             }
 
-            supabaseApi.drivers.update(driverId, { status: "available" });
-            setDriver((prev) => (prev ? { ...prev, status: "available", suspended_until: null } : prev));
-            setSuspendedUntil(null);
-            localStorage.removeItem("driver_suspended_until");
+            void releaseDriverToAvailable();
             queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
             return;
           }
@@ -1149,6 +1180,9 @@ export default function DriverApp() {
               const revertedToPending = data.status === "pending" && !data.driver_id;
               if (takenByOther || noLongerAuction || cancelled || revertedToPending) {
                 stopNewRideAlarm(prev.id);
+                if (driverRef.current?.status === "busy") {
+                  void releaseDriverToAvailable();
+                }
                 return null;
               }
               return prev;
@@ -1161,7 +1195,7 @@ export default function DriverApp() {
     return () => {
       channel.unsubscribe();
     };
-  }, [driver?.id, queryClient, getAssignmentSignal]);
+  }, [driver?.id, queryClient, getAssignmentSignal, releaseDriverToAvailable]);
 
   // ─── REAL-TIME incoming ride notifications channel ─────────────────────
   useEffect(() => {
@@ -1494,6 +1528,7 @@ export default function DriverApp() {
 
     // Update local driver state
     setDriver((prev) => (prev ? { ...prev, status: "busy" } : prev));
+    await registerDriverOfferResult("accepted");
 
     playAcceptedSound();
     queryClient.invalidateQueries({ queryKey: ["driverRides", driver?.id] });
@@ -1574,6 +1609,11 @@ export default function DriverApp() {
     }
 
     const isCancelByDriver = reason === "driver_cancelled";
+    const isOfferRejection = reason === "timeout" || reason === "driver_declined";
+
+    if (isOfferRejection) {
+      await registerDriverOfferResult("rejected", "other");
+    }
 
     if (
       isCancelByDriver &&
@@ -2273,7 +2313,6 @@ export default function DriverApp() {
             hasActiveRide={hasActiveRide}
             onClose={() => setShowMenu(false)}
             onOpenEarnings={() => setActiveTab("earnings")}
-            onOpenHistory={() => setShowHistory(true)}
             onOpenProfile={() => setActiveTab("profile")}
             onOpenTickets={() => setShowTickets(true)}
             onLogout={handleLogout}

@@ -98,6 +98,7 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("info");
   const [showRatings, setShowRatings] = useState(false);
   const [onlineElapsed, setOnlineElapsed] = useState(0);
@@ -132,10 +133,17 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
 
   const handlePhotoUpload = async (file) => {
     setUploadingPhoto(true);
-    const { file_url } = await supabaseApi.uploads.uploadFile({ file });
-    await supabaseApi.drivers.update(driver.id, { photo_url: file_url });
-    onPhotoUpdate(file_url);
-    setUploadingPhoto(false);
+    setPhotoUploadError(null);
+    try {
+      const { file_url } = await supabaseApi.uploads.uploadFile({ file });
+      if (!file_url) throw new Error("No se obtuvo URL de la foto");
+      await supabaseApi.drivers.update(driver.id, { photo_url: file_url });
+      onPhotoUpdate(file_url);
+    } catch (error: any) {
+      setPhotoUploadError(error?.message || "No se pudo subir la foto");
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -199,11 +207,21 @@ export default function DriverProfileTab({ driver, onPhotoUpdate, onLogout, onDe
               )}
             </div>
             <label className="absolute bottom-0 right-0 w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow-md select-none">
-              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); }} />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handlePhotoUpload(f);
+                  e.currentTarget.value = "";
+                }}
+              />
               <Camera className="w-4 h-4 text-white" />
             </label>
           </div>
           {uploadingPhoto && <p className="text-xs text-blue-500 mt-2">Subiendo foto...</p>}
+          {photoUploadError && <p className="text-xs text-red-500 mt-2">{photoUploadError}</p>}
           <h2 className="text-lg font-bold text-slate-900 mt-3">{driver.full_name}</h2>
           <p className="text-sm text-slate-400">{driver.email}</p>
         </div>
