@@ -52,7 +52,7 @@ export function syncBrandHead({ title, logoUrl, appName, cacheSeed }: BrandHeadO
   const manifest = {
     name: appName || "YAJA Asistencia",
     short_name: (appName || "YAJA").slice(0, 12),
-    start_url: "/",
+    start_url: typeof window !== "undefined" ? `${window.location.origin}/` : "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#0F172A",

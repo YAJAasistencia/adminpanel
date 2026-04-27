@@ -392,12 +392,20 @@ export default function SettingsPage() {
         updated_at: nowCDMX(),
       };
 
-      console.log("[Settings] Guardando configuración:", { existingId, payload });
+      // En UPDATE, filtrar columnas inexistentes para que un campo faltante
+      // no bloquee el guardado completo (ej. colores de marca).
+      const updatePayload = existingId && settings
+        ? Object.fromEntries(
+            Object.entries(payload).filter(([key]) => key in (settings as any))
+          )
+        : payload;
+
+      console.log("[Settings] Guardando configuración:", { existingId, payload: updatePayload });
       
       // ── Paso 3: Siempre UPDATE si existe, solo INSERT si es la primera vez ──
       let updated;
       if (existingId) {
-        updated = await supabaseApi.settings.update(existingId, payload);
+        updated = await supabaseApi.settings.update(existingId, updatePayload);
         console.log("[Settings] UPDATE exitoso:", updated);
       } else {
         updated = await supabaseApi.settings.create(payload);

@@ -24,6 +24,7 @@ ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS eta_uncertainty_factor 
 -- ── App conductor ─────────────────────────────────────────────────────────
 ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS driver_arrival_radius_meters integer DEFAULT 50;
 ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS driver_cancel_suspension_minutes integer DEFAULT 30;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS driver_offer_timeout_seconds integer DEFAULT 30;
 
 -- ── App pasajero ─────────────────────────────────────────────────────────
 ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS passenger_active_rides_refetch_seconds integer DEFAULT 30;
