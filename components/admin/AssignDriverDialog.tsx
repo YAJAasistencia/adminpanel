@@ -171,12 +171,12 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       driver_id: selectedDriverId,
       driver_name: driver.full_name,
       status: "assigned",
+      assignment_mode: "manual",
       assigned_at: assignedNow,
       _excluded_driver_ids: [],
       auction_driver_ids: [],
     };
     await supabaseApi.rideRequests.update(ride.id, updatedRide);
-    await supabaseApi.drivers.update(selectedDriverId, { status: "busy" });
     queryClient.invalidateQueries({ queryKey: ["rides"] });
     queryClient.invalidateQueries({ queryKey: ["drivers"] });
     setSaving(false);

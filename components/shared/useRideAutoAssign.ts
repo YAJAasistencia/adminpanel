@@ -437,16 +437,49 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         }
 
         if (payload.eventType === "UPDATE") {
+          const oldData = (payload.old || null) as Ride | null;
           const wasReassignment = Array.isArray(data._excluded_driver_ids) && data._excluded_driver_ids.length > 0;
           if (data.status === "pending" && !data.driver_id && wasReassignment) {
             const excludeIds = data._excluded_driver_ids || [];
             if (data.assignment_mode === "auto" || !data.assignment_mode) {
               await autoAssignDriver(data, excludeIds);
-            } else if (data.assignment_mode === "manual") {
-              await autoAssignDriver(data, excludeIds);
             } else if (data.assignment_mode === "auction") {
               const prevNotified = Array.isArray(data.auction_driver_ids) ? data.auction_driver_ids : [];
               await startAuction(data, prevNotified);
+            }
+            return;
+          }
+
+          const becamePending = oldData?.status !== "pending" && data.status === "pending";
+          const paymentGateReleased =
+            !!oldData?.awaiting_payment_confirmation &&
+            !data.awaiting_payment_confirmation;
+          const paymentStatusReleased =
+            oldData?.payment_status === "awaiting_payment" &&
+            data.payment_status !== "awaiting_payment";
+
+          if (
+            data.status === "pending" &&
+            !data.driver_id &&
+            data.assignment_mode !== "manual" &&
+            !data.awaiting_payment_confirmation &&
+            data.payment_status !== "awaiting_payment" &&
+            (becamePending || paymentGateReleased || paymentStatusReleased)
+          ) {
+            const current = await supabaseApi.rideRequests.get(data.id).catch(() => null);
+            if (!current || current.driver_id || current.status !== "pending") return;
+
+            const excludeIds = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
+            const mode = current.assignment_mode;
+            const useAuction = mode
+              ? mode === "auction"
+              : !!settingsRef.current?.auction_mode_enabled;
+
+            if (useAuction) {
+              const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
+              await startAuction(current, uniqueIds([...excludeIds, ...prevNotified]));
+            } else {
+              await autoAssignDriver(current, excludeIds);
             }
           }
         }
@@ -606,6 +639,33 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             queryClient.setQueryData(["drivers"], (old: Driver[] = []) =>
               old.map((d) => d.id === current.driver_id ? { ...d, status: "available" } : d)
             );
+
+            if (current.assignment_mode === "manual") {
+              const manualRequestedAt = nowCDMX();
+              await supabaseApi.rideRequests.update(current.id, {
+                status: "pending",
+                driver_id: null,
+                driver_name: null,
+                auction_driver_ids: [],
+                manual_assignment_requested_at: manualRequestedAt,
+              });
+
+              queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
+                old.map((r) =>
+                  r.id === current.id
+                    ? {
+                        ...r,
+                        status: "pending",
+                        driver_id: null,
+                        driver_name: null,
+                        auction_driver_ids: [],
+                        manual_assignment_requested_at: manualRequestedAt,
+                      }
+                    : r
+                )
+              );
+              return;
+            }
 
             await supabaseApi.rideRequests.update(current.id, {
               status: "pending",

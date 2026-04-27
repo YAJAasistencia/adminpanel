@@ -20,11 +20,11 @@ const statusConfig = {
   admin_approved: { label: "Aprobado inicio", class: "bg-teal-50 text-teal-700 border-teal-200" },
 };
 
-export default function StatusBadge({ status }) {
+export default function StatusBadge({ status, label, className = "" }) {
   const config = statusConfig[status] || { label: status, class: "bg-slate-100 text-slate-600" };
   return (
-    <Badge variant="outline" className={`${config.class} font-medium text-xs px-2.5 py-0.5`}>
-      {config.label}
+    <Badge variant="outline" className={`${config.class} ${className} font-medium text-xs px-2.5 py-0.5`}>
+      {label || config.label}
     </Badge>
   );
 }

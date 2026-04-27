@@ -1144,6 +1144,7 @@ export default function DriverApp() {
             const alreadyAccepted = acceptedRideIdsRef.current.has(data.id);
             const wasRejectedThisAssignment = rejectedRideSignalsRef.current[data.id] === thisAssignmentAt;
             if (isNewAssignment && !alreadyAccepted) {
+              const isManualAssignment = data.assignment_mode === "manual";
               shownRideAssignmentsRef.current[data.id] = thisAssignmentAt || "";
               if (rejectedRideSignalsRef.current[data.id] && rejectedRideSignalsRef.current[data.id] !== thisAssignmentAt) {
                 delete rejectedRideSignalsRef.current[data.id];
@@ -1152,8 +1153,10 @@ export default function DriverApp() {
               stopNewRideAlarm(data.id);
               startNewRideAlarm(data.id);
               showDriverNotification({
-                title: "🚗 ¡Servicio asignado!",
-                body: `Recoge a ${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`,
+                title: isManualAssignment ? "🚗 ¡Nuevo servicio!" : "🚗 ¡Servicio asignado!",
+                body: isManualAssignment
+                  ? `${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`
+                  : `Recoge a ${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`,
                 rideId: data.id,
               });
               const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
@@ -1234,9 +1237,12 @@ export default function DriverApp() {
       queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
 
       if (notificationType === "ride_assigned") {
+        const isManualAssignment = rideData?.assignment_mode === "manual";
         showDriverNotification({
-          title: "🚗 ¡Servicio asignado!",
-          body: `Recoge a ${rideData?.passenger_name || "Pasajero"} · ${rideData?.pickup_address || ""}`,
+          title: isManualAssignment ? "🚗 ¡Nuevo servicio!" : "🚗 ¡Servicio asignado!",
+          body: isManualAssignment
+            ? `${rideData?.passenger_name || "Pasajero"} · ${rideData?.pickup_address || ""}`
+            : `Recoge a ${rideData?.passenger_name || "Pasajero"} · ${rideData?.pickup_address || ""}`,
           rideId,
         });
         const current = await supabaseApi.rideRequests.get(rideId).catch(() => null);

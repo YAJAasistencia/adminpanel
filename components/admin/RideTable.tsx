@@ -41,6 +41,69 @@ function hasDriverAccepted(ride) {
   return !!(ride?.driver_accepted_at || ride?.en_route_at || ride?.arrived_at || ride?.in_progress_at);
 }
 
+function hasCancellationFee(ride) {
+  const fee = Number(ride?.cancellation_fee ?? 0);
+  const finalPrice = Number(ride?.final_price ?? 0);
+  return fee > 0 || (ride?.status === "cancelled" && finalPrice > 0);
+}
+
+function getResolvedDriverName(ride, drivers = []) {
+  if (ride?.driver_name) return ride.driver_name;
+  if (!ride?.driver_id) return "";
+  return drivers.find((driver) => driver.id === ride.driver_id)?.full_name || "";
+}
+
+function getRideVisualState(ride) {
+  const normalizedReason = String(ride?.cancellation_reason || "").toLowerCase();
+  const accepted = hasDriverAccepted(ride) || ride?.status === "completed";
+  const noDrivers =
+    ride?.status === "no_drivers" ||
+    (!ride?.driver_id && !ride?.driver_name && normalizedReason.includes("sin conductores"));
+
+  if (ride?.status === "completed") {
+    return {
+      badgeLabel: "Completado",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      rowClass: "bg-emerald-50 border-l-emerald-500",
+      showReason: false,
+    };
+  }
+
+  if (noDrivers) {
+    return {
+      badgeLabel: "Sin conductores disponibles",
+      badgeClass: "bg-red-100 text-red-800 border-red-400 font-bold",
+      rowClass: "bg-red-50 border-l-red-500",
+      showReason: true,
+    };
+  }
+
+  if (ride?.status === "cancelled") {
+    if (accepted && hasCancellationFee(ride)) {
+      return {
+        badgeLabel: "Cancelado con costo",
+        badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+        rowClass: "bg-orange-50 border-l-orange-400",
+        showReason: false,
+      };
+    }
+
+    return {
+      badgeLabel: "Cancelado sin costo",
+      badgeClass: "bg-red-50 text-red-700 border-red-200",
+      rowClass: "bg-red-50 border-l-red-300",
+      showReason: false,
+    };
+  }
+
+  return {
+    badgeLabel: null,
+    badgeClass: "",
+    rowClass: rowBgColors[ride?.status] || "bg-white border-l-slate-200",
+    showReason: !!ride?.cancellation_reason,
+  };
+}
+
 /** Devuelve true si el ride auto/auction aún está dentro de la ventana de búsqueda de 3 minutos */
 function isAutoSearching(ride, searchWindowSeconds = 180) {
   if (ride.assignment_mode !== "auto" && ride.assignment_mode !== "auction") return false;
@@ -97,7 +160,12 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
       <div className="space-y-2">
         {displayRides.map(ride => {
           const action = statusActions[ride.status];
-          const rowBg = rowBgColors[ride.status] || "bg-white border-l-slate-200";
+          const visualState = getRideVisualState(ride);
+          const rowBg = visualState.rowClass;
+          const resolvedDriverName = getResolvedDriverName(ride, drivers);
+          const shouldShowDriverName =
+            !!resolvedDriverName &&
+            (ride.status === "completed" || hasCancellationFee(ride) || hasDriverAccepted(ride) || ride.status !== "assigned");
 
           return (
             <div
@@ -110,7 +178,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <p className="font-semibold text-slate-900 text-sm">{ride.passenger_name}</p>
-                    <StatusBadge status={ride.status} />
+                    <StatusBadge status={ride.status} label={visualState.badgeLabel || undefined} className={visualState.badgeClass} />
                     {ride.service_type_name && (
                       <span className="text-[11px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">{ride.service_type_name}</span>
                     )}
@@ -147,15 +215,17 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                   </div>
 
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    {ride.driver_name ? (
-                      hasDriverAccepted(ride) || ride.status !== "assigned" ? (
+                    {shouldShowDriverName ? (
+                      ride.status !== "assigned" || hasDriverAccepted(ride) ? (
                         <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                          {ride.driver_name}
+                          {resolvedDriverName}
                         </span>
                       ) : (
                         <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Pendiente de aceptación</span>
                       )
+                    ) : ride.status === "no_drivers" || visualState.badgeLabel === "Sin conductores disponibles" ? (
+                      <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Sin conductor</span>
                     ) : (
                       <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Sin conductor</span>
                     )}
@@ -183,7 +253,7 @@ export default function RideTable({ rides, onAssign, onCancel, onUpdateStatus, o
                     ) : null}
                     <span className="text-xs text-slate-300">{formatCDMX(ride.requested_at || ride.created_date, "shortdatetime")}</span>
                   </div>
-                  {ride.cancellation_reason && (
+                  {visualState.showReason && ride.cancellation_reason && (
                     <p className="text-xs text-red-500 mt-1.5 bg-red-50 px-2 py-1 rounded-lg">❌ {ride.cancellation_reason}</p>
                   )}
                 </div>
