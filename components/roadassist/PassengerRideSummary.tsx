@@ -165,19 +165,40 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
 
   // While waiting for confirmation: poll the ride every 5 seconds
   const waitingForPayment = isCompleted && requireDriverConfirmation && !isPaid;
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!waitingForPayment || !ride?.id) return;
 
-    // Subscribe to real-time updates
-    const channel = supabase.channel(`rt:ride_requests:${ride.id}`);
-    const sub = channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "ride_requests", filter: `id=eq.${ride.id}` }, (event) => {
-      if (event.new?.id === ride.id) {
-        setRide(prev => ({ ...prev, ...event.new }));
-      }
-    }).subscribe();
+    // Clean up previous subscription first
+    if (channelRef.current) {
+      try {
+        channelRef.current.unsubscribe();
+      } catch (_) {}
+      channelRef.current = null;
+    }
+
+    // Create new channel with unique timestamp to avoid collisions
+    const channelName = `payment_confirm:${ride.id}:${Date.now()}`;
+    const channel = supabase.channel(channelName);
+    
+    channel
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "ride_requests", filter: `id=eq.${ride.id}` }, (event) => {
+        if (event.new?.id === ride.id) {
+          setRide(prev => ({ ...prev, ...event.new }));
+        }
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          channelRef.current = channel;
+        } else if (status === "CHANNEL_ERROR") {
+          console.warn("Realtime subscription failed, using polling only");
+        }
+      });
 
     // Also poll every 5s as fallback
+    if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
         const data = await supabaseApi.rideRequests.list({ id: ride.id });
@@ -186,16 +207,29 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
     }, 5000);
 
     return () => {
-      channel.unsubscribe();
+      if (channelRef.current) {
+        try {
+          channelRef.current.unsubscribe();
+        } catch (_) {}
+      }
+      channelRef.current = null;
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [waitingForPayment, ride?.id]);
 
   // Stop polling when paid
   useEffect(() => {
-    if (isPaid && pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+    if (isPaid) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      if (channelRef.current) {
+        try {
+          channelRef.current.unsubscribe();
+        } catch (_) {}
+        channelRef.current = null;
+      }
     }
   }, [isPaid]);
 

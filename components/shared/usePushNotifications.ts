@@ -137,15 +137,21 @@ export async function initPassengerPush(userId?: string): Promise<PushPermission
   if (permission === "granted") {
     if (!("serviceWorker" in navigator)) return permission;
     try {
-      const swReg = await Promise.race([
-        registerDriverSW(),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
-      ]);
+      // Ensure service worker is active and ready before subscribing to push
+      const swReg = await registerDriverSW();
+      if (!swReg) return permission;
+      
+      // Wait for the service worker to actually be active
+      const readyReg = await navigator.serviceWorker.ready.catch(() => swReg);
+      if (!readyReg?.active && !swReg?.active) {
+        console.warn("[Push] Service worker not yet active");
+        return permission;
+      }
 
-      if (swReg && userId) {
+      if (userId) {
         const sub = await Promise.race([
           getOrCreateSubscription(swReg),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
         ]);
 
         if (sub) {

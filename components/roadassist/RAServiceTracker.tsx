@@ -239,18 +239,33 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     setRideSnapshot((prev) => ({ ...(prev || {}), ...liveRide }));
   }, [liveRide?.id, liveRide?.status, liveRide?.updated_at, liveRide?.completed_at, liveRide?.cancelled_at]);
 
-  useEffect(() => {
-    if (!ride?.id) return;
-    const channel = supabase.channel(`rt:ride_requests:${ride.id}`);
-    const sub = channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "ride_requests", filter: `id=eq.${ride.id}` }, (event) => {
-      const data = event.new;
-      if (data?.id !== ride.id) return;
-      queryClient.setQueryData(["ra_live_ride", ride.id], data);
-      setRideSnapshot(data);
-      queryClient.invalidateQueries({ queryKey: ["ra_active_rides"] });
-    }).subscribe();
-    return () => { channel.unsubscribe(); };
-  }, [ride?.id, queryClient]);
+   useEffect(() => {
+     if (!ride?.id) return;
+     
+     // Use a unique channel name with timestamp to avoid collisions
+     const channelName = `ride_live:${ride.id}:${Date.now()}`;
+     const channel = supabase.channel(channelName);
+     
+     const unsubscribe = channel
+       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "ride_requests", filter: `id=eq.${ride.id}` }, (event) => {
+         const data = event.new;
+         if (data?.id !== ride.id) return;
+         queryClient.setQueryData(["ra_live_ride", ride.id], data);
+         setRideSnapshot(data);
+         queryClient.invalidateQueries({ queryKey: ["ra_active_rides"] });
+       })
+       .subscribe((status) => {
+         if (status === "CHANNEL_ERROR") {
+           console.warn("[RAServiceTracker] Realtime subscription failed for ride", ride.id);
+         }
+       });
+     
+     return () => { 
+       try {
+         channel.unsubscribe();
+       } catch (_) {}
+     };
+   }, [ride?.id, queryClient]);
 
   const currentRide = React.useMemo(
     () => mergeRideCandidates([ride, rideSnapshot, liveRide]),
@@ -267,16 +282,31 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     },
   });
 
-  useEffect(() => {
-    if (!currentRide?.driver_id) return;
-    const channel = supabase.channel(`rt:Driver:${currentRide.driver_id}`);
-    const sub = channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "Driver", filter: `id=eq.${currentRide.driver_id}` }, (event) => {
-      const data = event.new;
-      if (data?.id !== currentRide.driver_id) return;
-      queryClient.setQueryData(["ra_driver", currentRide.driver_id], data);
-    }).subscribe();
-    return () => { channel.unsubscribe(); };
-  }, [currentRide?.driver_id, queryClient]);
+   useEffect(() => {
+     if (!currentRide?.driver_id) return;
+     
+     // Use a unique channel name with timestamp to avoid collisions
+     const channelName = `driver_live:${currentRide.driver_id}:${Date.now()}`;
+     const channel = supabase.channel(channelName);
+     
+     const unsubscribe = channel
+       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drivers", filter: `id=eq.${currentRide.driver_id}` }, (event) => {
+         const data = event.new;
+         if (data?.id !== currentRide.driver_id) return;
+         queryClient.setQueryData(["ra_driver", currentRide.driver_id], data);
+       })
+       .subscribe((status) => {
+         if (status === "CHANNEL_ERROR") {
+           console.warn("[RAServiceTracker] Realtime subscription failed for driver", currentRide.driver_id);
+         }
+       });
+     
+     return () => { 
+       try {
+         channel.unsubscribe();
+       } catch (_) {}
+     };
+   }, [currentRide?.driver_id, queryClient]);
 
   const { data: policies = [] } = useQuery({
     queryKey: ["cancellationPolicies"],
@@ -287,15 +317,20 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   });
 
   // Subscribe to chat messages for unread badge + sound notification
-  useEffect(() => {
-    if (!ride?.id) return;
-    const channel = supabase.channel(`rt:ChatMessage:${ride.id}`);
-    const sub = channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
-      const msg = event.new;
-      if (!msg || msg.ride_id !== ride.id) return;
-      if ((msg.sender_role === "driver" || msg.sender_role === "admin") && !msg.read_by_passenger) {
-        if (!showChat) {
-          setUnreadDriverMessages(prev => prev + 1);
+   useEffect(() => {
+     if (!ride?.id) return;
+     
+     // Use a unique channel name with timestamp to avoid collisions
+     const channelName = `chat_live:${ride.id}:${Date.now()}`;
+     const channel = supabase.channel(channelName);
+     
+     const unsubscribe = channel
+       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
+         const msg = event.new;
+         if (!msg || msg.ride_id !== ride.id) return;
+         if ((msg.sender_role === "driver" || msg.sender_role === "admin") && !msg.read_by_passenger) {
+           if (!showChat) {
+             setUnreadDriverMessages(prev => prev + 1);
           // Play notification sound
           try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -312,11 +347,21 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     }).subscribe();
     return () => { channel.unsubscribe(); };
   }, [ride?.id, showChat]);
-
-  const prevStatusRef = useRef(currentRide?.status || null);
-  const summaryShownRef = useRef(
-    currentRide?.status === "completed" || currentRide?.status === "cancelled"
-  );
+       }
+     }
+   })
+   .subscribe((status) => {
+     if (status === "CHANNEL_ERROR") {
+       console.warn("[RAServiceTracker] Realtime subscription failed for chat", ride.id);
+     }
+   });
+   
+   return () => { 
+     try {
+       channel.unsubscribe();
+     } catch (_) {}
+   };
+ }, [ride?.id, showChat]);
   const pushSentRef = useRef(new Set());
 
   useEffect(() => {
