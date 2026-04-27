@@ -104,14 +104,23 @@ export function validateCoverageAvailability(lat, lng, options = {}) {
     };
   }
 
+  const activeCities = (cities || []).filter((c) => c?.is_active);
+  const cityByCircle = activeCities.find((c) => pointInCityCircle(lat, lng, c)) || null;
+
   const activeZones = (zones || []).filter(
     (z) => z?.is_active && pointInPolygon({ lat, lng }, z.coordinates)
   );
   const zone = activeZones.sort((a, b) => (b.prioridad || 0) - (a.prioridad || 0))[0] || null;
-  if (!zone) {
+
+  const cityByZone = zone?.city_id
+    ? activeCities.find((c) => c.id === zone.city_id) || null
+    : null;
+
+  // Covered if it belongs to any active tariff polygon OR falls inside an active city radius.
+  if (!zone && !cityByCircle) {
     return {
       isCovered: false,
-      reason: "outside_zone",
+      reason: activeCities.length > 0 ? "outside_city" : "outside_zone",
       message: unavailableMessage,
       zone: null,
       redZone: null,
@@ -119,7 +128,6 @@ export function validateCoverageAvailability(lat, lng, options = {}) {
     };
   }
 
-  const activeCities = (cities || []).filter((c) => c?.is_active);
   if (!activeCities.length) {
     return {
       isCovered: true,
@@ -131,9 +139,6 @@ export function validateCoverageAvailability(lat, lng, options = {}) {
     };
   }
 
-  const cityByZone = zone?.city_id
-    ? activeCities.find((c) => c.id === zone.city_id) || null
-    : null;
   if (cityByZone) {
     return {
       isCovered: true,
@@ -145,7 +150,6 @@ export function validateCoverageAvailability(lat, lng, options = {}) {
     };
   }
 
-  const cityByCircle = activeCities.find((c) => pointInCityCircle(lat, lng, c)) || null;
   if (cityByCircle) {
     return {
       isCovered: true,
@@ -158,9 +162,9 @@ export function validateCoverageAvailability(lat, lng, options = {}) {
   }
 
   return {
-    isCovered: false,
-    reason: "outside_city",
-    message: unavailableMessage,
+    isCovered: !!zone,
+    reason: zone ? null : "outside_city",
+    message: zone ? "" : unavailableMessage,
     zone,
     redZone: null,
     city: null,

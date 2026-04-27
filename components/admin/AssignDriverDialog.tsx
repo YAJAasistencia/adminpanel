@@ -82,8 +82,16 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [viewMode, setViewMode] = useState("list"); // "list" | "map"
   const queryClient = useQueryClient();
-  const primaryRadius = 5;   // km
-  const secondaryRadius = 15; // km
+
+  const { data: settingsList = [] } = useQuery({
+    queryKey: ["appSettings"],
+    queryFn: () => supabaseApi.settings.list(),
+    enabled: open,
+    staleTime: 60 * 1000,
+  });
+  const settings = settingsList[0];
+  const primaryRadius = settings?.auto_primary_radius_km ?? settings?.auction_primary_radius_km ?? 5;
+  const secondaryRadius = settings?.auto_secondary_radius_km ?? settings?.auction_secondary_radius_km ?? 15;
 
   // Load GeoZones to display on map
   const { data: geoZones = [] } = useQuery({
