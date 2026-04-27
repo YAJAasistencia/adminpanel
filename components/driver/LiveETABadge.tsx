@@ -15,6 +15,9 @@ interface LiveETABadgeProps {
   destLat: number;
   destLng: number;
   updateIntervalSec?: number;
+  trafficLightThresholdMin?: number;
+  trafficModerateThresholdMin?: number;
+  uncertaintyFactor?: number;
   mapsProvider?: string;
   googleMapsApiKey?: string;
   compact?: boolean; // If true, show minimal version
@@ -26,6 +29,9 @@ export default function LiveETABadge({
   destLat,
   destLng,
   updateIntervalSec = 30,
+  trafficLightThresholdMin = 20,
+  trafficModerateThresholdMin = 40,
+  uncertaintyFactor = 0.2,
   mapsProvider = "osrm",
   googleMapsApiKey,
   compact = false,
@@ -37,6 +43,8 @@ export default function LiveETABadge({
     destLng,
     enabled: !!(originLat && originLng && destLat && destLng),
     updateIntervalSec,
+    trafficLightThresholdMin,
+    trafficModerateThresholdMin,
     mapsProvider,
     googleMapsApiKey,
   });
@@ -51,7 +59,7 @@ export default function LiveETABadge({
   }
 
   const trafficEmoji = getTrafficEmoji(eta.trafficStatus);
-  const etaText = formatETARange(eta);
+  const etaText = formatETARange(eta, uncertaintyFactor);
   const wasRecentlyUpdated = eta.updateCounter > 1;
 
   if (compact) {

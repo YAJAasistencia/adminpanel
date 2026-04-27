@@ -84,6 +84,9 @@ interface RideRejectionReasonsProps {
   rejectCount?: number; // Cuántos viajes ha rechazado hoy
   warningThreshold?: number;
   reasons?: string[];
+  highRiskReasons?: string[];
+  warningMessageTemplate?: string;
+  highRiskTip?: string;
   ride?: any;
 }
 
@@ -94,6 +97,9 @@ export default function RideRejectionReasons({
   rejectCount = 0,
   warningThreshold = 3,
   reasons,
+  highRiskReasons,
+  warningMessageTemplate,
+  highRiskTip,
   ride,
 }: RideRejectionReasonsProps) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -119,8 +125,18 @@ export default function RideRejectionReasons({
         }))
     : REJECTION_REASONS;
 
+  const normalizedHighRisk = Array.isArray(highRiskReasons)
+    ? highRiskReasons.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  const reasonsWithRisk: RejectionReason[] = configuredReasons.map((r) => {
+    const byId = normalizedHighRisk.includes(String(r.id || "").trim().toLowerCase());
+    const byLabel = normalizedHighRisk.includes(String(r.label || "").trim().toLowerCase());
+    return byId || byLabel ? { ...r, riskLevel: "high" } : r;
+  });
+
   const showWarning = rejectCount >= warningThreshold;
-  const selectedReason = configuredReasons.find((r) => r.id === selected);
+  const selectedReason = reasonsWithRisk.find((r) => r.id === selected);
 
   if (!open) return null;
 
@@ -159,14 +175,18 @@ export default function RideRejectionReasons({
             className="bg-amber-50 border-l-4 border-amber-400 px-4 py-3 mx-4 mt-3 rounded-lg"
           >
             <p className="text-xs font-semibold text-amber-700">
-              ⚠️ Has rechazado {rejectCount} viajes hoy. Tu calificación podría verse afectada.
+              {warningMessageTemplate
+                ? warningMessageTemplate
+                    .replace("{count}", String(rejectCount))
+                    .replace("{threshold}", String(warningThreshold))
+                : `⚠️ Has rechazado ${rejectCount} viajes hoy. Tu calificación podría verse afectada.`}
             </p>
           </motion.div>
         )}
 
         {/* Reasons grid */}
         <div className="overflow-y-auto flex-1 px-4 py-4 space-y-2">
-          {configuredReasons.map((reason) => {
+          {reasonsWithRisk.map((reason) => {
             const isSelected = selected === reason.id;
             const isRiskyReason = reason.riskLevel === "high";
 
@@ -233,7 +253,7 @@ export default function RideRejectionReasons({
               className="bg-red-50 border border-red-200 rounded-lg px-3 py-2"
             >
               <p className="text-xs text-red-700 font-semibold">
-                💡 Tip: Responder más viajes mejora tu calificación y prioridad para futuras solicitudes.
+                {highRiskTip || "💡 Tip: Responder más viajes mejora tu calificación y prioridad para futuras solicitudes."}
               </p>
             </motion.div>
           )}

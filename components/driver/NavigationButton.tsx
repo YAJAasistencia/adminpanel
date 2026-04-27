@@ -49,6 +49,8 @@ export default function NavigationButton({
     ? features.driver_navigation_enabled_apps
     : ["google_maps", "waze", "apple_maps"];
   const defaultNavApp = String(features?.driver_navigation_default_app || "auto");
+  const useModalPicker = features?.driver_navigation_use_modal_picker !== false;
+  const showBestOptionButton = features?.driver_navigation_show_best_option_button !== false;
 
   // Define available navigation options based on platform
   const navOptions = [
@@ -108,7 +110,13 @@ export default function NavigationButton({
   return (
     <>
       <Button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (!useModalPicker) {
+            handleDefaultNav();
+            return;
+          }
+          setOpen(true);
+        }}
         className={`rounded-xl font-semibold flex items-center gap-2 transition-colors ${sizeClasses[size]} ${variantClasses} ${className}`}
       >
         <Navigation className="w-4 h-4" />
@@ -190,14 +198,14 @@ export default function NavigationButton({
               </div>
 
               {/* Auto-open best app button */}
-              <div className="border-t border-slate-200 px-4 py-3 bg-slate-50">
+              {showBestOptionButton && <div className="border-t border-slate-200 px-4 py-3 bg-slate-50">
                 <Button
                   onClick={handleDefaultNav}
                   className="w-full rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold"
                 >
                   Abrir mejor opción
                 </Button>
-              </div>
+              </div>}
             </motion.div>
           </motion.div>
         )}

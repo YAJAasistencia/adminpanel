@@ -102,6 +102,15 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
   const rejectionReasonOptions = Array.isArray(featureFlags?.driver_rejection_reason_options)
     ? featureFlags.driver_rejection_reason_options
     : undefined;
+  const rejectionHighRiskReasons = Array.isArray(featureFlags?.driver_rejection_high_risk_reasons)
+    ? featureFlags.driver_rejection_high_risk_reasons
+    : undefined;
+  const rejectionWarningMessageTemplate = typeof featureFlags?.driver_rejection_warning_message_template === "string"
+    ? featureFlags.driver_rejection_warning_message_template
+    : undefined;
+  const rejectionHighRiskTip = typeof featureFlags?.driver_rejection_high_risk_tip === "string"
+    ? featureFlags.driver_rejection_high_risk_tip
+    : undefined;
   const totalSecs = timeoutSeconds > 0 ? timeoutSeconds : 30;
 
   useEffect(() => { injectLeafletCSS(); }, []);
@@ -450,6 +459,9 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
         rejectCount={rejectCountToday}
         warningThreshold={rejectionWarningThreshold}
         reasons={rejectionReasonOptions}
+        highRiskReasons={rejectionHighRiskReasons}
+        warningMessageTemplate={rejectionWarningMessageTemplate}
+        highRiskTip={rejectionHighRiskTip}
         ride={ride}
       />
     </AnimatePresence>

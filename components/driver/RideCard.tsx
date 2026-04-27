@@ -162,10 +162,11 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
 
   const pickupLat = ride.pickup_lat;
   const pickupLon = ride.pickup_lon;
+  const arrivalRadiusMeters = Number(settings?.driver_arrival_radius_meters ?? 50);
   const distanceToPickup = driverLocation && pickupLat && pickupLon
     ? getDistance(driverLocation.lat, driverLocation.lon, pickupLat, pickupLon) * 1000
     : null;
-  const nearPickup = distanceToPickup !== null ? distanceToPickup <= 50 : true;
+  const nearPickup = distanceToPickup !== null ? distanceToPickup <= arrivalRadiusMeters : true;
 
   const statusFlow = {
     assigned: { next: "en_route", label: "Ir en camino", icon: Navigation },
@@ -345,6 +346,9 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                     destLat={ride.status === "in_progress" ? ride.dropoff_lat : ride.pickup_lat}
                     destLng={ride.status === "in_progress" ? ride.dropoff_lon : ride.pickup_lon}
                     updateIntervalSec={etaRefreshSeconds}
+                    trafficLightThresholdMin={Number(settings?.eta_traffic_light_threshold_minutes ?? 20)}
+                    trafficModerateThresholdMin={Number(settings?.eta_traffic_moderate_threshold_minutes ?? 40)}
+                    uncertaintyFactor={Number(settings?.eta_uncertainty_factor ?? 0.2)}
                     mapsProvider={settings?.maps_provider || "osrm"}
                     googleMapsApiKey={settings?.google_maps_api_key}
                   />
@@ -361,7 +365,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                   <div className="bg-amber-500/20 border border-amber-400/30 rounded-xl p-2.5 flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-amber-400 flex-shrink-0" />
                     <p className="text-xs text-amber-300">
-                      Debes estar a menos de 50m del punto de recogida
+                      Debes estar a menos de {arrivalRadiusMeters}m del punto de recogida
                       {distanceToPickup !== null ? ` (estás a ${Math.round(distanceToPickup)}m)` : ""}
                     </p>
                   </div>

@@ -1616,6 +1616,8 @@ export default function DriverApp() {
 
     const isCancelByDriver = reason === "driver_cancelled";
     const isOfferRejection = !["wait_time_expired", "driver_cancelled", "assigned"].includes(String(reason || ""));
+    const suspensionMinutes = Number(settingsRef.current?.driver_cancel_suspension_minutes ?? 30);
+    const suspensionMs = Math.max(1, suspensionMinutes) * 60 * 1000;
 
     if (isOfferRejection) {
       await registerDriverOfferResult("rejected", reason || "other");
@@ -1636,8 +1638,8 @@ export default function DriverApp() {
           platform_commission: 0,
         });
 
-      const suspendUntil = Date.now() + 30 * 60 * 1000;
-      const suspendUntilISO = futureCDMX(30 * 60 * 1000);
+      const suspendUntil = Date.now() + suspensionMs;
+      const suspendUntilISO = futureCDMX(suspensionMs);
       await supabaseApi.drivers.update(driver?.id || "", { status: "offline", suspended_until: suspendUntilISO });
 
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
@@ -1680,8 +1682,8 @@ export default function DriverApp() {
     }
 
     if (isCancelByDriver) {
-      const suspendUntil = Date.now() + 30 * 60 * 1000;
-      const suspendUntilISO = futureCDMX(30 * 60 * 1000);
+      const suspendUntil = Date.now() + suspensionMs;
+      const suspendUntilISO = futureCDMX(suspensionMs);
       await supabaseApi.drivers.update(driver?.id || "", { status: "offline", suspended_until: suspendUntilISO });
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
       setSuspendedUntil(suspendUntil);

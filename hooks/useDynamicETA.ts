@@ -22,6 +22,8 @@ interface UseDynamicETAProps {
   destLng: number;
   enabled?: boolean;
   updateIntervalSec?: number; // How often to re-fetch route (default 30s)
+  trafficLightThresholdMin?: number;
+  trafficModerateThresholdMin?: number;
   mapsProvider?: string;
   googleMapsApiKey?: string;
 }
@@ -35,6 +37,8 @@ export function useDynamicETA({
   destLng,
   enabled = true,
   updateIntervalSec = DEFAULT_UPDATE_INTERVAL,
+  trafficLightThresholdMin = 20,
+  trafficModerateThresholdMin = 40,
   mapsProvider = "osrm",
   googleMapsApiKey,
 }: UseDynamicETAProps): ETAInfo | null {
@@ -68,7 +72,7 @@ export function useDynamicETA({
               durationMin: route.durationMin,
               lastUpdated: new Date(),
               updateCounter: updateCount + 1,
-              trafficStatus: inferTrafficStatus(route.durationMin),
+              trafficStatus: inferTrafficStatus(route.durationMin, trafficLightThresholdMin, trafficModerateThresholdMin),
             });
           } else {
             // Fallback to haversine if route service fails
@@ -109,7 +113,7 @@ export function useDynamicETA({
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [originLat, originLng, destLat, destLng, enabled, updateIntervalSec, mapsProvider, googleMapsApiKey]);
+  }, [originLat, originLng, destLat, destLng, enabled, updateIntervalSec, mapsProvider, googleMapsApiKey, trafficLightThresholdMin, trafficModerateThresholdMin]);
 
   return eta;
 }
@@ -120,9 +124,13 @@ export function useDynamicETA({
  * Moderate: 20-40 min
  * Heavy: > 40 min
  */
-function inferTrafficStatus(durationMin: number): "light" | "moderate" | "heavy" {
-  if (durationMin < 20) return "light";
-  if (durationMin < 40) return "moderate";
+function inferTrafficStatus(
+  durationMin: number,
+  lightThresholdMin: number,
+  moderateThresholdMin: number
+): "light" | "moderate" | "heavy" {
+  if (durationMin < lightThresholdMin) return "light";
+  if (durationMin < moderateThresholdMin) return "moderate";
   return "heavy";
 }
 

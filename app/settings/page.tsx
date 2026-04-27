@@ -80,10 +80,15 @@ const defaults = {
       "No me siento bien",
       "Otra razón",
     ],
+    driver_rejection_high_risk_reasons: ["La tarifa es muy baja"],
+    driver_rejection_warning_message_template: "⚠️ Has rechazado {count} viajes hoy. Tu calificación podría verse afectada.",
+    driver_rejection_high_risk_tip: "💡 Tip: Responder más viajes mejora tu calificación y prioridad para futuras solicitudes.",
     driver_live_eta_enabled: true,
     driver_external_navigation_enabled: true,
     driver_navigation_enabled_apps: ["google_maps", "waze", "apple_maps"],
     driver_navigation_default_app: "auto",
+    driver_navigation_use_modal_picker: true,
+    driver_navigation_show_best_option_button: true,
   },
   promotions: [],
   
@@ -113,6 +118,9 @@ const defaults = {
   driver_location_update_interval_seconds: 5,
   eta_modal_duration_seconds: 15,
   service_flow_update_minutes: 5,
+  eta_traffic_light_threshold_minutes: 20,
+  eta_traffic_moderate_threshold_minutes: 40,
+  eta_uncertainty_factor: 0.2,
   
   // Jornada Laboral
   work_max_hours: 12,
@@ -129,6 +137,8 @@ const defaults = {
   
   // Operaciones
   driver_inactivity_timeout_minutes: 30,
+  driver_arrival_radius_meters: 50,
+  driver_cancel_suspension_minutes: 30,
   rating_window_minutes: 1440,
   payment_timeout_hours: 24,
   search_phase_seconds: 5,
@@ -290,6 +300,21 @@ export default function SettingsPage() {
       }
       if (form.eta_speed_kmh < 5 || form.eta_speed_kmh > 120) {
         throw new Error("Velocidad ETA debe estar entre 5 y 120 km/h");
+      }
+      if ((form.eta_traffic_light_threshold_minutes ?? 20) < 1) {
+        throw new Error("El umbral de tráfico libre debe ser mayor a 0");
+      }
+      if ((form.eta_traffic_moderate_threshold_minutes ?? 40) <= (form.eta_traffic_light_threshold_minutes ?? 20)) {
+        throw new Error("El umbral de tráfico moderado debe ser mayor al umbral de tráfico libre");
+      }
+      if ((form.eta_uncertainty_factor ?? 0.2) < 0 || (form.eta_uncertainty_factor ?? 0.2) > 1) {
+        throw new Error("La incertidumbre de ETA debe estar entre 0 y 1");
+      }
+      if ((form.driver_arrival_radius_meters ?? 50) < 10 || (form.driver_arrival_radius_meters ?? 50) > 500) {
+        throw new Error("El radio de llegada debe estar entre 10 y 500 metros");
+      }
+      if ((form.driver_cancel_suspension_minutes ?? 30) < 1 || (form.driver_cancel_suspension_minutes ?? 30) > 720) {
+        throw new Error("La suspensión por cancelación debe estar entre 1 y 720 minutos");
       }
       if ((form.total_search_window_seconds ?? 180) < 30) {
         throw new Error("La ventana total de búsqueda debe ser de al menos 30 segundos");
@@ -756,6 +781,21 @@ export default function SettingsPage() {
                   <Input type="number" min={1} value={form.service_flow_update_minutes ?? 5} onChange={e => update("service_flow_update_minutes", parseFloat(e.target.value) || 5)} />
                   <p className="text-xs text-slate-500 mt-1">Intervalo refresco mapa de flujo</p>
                 </div>
+                <div>
+                  <Label>Umbral tráfico libre (min)</Label>
+                  <Input type="number" min={1} value={form.eta_traffic_light_threshold_minutes ?? 20} onChange={e => update("eta_traffic_light_threshold_minutes", parseFloat(e.target.value) || 20)} />
+                  <p className="text-xs text-slate-500 mt-1">Menor a este valor se marca como tráfico libre</p>
+                </div>
+                <div>
+                  <Label>Umbral tráfico moderado (min)</Label>
+                  <Input type="number" min={2} value={form.eta_traffic_moderate_threshold_minutes ?? 40} onChange={e => update("eta_traffic_moderate_threshold_minutes", parseFloat(e.target.value) || 40)} />
+                  <p className="text-xs text-slate-500 mt-1">Menor a este valor se marca como moderado</p>
+                </div>
+                <div className="col-span-2">
+                  <Label>Incertidumbre ETA (0 a 1)</Label>
+                  <Input type="number" min={0} max={1} step={0.05} value={form.eta_uncertainty_factor ?? 0.2} onChange={e => update("eta_uncertainty_factor", parseFloat(e.target.value) || 0.2)} />
+                  <p className="text-xs text-slate-500 mt-1">0.2 = mostrar rango ±20% en el ETA de conductor</p>
+                </div>
               </div>
             </Card>
           </TabsContent>
@@ -863,6 +903,16 @@ export default function SettingsPage() {
                   <Label>Fase de búsqueda (segundos)</Label>
                   <Input type="number" min={1} max={60} value={form.search_phase_seconds ?? 5} onChange={e => update("search_phase_seconds", parseFloat(e.target.value) || 5)} />
                   <p className="text-xs text-slate-500 mt-1">Segundos que dura la fase visual de "buscando conductor"</p>
+                </div>
+                <div>
+                  <Label>Radio de llegada a recogida (metros)</Label>
+                  <Input type="number" min={10} max={500} value={form.driver_arrival_radius_meters ?? 50} onChange={e => update("driver_arrival_radius_meters", parseFloat(e.target.value) || 50)} />
+                  <p className="text-xs text-slate-500 mt-1">Distancia máxima para habilitar "He llegado"</p>
+                </div>
+                <div>
+                  <Label>Suspensión por cancelación de conductor (min)</Label>
+                  <Input type="number" min={1} max={720} value={form.driver_cancel_suspension_minutes ?? 30} onChange={e => update("driver_cancel_suspension_minutes", parseFloat(e.target.value) || 30)} />
+                  <p className="text-xs text-slate-500 mt-1">Tiempo offline automático cuando el conductor cancela</p>
                 </div>
               </div>
             </Card>
@@ -1059,6 +1109,44 @@ export default function SettingsPage() {
                   />
                   <p className="text-xs text-slate-500 mt-1">Estas opciones aparecerán en la app de conductor al rechazar una oferta.</p>
                 </div>
+
+                <div className="mt-3">
+                  <Label>Razones de alto riesgo (una por línea)</Label>
+                  <Textarea
+                    rows={3}
+                    value={((form.features_enabled?.driver_rejection_high_risk_reasons || []) as string[]).join("\n")}
+                    onChange={e =>
+                      updateFeature(
+                        "driver_rejection_high_risk_reasons",
+                        e.target.value
+                          .split("\n")
+                          .map(s => s.trim())
+                          .filter(Boolean)
+                      )
+                    }
+                    placeholder={"La tarifa es muy baja"}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Si la razón coincide por texto o id, se mostrará aviso de riesgo.</p>
+                </div>
+
+                <div className="mt-3">
+                  <Label>Plantilla de mensaje de advertencia</Label>
+                  <Input
+                    value={String(form.features_enabled?.driver_rejection_warning_message_template || "")}
+                    onChange={e => updateFeature("driver_rejection_warning_message_template", e.target.value)}
+                    placeholder="⚠️ Has rechazado {count} viajes hoy. Tu calificación podría verse afectada."
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Variables disponibles: {'{count}'} y {'{threshold}'}</p>
+                </div>
+
+                <div className="mt-3">
+                  <Label>Mensaje sugerencia para alto riesgo</Label>
+                  <Input
+                    value={String(form.features_enabled?.driver_rejection_high_risk_tip || "")}
+                    onChange={e => updateFeature("driver_rejection_high_risk_tip", e.target.value)}
+                    placeholder="💡 Tip: Responder más viajes mejora tu calificación y prioridad para futuras solicitudes."
+                  />
+                </div>
               </div>
             </Card>
           </TabsContent>
@@ -1168,6 +1256,28 @@ export default function SettingsPage() {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Usar selector de apps (modal)</Label>
+                    <div className="mt-2 flex items-center gap-3">
+                      <Switch
+                        checked={!!(form.features_enabled?.driver_navigation_use_modal_picker ?? true)}
+                        onCheckedChange={v => updateFeature("driver_navigation_use_modal_picker", v)}
+                      />
+                      <span className="text-xs text-slate-500">Si se desactiva, abre la app por defecto directo</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Mostrar botón “Abrir mejor opción”</Label>
+                    <div className="mt-2 flex items-center gap-3">
+                      <Switch
+                        checked={!!(form.features_enabled?.driver_navigation_show_best_option_button ?? true)}
+                        onCheckedChange={v => updateFeature("driver_navigation_show_best_option_button", v)}
+                      />
+                      <span className="text-xs text-slate-500">Controla si aparece el botón auxiliar en el modal</span>
                     </div>
                   </div>
                 </div>
