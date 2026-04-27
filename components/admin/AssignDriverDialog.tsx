@@ -205,6 +205,8 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       status: "assigned",
       assignment_mode: "manual",
       assigned_at: assignedNow,
+      manual_assignment_requested_at: null,
+      cancellation_reason: null,
       _excluded_driver_ids: [],
       auction_driver_ids: [],
     };

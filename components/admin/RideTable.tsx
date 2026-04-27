@@ -56,9 +56,10 @@ function getResolvedDriverName(ride, drivers = []) {
 function getRideVisualState(ride) {
   const normalizedReason = String(ride?.cancellation_reason || "").toLowerCase();
   const accepted = hasDriverAccepted(ride) || ride?.status === "completed";
+  const hasAssignedDriver = !!(ride?.driver_id || ride?.driver_name);
   const noDrivers =
     ride?.status === "no_drivers" ||
-    (!ride?.driver_id && !ride?.driver_name && normalizedReason.includes("sin conductores"));
+    (!hasAssignedDriver && normalizedReason.includes("sin conductores"));
 
   if (ride?.status === "completed") {
     return {
@@ -100,7 +101,8 @@ function getRideVisualState(ride) {
     badgeLabel: null,
     badgeClass: "",
     rowClass: rowBgColors[ride?.status] || "bg-white border-l-slate-200",
-    showReason: !!ride?.cancellation_reason,
+    // Do not show stale no-driver/cancellation messages on active assigned rides.
+    showReason: !!ride?.cancellation_reason && ["cancelled", "no_drivers"].includes(ride?.status),
   };
 }
 

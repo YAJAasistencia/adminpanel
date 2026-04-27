@@ -66,7 +66,8 @@ function getRideCreatedTs(ride: Ride) {
 }
 
 function getRideUpdatedIso(ride: Ride) {
-  return ride.assigned_at || ride.updated_at || ride.requested_at || nowCDMX();
+  // Prefer updated_at so same-second reassignments still produce a new signal.
+  return ride.updated_at || ride.assigned_at || ride.requested_at || nowCDMX();
 }
 
 function getSearchWindowMs(s: any) {
@@ -332,6 +333,8 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       driver_name: best.full_name,
       status: "assigned",
       assigned_at: assignedNow,
+      manual_assignment_requested_at: null,
+      cancellation_reason: null,
     });
     queryClient.invalidateQueries({ queryKey: ["drivers"] });
   };
@@ -382,6 +385,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       auction_driver_ids: notifyDrivers.map((driver) => driver.id),
       auction_expires_at: auctionExpiresAt,
       status: "auction",
+      cancellation_reason: null,
     });
     queryClient.invalidateQueries({ queryKey: ["rides"] });
   };
@@ -696,7 +700,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           !ride.driver_accepted_at
         ) {
           const deadlineTs = getAssignedAcceptanceDeadlineTs(ride, s);
-          const signature = `${ride.driver_id || ""}_${ride.assigned_at || ""}_${ride.status || ""}`;
+          const signature = `${ride.driver_id || ""}_${ride.assigned_at || ""}_${ride.updated_at || ""}_${ride.status || ""}`;
           const trackedSignature = assignedRideSignaturesRef.current[ride.id];
 
           if (assignedRideTimersRef.current[ride.id]) {

@@ -685,7 +685,9 @@ export default function DriverApp() {
   const queryClient = useQueryClient();
   const getAssignmentSignal = useCallback((ride?: Ride | null) => {
     if (!ride) return "";
-    return String(ride.assigned_at || ride.updated_at || ride.requested_at || "");
+    // Include updated_at + status so same-driver reassignment in the same second
+    // is still treated as a new assignment and banner is shown again.
+    return String(`${ride.assigned_at || ""}_${ride.updated_at || ""}_${ride.status || ""}_${ride.driver_id || ""}`);
   }, []);
   const getDriverOfferTimeoutMs = useCallback((ride?: Ride | null) => {
     const configured = Number(settingsRef.current?.driver_offer_timeout_seconds ?? settingsRef.current?.auction_timeout_seconds ?? 30);
