@@ -19,9 +19,11 @@ import CancelRideDialog from "@/components/admin/CancelRideDialog";
 import ETAModal from "@/components/admin/ETAModal";
 import { todayCDMX, startOfDayCDMX, endOfDayCDMX, formatCDMX, nowCDMX, futureCDMX } from "@/components/shared/dateUtils";
 import { toast } from "sonner";
+import { useAdminSession } from "@/components/shared/useAdminSession";
 
 export default function Dashboard() {
   const [search, setSearch] = useState("");
+  const { isAllowed } = useAdminSession();
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(todayCDMX());
   const [timeRange, setTimeRange] = useState("today");
@@ -1018,8 +1020,8 @@ export default function Dashboard() {
               toast.error("Error al eliminar viaje");
             }
           }}
-          canEdit={true}
-          canDelete={true}
+          canEdit={isAllowed('edit_rides')}
+          canDelete={isAllowed('delete_rides')}
           drivers={drivers}
           settings={settings}
         />
