@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Panel Administrativo',
-  description: 'Panel administrativo de gestión',
+  title: 'YAJA Asistencia',
+  description: 'Plataforma YAJA Asistencia',
   icons: {
     icon: [
       { url: '/favicon.ico?v=2' },

@@ -20,6 +20,7 @@ import AnnouncementModal from "@/components/shared/AnnouncementModal";
 import { AnimatePresence } from "framer-motion";
 import PullToRefresh from "@/components/driver/PullToRefresh";
 import { initPassengerPush, showPassengerNotification } from "@/components/shared/usePushNotifications";
+import { syncBrandHead } from "@/components/shared/brandHead";
 
 // Sound engine for passenger notifications
 function usePassengerSounds() {
@@ -278,24 +279,13 @@ export default function RoadAssistApp() {
 
   useEffect(() => {
     const company = settings?.company_name?.trim() || "YAJA Asistencia";
-    document.title = `${company} Pasajero`;
-
-    const logoUrl = settings?.logo_url;
-    if (!logoUrl) return;
-
-    const updateLink = (selector: string, href: string) => {
-      let el = document.querySelector(selector) as HTMLLinkElement | null;
-      if (!el) {
-        el = document.createElement("link");
-        el.rel = selector.includes("apple-touch-icon") ? "apple-touch-icon" : "icon";
-        document.head.appendChild(el);
-      }
-      el.href = href;
-    };
-
-    updateLink('link[rel="icon"]', logoUrl);
-    updateLink('link[rel="apple-touch-icon"]', logoUrl);
-  }, [settings?.company_name, settings?.logo_url]);
+    return syncBrandHead({
+      title: `${company} Pasajero`,
+      logoUrl: settings?.logo_url,
+      appName: `${company} Pasajero`,
+      cacheSeed: settings?.updated_at || settings?.updated_date || company,
+    });
+  }, [settings?.company_name, settings?.logo_url, settings?.updated_at, settings?.updated_date]);
 
   const { playSound } = usePassengerSounds();
 

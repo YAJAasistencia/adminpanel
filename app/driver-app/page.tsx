@@ -36,6 +36,7 @@ import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
 import { toast } from "sonner";
 import { enqueueRideUpdateOffline, flushOfflineOutbox, buildReconciliationExtra, isOnlineNow, type OfflineOutboxAction } from "@/lib/offlineSecurity";
 import { clearLiveLocationWatch, getCurrentLiveLocation, getLocationPermissionState, getNotificationPermissionState, requestLocationPermissionAccess, watchLiveLocation, type LiveLocationWatchHandle } from "@/lib/nativeMobile";
+import { syncBrandHead } from "@/components/shared/brandHead";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Driver = {
@@ -909,6 +910,16 @@ export default function DriverApp() {
   }, [settings]);
   const appLogo = settings?.logo_url;
   const appName = settings?.company_name;
+
+  useEffect(() => {
+    const company = appName?.trim() || "YAJA Asistencia";
+    return syncBrandHead({
+      title: `${company} Conductor`,
+      logoUrl: appLogo,
+      appName: `${company} Conductor`,
+      cacheSeed: settings?.updated_at || settings?.updated_date || company,
+    });
+  }, [appLogo, appName, settings?.updated_at, settings?.updated_date]);
 
   useEffect(() => {
     if (settings?.timezone) setSystemTimezone(settings.timezone);
