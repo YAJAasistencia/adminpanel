@@ -613,6 +613,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
   const assignedRideTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const assignedRideDeadlinesRef = useRef<Record<string, number>>({});
+  const assignedRideSignaturesRef = useRef<Record<string, string>>({});
   const processedAuctionsRef = useRef(new Set<string>());
 
   const expireAssignedRide = async (current: Ride) => {
@@ -695,16 +696,21 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           !ride.driver_accepted_at
         ) {
           const deadlineTs = getAssignedAcceptanceDeadlineTs(ride, s);
+          const signature = `${ride.driver_id || ""}_${ride.assigned_at || ""}_${ride.status || ""}`;
+          const trackedSignature = assignedRideSignaturesRef.current[ride.id];
 
           if (assignedRideTimersRef.current[ride.id]) {
             const trackedDeadline = assignedRideDeadlinesRef.current[ride.id] || deadlineTs;
-            if (now < trackedDeadline) {
+            const sameAssignment = trackedSignature === signature;
+            // Keep existing timer only if assignment metadata didn't change.
+            if (sameAssignment && now < trackedDeadline) {
               continue;
             }
 
             clearTimeout(assignedRideTimersRef.current[ride.id]);
             delete assignedRideTimersRef.current[ride.id];
             delete assignedRideDeadlinesRef.current[ride.id];
+            delete assignedRideSignaturesRef.current[ride.id];
           }
 
           const remaining = Math.max(0, deadlineTs - now);
@@ -721,6 +727,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
           assignedRideTimersRef.current[ride.id] = timer;
           assignedRideDeadlinesRef.current[ride.id] = deadlineTs;
+          assignedRideSignaturesRef.current[ride.id] = signature;
         } else if (
           ride.driver_accepted_at ||
           ride.en_route_at ||
@@ -731,6 +738,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             delete assignedRideTimersRef.current[ride.id];
           }
           delete assignedRideDeadlinesRef.current[ride.id];
+          delete assignedRideSignaturesRef.current[ride.id];
         }
 
         if (ride.status === "auction" && ride.auction_expires_at) {
@@ -796,6 +804,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       Object.values(assignedRideTimersRef.current).forEach(clearTimeout);
       assignedRideTimersRef.current = {};
       assignedRideDeadlinesRef.current = {};
+      assignedRideSignaturesRef.current = {};
       assignTimeoutsRef.current.forEach(clearTimeout);
       assignTimeoutsRef.current = [];
     };
