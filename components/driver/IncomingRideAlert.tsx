@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
 import L from "leaflet";
 import { getRoute, getHaverDist } from "@/components/shared/mapsUtils";
+import RideRejectionReasons from "./RideRejectionReasons";
 
 // ─── Leaflet CSS injection ────────────────────────────────────────────────────
 let _leafletCSSInjected = false;
@@ -90,10 +91,11 @@ function CountdownRing({ value, total }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function IncomingRideAlert({ ride, driver, settings, onAccept, onReject, timeoutSeconds = 30 }) {
+export default function IncomingRideAlert({ ride, driver, settings, onAccept, onReject, timeoutSeconds = 30, rejectCountToday = 0 }) {
   const [phase, setPhase] = useState("calculating"); // "calculating" | "ready"
   const [routeInfo, setRouteInfo] = useState(null);
   const [countdown, setCountdown] = useState(timeoutSeconds);
+  const [showRejectionReasons, setShowRejectionReasons] = useState(false);
   const totalSecs = timeoutSeconds > 0 ? timeoutSeconds : 30;
 
   useEffect(() => { injectLeafletCSS(); }, []);
@@ -411,7 +413,7 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
                       <CheckCircle2 className="w-5 h-5" /> Aceptar viaje
                     </button>
                     <button
-                      onClick={() => onReject(ride, "driver_declined")}
+                      onClick={() => setShowRejectionReasons(true)}
                       className="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-sm flex items-center justify-center gap-2 transition-colors active:scale-95 w-full"
                     >
                       <XCircle className="w-4 h-4" /> Rechazar
@@ -424,6 +426,18 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
           )}
         </motion.div>
       )}
+
+      {/* Ride Rejection Reasons Modal */}
+      <RideRejectionReasons
+        open={showRejectionReasons}
+        onClose={() => setShowRejectionReasons(false)}
+        onConfirm={(reasonId) => {
+          setShowRejectionReasons(false);
+          onReject(ride, reasonId);
+        }}
+        rejectCount={rejectCountToday}
+        ride={ride}
+      />
     </AnimatePresence>
   );
 }

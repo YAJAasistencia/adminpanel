@@ -11,6 +11,8 @@ import {
 import RideMap from "@/components/driver/RideMap";
 import RideFareBreakdown from "@/components/driver/RideFareBreakdown";
 import DriverChat from "@/components/driver/DriverChat";
+import NavigationButton from "@/components/driver/NavigationButton";
+import LiveETABadge from "@/components/driver/LiveETABadge";
 import { getDistance } from "@/components/driver/driverUtils";
 
 function CancelRideConfirm({ ride, onConfirm }) {
@@ -327,6 +329,23 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                   )}
                 </div>
 
+                {/* Live ETA during active ride */}
+                {(ride.status === "en_route" || ride.status === "in_progress") && 
+                 driverLocation && 
+                 ride.pickup_lat && 
+                 ride.pickup_lon &&
+                 (ride.status === "in_progress" ? ride.dropoff_lat && ride.dropoff_lon : true) && (
+                  <LiveETABadge
+                    originLat={driverLocation.lat}
+                    originLng={driverLocation.lon}
+                    destLat={ride.status === "in_progress" ? ride.dropoff_lat : ride.pickup_lat}
+                    destLng={ride.status === "in_progress" ? ride.dropoff_lon : ride.pickup_lon}
+                    updateIntervalSec={30}
+                    mapsProvider={settings?.maps_provider || "osrm"}
+                    googleMapsApiKey={settings?.google_maps_api_key}
+                  />
+                )}
+
                 {/* Warnings */}
                 {waitingAdminApproval && (
                   <div className="bg-amber-500/20 border border-amber-400/30 rounded-xl p-3 flex items-center gap-2">
@@ -384,6 +403,41 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                     onConfirm={(fee) => onRejectRide(ride, "wait_time_expired", fee)}
                   />
                 )}
+
+                {/* Navigation buttons */}
+                <div className="flex gap-2">
+                  {/* Navigate to pickup (when en_route) */}
+                  {ride.status === "en_route" && ride.pickup_lat && ride.pickup_lon && (
+                    <NavigationButton
+                      pickup={{
+                        lat: ride.pickup_lat,
+                        lng: ride.pickup_lon,
+                        label: "Punto de recogida",
+                        name: ride.pickup_address || "Recogida",
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      label="📍 Recogida"
+                    />
+                  )}
+
+                  {/* Navigate to dropoff (when in_progress) */}
+                  {ride.status === "in_progress" && ride.dropoff_lat && ride.dropoff_lon && (
+                    <NavigationButton
+                      dropoff={{
+                        lat: ride.dropoff_lat,
+                        lng: ride.dropoff_lon,
+                        label: "Destino",
+                        name: ride.dropoff_address || "Destino",
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      label="🎯 Destino"
+                    />
+                  )}
+                </div>
 
                 {/* Main action button */}
                 {action && (
