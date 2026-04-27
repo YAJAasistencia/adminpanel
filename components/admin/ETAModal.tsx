@@ -50,7 +50,7 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = f
     : { background: "linear-gradient(135deg,#2563eb,#1e40af)" };
 
   const headingText = rejected
-    ? `Conductor no acepto el viaje${".".repeat(dots)}`
+    ? `Conductor no aceptó el viaje${".".repeat(dots)}`
     : waitingAcceptance
     ? `Conductor encontrado · Esperando aceptación${".".repeat(dots)}`
     : `Buscando conductor${".".repeat(dots)}`;
@@ -320,8 +320,8 @@ function NoAcceptancePhase({ ride, onClose, onAssignManual }) {
           <AlertTriangle className="w-6 h-6 text-white" />
         </div>
         <div>
-          <p className="font-bold text-base">Nadie acepto el viaje</p>
-          <p className="text-red-200 text-xs mt-0.5">Se alcanzo el tiempo maximo de busqueda</p>
+          <p className="font-bold text-base">Nadie aceptó el viaje</p>
+          <p className="text-red-200 text-xs mt-0.5">Se alcanzó el tiempo máximo de búsqueda</p>
         </div>
       </div>
       <div className="bg-black/20 rounded-xl p-3 text-sm mb-4">
@@ -354,9 +354,9 @@ export default function ETAModal({ ride, driver, phase, settings, open, onClose,
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className={`p-0 overflow-hidden border-0 shadow-2xl ${isAssigned ? "sm:max-w-[30.8rem]" : "sm:max-w-[26.4rem]"}`}>
-        <DialogTitle className="sr-only">Estado de asignacion de conductor</DialogTitle>
+        <DialogTitle className="sr-only">Estado de asignación de conductor</DialogTitle>
         <DialogDescription className="sr-only">
-          Muestra el estado actual de la busqueda o asignacion de conductor para el viaje.
+          Muestra el estado actual de la búsqueda o asignación de conductor para el viaje.
         </DialogDescription>
         {isNoDrivers ? (
           <NoDriversPhase ride={ride} onClose={onClose} onAssignManual={() => { onClose(); onAssignManual?.(ride); }} />

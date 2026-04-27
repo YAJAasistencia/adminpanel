@@ -73,14 +73,28 @@ function getSearchWindowMs(s: any) {
   return Math.max(30, Number(s?.total_search_window_seconds ?? 180)) * 1000;
 }
 
+function getDriverAcceptTimeoutMs(s: any) {
+  return Math.max(10, Number(s?.auction_timeout_seconds ?? 30)) * 1000;
+}
+
 function getFallbackReason(ride: Ride, excludedCount = 0) {
-  if (excludedCount > 0) return "Nadie acepto el viaje";
+  if (excludedCount > 0) return "Nadie aceptó el viaje";
   return "Sin conductores disponibles";
 }
 
 function isSearchWindowExceeded(ride: Ride, s: any) {
   const rideAge = Date.now() - getRideCreatedTs(ride);
   return rideAge >= getSearchWindowMs(s);
+}
+
+function getAssignedAcceptanceDeadlineTs(ride: Ride, s: any) {
+  const assignedAtTs = new Date(getRideUpdatedIso(ride)).getTime();
+  const graceMs = ride.assignment_mode === "auction" ? 3000 : 0;
+  return assignedAtTs + getDriverAcceptTimeoutMs(s) + graceMs;
+}
+
+function isAssignedAcceptanceExpired(ride: Ride, s: any) {
+  return Date.now() >= getAssignedAcceptanceDeadlineTs(ride, s);
 }
 
 function uniqueIds(values: Array<string | null | undefined>) {
@@ -196,24 +210,21 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
       if (driver.approval_status !== "approved") return false;
       if (busyRideDriverIds.has(driver.id)) return false;
 
-      // En modo automático solo se considera disponibilidad y distancia; sin filtros de tipo ni ciudad.
-      if (ride.assignment_mode !== "auto") {
-        const hasServiceNames = Array.isArray(driver.service_type_names) && driver.service_type_names.length > 0;
-        const hasServiceIds = Array.isArray(driver.service_type_ids) && driver.service_type_ids.length > 0;
+      const hasServiceNames = Array.isArray(driver.service_type_names) && driver.service_type_names.length > 0;
+      const hasServiceIds = Array.isArray(driver.service_type_ids) && driver.service_type_ids.length > 0;
 
-        if (ride.service_type_name) {
-          if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
-        } else if (ride.service_type_id) {
-          if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
-        }
-
-        if (ride.service_type_name && ride.service_type_id) {
-          if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
-          if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
-        }
-
-        if (ride.city_id && driver.city_id && driver.city_id !== ride.city_id) return false;
+      if (ride.service_type_name) {
+        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
+      } else if (ride.service_type_id) {
+        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
       }
+
+      if (ride.service_type_name && ride.service_type_id) {
+        if (hasServiceNames && !driver.service_type_names?.includes(ride.service_type_name)) return false;
+        if (hasServiceIds && !driver.service_type_ids?.includes(ride.service_type_id)) return false;
+      }
+
+      if (ride.city_id && driver.city_id && driver.city_id !== ride.city_id) return false;
 
       if (ride.pickup_lat && ride.pickup_lon) {
         const driverCity = localCities.find((city) => city.id === driver.city_id);
@@ -405,9 +416,17 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
               const current = await supabaseApi.rideRequests.get(createdRideId).catch(() => null);
               if (!current) return;
               if (current.driver_id || current.status !== "auction") return;
-              const prevNotified = Array.isArray(current.auction_driver_ids) ? current.auction_driver_ids : [];
-              await startAuction(current, prevNotified);
-            }, 250);
+
+              // If auction was already initialized (with notified drivers and expiry),
+              // do not relaunch it; relaunching can replace recipients and lose banners.
+              const alreadyInitialized =
+                Array.isArray(current.auction_driver_ids) &&
+                current.auction_driver_ids.length > 0 &&
+                !!current.auction_expires_at;
+
+              if (alreadyInitialized) return;
+              await startAuction(current);
+            }, 0);
             return;
           }
 
@@ -593,15 +612,79 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
   }, [queryClient, enabled]);
 
   const assignedRideTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const assignedRideDeadlinesRef = useRef<Record<string, number>>({});
   const processedAuctionsRef = useRef(new Set<string>());
+
+  const expireAssignedRide = async (current: Ride) => {
+    if (isSearchWindowExceeded(current, settingsRef.current)) {
+      const prevExcludedCount = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids.length : 0;
+      await moveRideToFallback(current, getFallbackReason(current, prevExcludedCount + 1));
+      return;
+    }
+
+    const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
+    const excludedIds = uniqueIds([...prevExcluded, current.driver_id]);
+
+    queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
+      old.map((r) => r.id === current.id ? { ...r, status: "pending", driver_id: null, driver_name: null, _excluded_driver_ids: excludedIds } : r)
+    );
+
+    await supabaseApi.drivers.update(String(current.driver_id), { status: "available" }).catch(() => {});
+    queryClient.setQueryData(["drivers"], (old: Driver[] = []) =>
+      old.map((d) => d.id === current.driver_id ? { ...d, status: "available" } : d)
+    );
+
+    if (current.assignment_mode === "manual") {
+      const manualRequestedAt = nowCDMX();
+      await supabaseApi.rideRequests.update(current.id, {
+        status: "pending",
+        driver_id: null,
+        driver_name: null,
+        auction_driver_ids: [],
+        manual_assignment_requested_at: manualRequestedAt,
+      });
+
+      queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
+        old.map((r) =>
+          r.id === current.id
+            ? {
+                ...r,
+                status: "pending",
+                driver_id: null,
+                driver_name: null,
+                auction_driver_ids: [],
+                manual_assignment_requested_at: manualRequestedAt,
+              }
+            : r
+        )
+      );
+      return;
+    }
+
+    await supabaseApi.rideRequests.update(current.id, {
+      status: "pending",
+      driver_id: null,
+      driver_name: null,
+      _excluded_driver_ids: excludedIds,
+    });
+
+    const mode = current.assignment_mode;
+    const useAuction = mode
+      ? mode === "auction"
+      : !!settingsRef.current?.auction_mode_enabled;
+    if (useAuction) {
+      await startAuction({ ...current, status: "pending", driver_id: null, assignment_mode: "auction" }, excludedIds);
+    } else {
+      await autoAssignDriver({ ...current, status: "pending", driver_id: null }, excludedIds);
+    }
+  };
 
   useEffect(() => {
     if (!enabled) return;
 
-    const unsub = queryClient.getQueryCache().subscribe(() => {
+    const syncTimeoutTimers = () => {
       const rides = (queryClient.getQueryData(["rides"]) as Ride[]) ?? [];
       const s = settingsRef.current;
-      const timeoutMs = (s?.auction_timeout_seconds ?? 30) * 1000;
       const now = Date.now();
 
       for (const ride of rides) {
@@ -611,81 +694,33 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           !ride.en_route_at &&
           !ride.driver_accepted_at
         ) {
-          if (assignedRideTimersRef.current[ride.id]) continue;
+          const deadlineTs = getAssignedAcceptanceDeadlineTs(ride, s);
 
-          const assignedAt = new Date(getRideUpdatedIso(ride)).getTime();
-          const graceMs = ride.assignment_mode === "auction" ? 3000 : 0;
-          const remaining = Math.max(0, timeoutMs + graceMs - (now - assignedAt));
+          if (assignedRideTimersRef.current[ride.id]) {
+            const trackedDeadline = assignedRideDeadlinesRef.current[ride.id] || deadlineTs;
+            if (now < trackedDeadline) {
+              continue;
+            }
+
+            clearTimeout(assignedRideTimersRef.current[ride.id]);
+            delete assignedRideTimersRef.current[ride.id];
+            delete assignedRideDeadlinesRef.current[ride.id];
+          }
+
+          const remaining = Math.max(0, deadlineTs - now);
 
           const timer = setTimeout(async () => {
             delete assignedRideTimersRef.current[ride.id];
+            delete assignedRideDeadlinesRef.current[ride.id];
             const current = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
             if (!current || current.status !== "assigned" || current.en_route_at || current.driver_accepted_at) return;
 
-            if (isSearchWindowExceeded(current, settingsRef.current)) {
-              const prevExcludedCount = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids.length : 0;
-              await moveRideToFallback(current, getFallbackReason(current, prevExcludedCount + 1));
-              return;
-            }
-
-            const prevExcluded = Array.isArray(current._excluded_driver_ids) ? current._excluded_driver_ids : [];
-            const excludedIds = uniqueIds([...prevExcluded, current.driver_id]);
-
-            queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
-              old.map((r) => r.id === current.id ? { ...r, status: "pending", driver_id: null, driver_name: null, _excluded_driver_ids: excludedIds } : r)
-            );
-
-            await supabaseApi.drivers.update(String(current.driver_id), { status: "available" }).catch(() => {});
-            queryClient.setQueryData(["drivers"], (old: Driver[] = []) =>
-              old.map((d) => d.id === current.driver_id ? { ...d, status: "available" } : d)
-            );
-
-            if (current.assignment_mode === "manual") {
-              const manualRequestedAt = nowCDMX();
-              await supabaseApi.rideRequests.update(current.id, {
-                status: "pending",
-                driver_id: null,
-                driver_name: null,
-                auction_driver_ids: [],
-                manual_assignment_requested_at: manualRequestedAt,
-              });
-
-              queryClient.setQueryData(["rides"], (old: Ride[] = []) =>
-                old.map((r) =>
-                  r.id === current.id
-                    ? {
-                        ...r,
-                        status: "pending",
-                        driver_id: null,
-                        driver_name: null,
-                        auction_driver_ids: [],
-                        manual_assignment_requested_at: manualRequestedAt,
-                      }
-                    : r
-                )
-              );
-              return;
-            }
-
-            await supabaseApi.rideRequests.update(current.id, {
-              status: "pending",
-              driver_id: null,
-              driver_name: null,
-              _excluded_driver_ids: excludedIds,
-            });
-
-            const mode = current.assignment_mode;
-            const useAuction = mode
-              ? mode === "auction"
-              : !!settingsRef.current?.auction_mode_enabled;
-            if (useAuction) {
-              await startAuction({ ...current, status: "pending", driver_id: null, assignment_mode: "auction" }, excludedIds);
-            } else {
-              await autoAssignDriver({ ...current, status: "pending", driver_id: null }, excludedIds);
-            }
+            if (!isAssignedAcceptanceExpired(current, settingsRef.current)) return;
+            await expireAssignedRide(current);
           }, remaining);
 
           assignedRideTimersRef.current[ride.id] = timer;
+          assignedRideDeadlinesRef.current[ride.id] = deadlineTs;
         } else if (
           ride.driver_accepted_at ||
           ride.en_route_at ||
@@ -695,6 +730,7 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
             clearTimeout(assignedRideTimersRef.current[ride.id]);
             delete assignedRideTimersRef.current[ride.id];
           }
+          delete assignedRideDeadlinesRef.current[ride.id];
         }
 
         if (ride.status === "auction" && ride.auction_expires_at) {
@@ -742,12 +778,24 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
           assignTimeoutsRef.current.push(timer);
         }
       }
+    };
+
+    // Run immediately so existing assigned rides also get timeout protection.
+    syncTimeoutTimers();
+
+    const unsub = queryClient.getQueryCache().subscribe(() => {
+      syncTimeoutTimers();
     });
+
+    // Safety net: run by wall-clock even if cache events are missed/throttled.
+    const watchdogInterval = setInterval(syncTimeoutTimers, 3000);
 
     return () => {
       unsub();
+      clearInterval(watchdogInterval);
       Object.values(assignedRideTimersRef.current).forEach(clearTimeout);
       assignedRideTimersRef.current = {};
+      assignedRideDeadlinesRef.current = {};
       assignTimeoutsRef.current.forEach(clearTimeout);
       assignTimeoutsRef.current = [];
     };

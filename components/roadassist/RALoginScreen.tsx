@@ -208,7 +208,7 @@ export default function RALoginScreen({ onLogin, appName, appLogo }) {
               <Truck className="w-10 h-10 text-white" />
             )}
           </div>
-          <h1 className="text-2xl font-black text-white">{appName || "Pasajero"}</h1>
+          <h1 className="text-2xl font-black text-white">{appName || "YAJA Asistencia"}</h1>
           <p className="text-blue-300 text-sm mt-1">Solicita asistencia cuando más lo necesitas</p>
         </div>
 

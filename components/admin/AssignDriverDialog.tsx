@@ -82,6 +82,8 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [viewMode, setViewMode] = useState("list"); // "list" | "map"
   const queryClient = useQueryClient();
+  const primaryRadius = 5;   // km
+  const secondaryRadius = 15; // km
 
   // Load GeoZones to display on map
   const { data: geoZones = [] } = useQuery({
@@ -89,6 +91,13 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
     queryFn: () => supabaseApi.geoZones.list(),
     enabled: open,
     staleTime: 60000,
+  });
+
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: () => supabaseApi.cities.list(),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Only exclude drivers who are truly busy (actively doing a ride, not just "assigned" waiting to accept)
@@ -114,6 +123,21 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
         }
       }
       if (ride?.city_id && d.city_id && d.city_id !== ride.city_id) return false;
+
+      if (ride?.pickup_lat && ride?.pickup_lon) {
+        const driverCity = cities.find(c => c.id === d.city_id);
+        const cityRadius = driverCity?.geofence_radius_km || driverCity?.radius_km;
+        if (driverCity?.center_lat && cityRadius) {
+          const cityDist = getHaverDist(ride.pickup_lat, ride.pickup_lon, driverCity.center_lat, driverCity.center_lon);
+          if (cityDist > cityRadius) return false;
+        }
+
+        if (d.latitude && d.longitude) {
+          const distToRide = getHaverDist(ride.pickup_lat, ride.pickup_lon, d.latitude, d.longitude);
+          if (distToRide > secondaryRadius) return false;
+        }
+      }
+
       return true;
     });
     if (ride?.pickup_lat && ride?.pickup_lon) {
@@ -124,7 +148,7 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
       });
     }
     return base;
-  }, [drivers, rides, ride]);
+  }, [drivers, rides, ride, cities, secondaryRadius]);
 
   // Auto-select nearest
   useEffect(() => {
@@ -187,9 +211,6 @@ export default function AssignDriverDialog({ ride, drivers, rides, open, onOpenC
 
   const nearest = availableDrivers[0];
   const hasPickup = !!(ride?.pickup_lat && ride?.pickup_lon);
-  const primaryRadius = 5;   // km
-  const secondaryRadius = 15; // km
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[46.2rem] max-h-[90vh] overflow-y-auto">

@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AddressSearch from "./AddressSearch";
 import MapPreview from "./MapPreview";
 import AdminMapPicker from "./AdminMapPicker";
-import { detectZone, calcZonePrice, detectRedZone } from "@/components/shared/geozone";
+import { detectZone, calcZonePrice, detectRedZone, validateCoverageAvailability } from "@/components/shared/geozone";
 import { Gavel, Car, AlertTriangle, Camera, Calendar, Phone } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { nowCDMX, futureCDMX, todayCDMX, systemLocalToISO } from "@/components/shared/dateUtils";
@@ -26,6 +26,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const [mapPickerField, setMapPickerField] = useState(null); // "pickup" | "dropoff"
   const [detectedZone, setDetectedZone] = useState(null);
   const [detectedRedZone, setDetectedRedZone] = useState(null);
+  const [coverageValidation, setCoverageValidation] = useState<any>(null);
   const [form, setForm] = useState({
     passenger_name: "", passenger_phone: "", pickup_address: "", dropoff_address: "",
     service_type_name: "", service_type_id: "", estimated_price: "", distance_km: "", duration_minutes: "",
@@ -58,6 +59,12 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const { data: companies = [] } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => (await supabaseApi.companies.list()).filter(c => c.is_active === true),
+    enabled: open,
+  });
+
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: () => supabaseApi.cities.list(),
     enabled: open,
   });
 
@@ -185,14 +192,19 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
     if (!coords) {
       // User typed but didn't select — clear coords
       setPickupCoords(null);
+      setCoverageValidation(null);
+      setDetectedZone(null);
+      setDetectedRedZone(null);
       return;
     }
     if (coords) {
       setPickupCoords(coords);
       const lat = coords.lat; const lng = coords.lng || coords.lon;
-      const zone = detectZone(lat, lng, zones);
+      const coverage = validateCoverageAvailability(lat, lng, { zones, redZones, cities });
+      const zone = coverage.zone || detectZone(lat, lng, zones);
       setDetectedZone(zone || null);
-      setDetectedRedZone(detectRedZone(lat, lng, redZones) || null);
+      setDetectedRedZone(coverage.redZone || detectRedZone(lat, lng, redZones) || null);
+      setCoverageValidation(coverage);
       if (dropoffCoords) fetchRoute(coords, dropoffCoords);
       // If single zone (no destination yet), try to apply corp pricing
       if (zone && form.company_id) {
@@ -268,6 +280,17 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
   const isGasolineService = /gasolina/i.test(form.service_type_name || "") || /gasolina/i.test(form.notes || "");
 
   const handleCreate = async () => {
+    const pickupLat = pickupCoords?.lat;
+    const pickupLng = pickupCoords?.lon || pickupCoords?.lng;
+    const coverage = validateCoverageAvailability(pickupLat, pickupLng, { zones, redZones, cities });
+    if (!coverage.isCovered) {
+      if (coverage.reason === "red_zone" && coverage.redZone?.name) {
+        alert(`No se puede crear el servicio: ZONA ROJA - ${coverage.redZone.name}`);
+      } else {
+        alert(coverage.message || "Ciudad no disponible, pronto estaremos aquí.");
+      }
+      return;
+    }
     if (detectedRedZone) {
       alert(`No se puede crear el servicio: ZONA ROJA - ${detectedRedZone.name}`);
       return;
@@ -538,6 +561,12 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
                 <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
                 <span className="text-xs text-red-700 font-semibold">⚠️ ZONA ROJA: {detectedRedZone.name}</span>
                 {detectedRedZone.reason && <span className="text-xs text-red-600">— {detectedRedZone.reason}</span>}
+              </div>
+            )}
+            {!detectedRedZone && pickupCoords && coverageValidation && !coverageValidation.isCovered && (
+              <div className="mt-1.5 flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2">
+                <AlertTriangle className="w-4 h-4 text-amber-700 flex-shrink-0" />
+                <span className="text-xs text-amber-800 font-semibold">Ciudad no disponible, pronto estaremos aquí.</span>
               </div>
             )}
             {detectedZone && !detectedRedZone && (
@@ -859,6 +888,7 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
           <Button onClick={handleCreate} disabled={
             !form.passenger_name || !form.pickup_address || !form.service_type_name || !form.payment_method ||
             !pickupCoords ||
+            (pickupCoords && coverageValidation && !coverageValidation.isCovered) ||
             (form.is_scheduled && (!form.scheduled_date || !form.scheduled_time)) ||
             ((destinationRequired || (form.dropoff_address && !dropoffCoords)) && !isVial && !dropoffCoords) ||
             (selectedCompany && (selectedCompany.folio_fields || []).some(f => f.required && !folioAnswers[f.key])) ||
@@ -882,9 +912,11 @@ export default function CreateRideDialog({ open, onOpenChange, serviceTypes, pay
         if (mapPickerField === "pickup") {
           update("pickup_address", address);
           setPickupCoords(coords);
-          const zone = detectZone(lat, lon, zones);
+          const coverage = validateCoverageAvailability(lat, lon, { zones, redZones, cities });
+          const zone = coverage.zone || detectZone(lat, lon, zones);
           setDetectedZone(zone || null);
-          setDetectedRedZone(detectRedZone(lat, lon, redZones) || null);
+          setDetectedRedZone(coverage.redZone || detectRedZone(lat, lon, redZones) || null);
+          setCoverageValidation(coverage);
           if (dropoffCoords) fetchRoute(coords, dropoffCoords);
         } else {
           update("dropoff_address", address);

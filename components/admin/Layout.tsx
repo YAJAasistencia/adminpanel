@@ -16,6 +16,72 @@ import useRideAutoAssign from "@/components/shared/useRideAutoAssign";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseApi } from "@/lib/supabaseApi";
 
+function hexToRgb(hex: string) {
+  const raw = String(hex || "").replace("#", "").trim();
+  const normalized = raw.length === 3
+    ? raw.split("").map((ch) => `${ch}${ch}`).join("")
+    : raw;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return { r: 59, g: 130, b: 246 };
+  }
+
+  const int = parseInt(normalized, 16);
+  return {
+    r: (int >> 16) & 255,
+    g: (int >> 8) & 255,
+    b: int & 255,
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+
+  let h = 0;
+  const l = (max + min) / 2;
+  let s = 0;
+
+  if (delta !== 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+    switch (max) {
+      case rn:
+        h = ((gn - bn) / delta) % 6;
+        break;
+      case gn:
+        h = (bn - rn) / delta + 2;
+        break;
+      default:
+        h = (rn - gn) / delta + 4;
+        break;
+    }
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  return {
+    h: Math.round(h),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+}
+
+function hexToHslTuple(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const { h, s, l } = rgbToHsl(r, g, b);
+  return `${h} ${s}% ${l}%`;
+}
+
+function getReadableForeground(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.6 ? "0 0% 9%" : "0 0% 98%";
+}
+
 // ─── Update PWA title per app context ────────────────────────────────────────
 // The static /public/manifest.json handles the full PWA definition.
 // This hook only updates the iOS title meta tag dynamically.
@@ -56,10 +122,10 @@ function usePWAManifest(currentPageName: string, companyName?: string) {
   useEffect(() => {
     const isPassenger = currentPageName === "RoadAssistApp";
     const isDriver = currentPageName === "DriverApp";
-    const company = (companyName && companyName !== "RideFlow") ? companyName : "YAJA Asistencia";
+    const company = companyName || "YAJA Asistencia";
 
     let appTitle: string;
-    if (isPassenger) appTitle = "Pasajero";
+    if (isPassenger) appTitle = `${company} Pasajero`;
     else if (isDriver) appTitle = `${company} Conductor`;
     else {
       const pageName = PAGE_TITLES[currentPageName];
@@ -135,6 +201,14 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   const accentColor = settings?.accent_color || "#3B82F6";
   const primaryColor = settings?.primary_color || "#0F172A";
   const secondaryColor = settings?.secondary_color || "#10B981";
+  const companyName = settings?.company_name || "YAJA Asistencia";
+
+  const primaryHsl = hexToHslTuple(primaryColor);
+  const accentHsl = hexToHslTuple(accentColor);
+  const secondaryHsl = hexToHslTuple(secondaryColor);
+  const primaryForeground = getReadableForeground(primaryColor);
+  const accentForeground = getReadableForeground(accentColor);
+  const secondaryForeground = getReadableForeground(secondaryColor);
 
   // ── Favicon dinámico: usa el logo_url de la DB ──
   useEffect(() => {
@@ -217,7 +291,15 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     <div className="min-h-screen bg-[#F4F6FA]">
       <style>{`
         :root {
-          --accent: ${accentColor};
+          --primary: ${primaryHsl};
+          --primary-foreground: ${primaryForeground};
+          --accent: ${accentHsl};
+          --accent-foreground: ${accentForeground};
+          --secondary: ${secondaryHsl};
+          --secondary-foreground: ${secondaryForeground};
+          --ring: ${accentHsl};
+          --sidebar-primary: ${primaryHsl};
+          --sidebar-primary-foreground: ${primaryForeground};
           --app-primary: ${primaryColor};
           --app-accent: ${accentColor};
           --app-secondary: ${secondaryColor};
@@ -235,7 +317,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
           {settings?.logo_url && (
             <img src={settings.logo_url} alt="Logo" className="w-6 h-6 rounded object-contain" />
           )}
-          <h1 className="font-bold text-slate-900 text-sm">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</h1>
+          <h1 className="font-bold text-slate-900 text-sm">{companyName}</h1>
         </div>
         <Button variant="outline" size="sm" className="h-8 w-8" onClick={shareAdminLink}>
           <Share2 className="w-4 h-4" />
@@ -256,11 +338,11 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                 <img src={settings.logo_url} alt="Logo" className="w-9 h-9 rounded-xl object-contain" />
               ) : (
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow" style={{ backgroundColor: accentColor }}>
-                  {((settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA").charAt(0).toUpperCase()}
+                  {companyName.charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
-                <p className="font-bold text-slate-900 text-sm leading-tight">{(settings?.company_name && settings.company_name !== "RideFlow") ? settings.company_name : "YAJA"}</p>
+                <p className="font-bold text-slate-900 text-sm leading-tight">{companyName}</p>
                 <p className="text-[10px] text-slate-400">Panel administrativo</p>
               </div>
             </div>

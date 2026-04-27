@@ -275,7 +275,7 @@ export default function RoadAssistApp() {
   }, [settings?.timezone]);
 
   useEffect(() => {
-    const company = settings?.company_name?.trim() || "Pasajero";
+    const company = settings?.company_name?.trim() || "YAJA Asistencia";
     document.title = `${company} Pasajero`;
 
     const logoUrl = settings?.logo_url;
@@ -420,7 +420,7 @@ export default function RoadAssistApp() {
   }
 
   if (!user) {
-    return <RALoginScreen onLogin={login} appName={settings?.company_name} appLogo={settings?.logo_url} />;
+    return <RALoginScreen onLogin={login} appName={settings?.company_name || "YAJA Asistencia"} appLogo={settings?.logo_url} />;
   }
 
   const trackerRide = activeRide || endedRide;
@@ -456,7 +456,7 @@ export default function RoadAssistApp() {
               </div>
             )}
             <div className="text-left">
-              <p className="text-white font-bold text-sm leading-tight">{settings?.company_name || "Asistencia Vial"}</p>
+              <p className="text-white font-bold text-sm leading-tight">{settings?.company_name || "YAJA Asistencia"}</p>
               <p className="text-white/60 text-[11px]">Hola, {user.full_name?.split(" ")[0]}</p>
             </div>
           </div>

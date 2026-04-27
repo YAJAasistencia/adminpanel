@@ -189,6 +189,18 @@ export default function Dashboard() {
     return { id, full_name: rideLike?.driver_name || "Conductor" };
   };
 
+  const hasDriverAccepted = (rideLike: any) => {
+    if (!rideLike) return false;
+    const acceptedByTimestamp = !!(
+      rideLike.driver_accepted_at ||
+      rideLike.en_route_at ||
+      rideLike.arrived_at ||
+      rideLike.in_progress_at
+    );
+    const acceptedByStatus = ["admin_approved", "en_route", "arrived", "in_progress"].includes(rideLike.status || "");
+    return acceptedByTimestamp || acceptedByStatus;
+  };
+
   useEffect(() => {
     const unsub = supabase.channel("rides_changes").on(
       "postgres_changes",
@@ -214,6 +226,7 @@ export default function Dashboard() {
           const prevRide = ridesRef.current.find((r: any) => r.id === d?.id);
           const prevStatus = prevRide?.status;
           const isPassengerAppRide = !!d?.passenger_user_id;
+          const fullRide = prevRide ? { ...prevRide, ...d } : d;
 
           // Update rides data first (atomic update)
           queryClient.setQueryData(["rides"], (old: any = []) =>
@@ -233,14 +246,12 @@ export default function Dashboard() {
               setEtaModalData((prev: any) => prev?.ride?.id === d.id ? null : prev);
               return;
             }
-            const fullRide = prevRide ? { ...prevRide, ...d } : d;
             setEtaModalData({ ride: fullRide, driver: null, phase: "no_drivers" });
             return;
           }
 
           if (d?.status === "pending" && d?.assignment_mode === "manual" && d?.manual_assignment_requested_at) {
-            const fullRide = prevRide ? { ...prevRide, ...d } : d;
-            const noAcceptanceFallback = /nadie\s+acepto\s+el\s+viaje/i.test(d?.cancellation_reason || "");
+            const noAcceptanceFallback = /nadie\s+acept[oó]\s+el\s+viaje/i.test(d?.cancellation_reason || "");
 
             if (noAcceptanceFallback) {
               setEtaModalData({ ride: fullRide, driver: null, phase: "no_acceptance" });
@@ -254,11 +265,9 @@ export default function Dashboard() {
             if (dismissedEtaRideIdsRef.current.has(d.id)) return;
             setEtaModalData((prev: any) => {
               if (prev?.ride?.id === d.id) {
-                const fullRide = prevRide ? { ...prevRide, ...d } : d;
                 return { ...prev, ride: fullRide, phase: "searching" };
               }
               if (!prev && d?.status === "auction") {
-                const fullRide = prevRide ? { ...prevRide, ...d } : d;
                 return { ride: fullRide, driver: null, phase: "searching" };
               }
               return prev;
@@ -266,9 +275,19 @@ export default function Dashboard() {
             return;
           }
 
+          const acceptedWithDriver = !isPassengerAppRide && !!d?.driver_id && hasDriverAccepted(fullRide);
+          if (acceptedWithDriver) {
+            dismissedEtaRideIdsRef.current.delete(d.id);
+            const instantDriver = resolveModalDriver(fullRide);
+            if (instantDriver) setEtaModalData({ ride: fullRide, driver: instantDriver, phase: "assigned" });
+
+            const fetched = await supabaseApi.drivers.get(d.driver_id).catch(() => null);
+            if (fetched) setEtaModalData({ ride: fullRide, driver: fetched, phase: "assigned" });
+            return;
+          }
+
           if (d?.status === "assigned" && d?.driver_id && !isPassengerAppRide) {
-            const fullRide = prevRide ? { ...prevRide, ...d } : d;
-            const driverAccepted = !!(d?.driver_accepted_at || d?.en_route_at);
+            const driverAccepted = hasDriverAccepted(fullRide);
             const waitingPhase = d?.assignment_mode === "manual" ? "waiting_acceptance" : "searching";
             
             if (driverAccepted) {
@@ -327,8 +346,8 @@ export default function Dashboard() {
     const current = rides.find((r: any) => r.id === currentRideId);
     if (!current) return;
 
-    const driverAccepted = !!(current.driver_accepted_at || current.en_route_at || current.arrived_at || current.in_progress_at);
-    if (current.status !== "assigned" || !current.driver_id || !driverAccepted) return;
+    const driverAccepted = hasDriverAccepted(current);
+    if (!current.driver_id || !driverAccepted) return;
 
     const instantDriver = resolveModalDriver(current);
     if (instantDriver) setEtaModalData({ ride: current, driver: instantDriver, phase: "assigned" });

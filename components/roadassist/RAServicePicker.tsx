@@ -15,6 +15,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { nowCDMX } from "@/components/shared/dateUtils";
+import { validateCoverageAvailability } from "@/components/shared/geozone";
 
 const iconMap = {
   car: Car, crown: Crown, truck: Truck, ambulance: Ambulance, wrench: Wrench,
@@ -129,6 +130,18 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     queryKey: ["appSettings"],
     queryFn: () => supabaseApi.settings.list(),
   });
+  const { data: geoZones = [] } = useQuery({
+    queryKey: ["geoZones"],
+    queryFn: () => supabaseApi.geoZones.list(),
+  });
+  const { data: redZones = [] } = useQuery({
+    queryKey: ["redZones"],
+    queryFn: () => supabaseApi.redZones.list(),
+  });
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: () => supabaseApi.cities.list(),
+  });
   const appSettings = appSettingsList[0];
   // Filter payment methods: active + allowed for this service type
   const activePMs = useMemo(() => {
@@ -181,6 +194,14 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
   const isVial = useMemo(() => /vial/i.test(selectedCategory || ""), [selectedCategory]);
   const isTransporteFlow = /transporte/i.test(selectedCategory || "");
   const isGruaFlow = /grua|grúa/i.test(selectedCategory || "");
+  const pickupCoverage = useMemo(() => {
+    if (pickupLat == null || pickupLon == null) return null;
+    return validateCoverageAvailability(pickupLat, pickupLon, {
+      zones: geoZones,
+      redZones,
+      cities,
+    });
+  }, [pickupLat, pickupLon, geoZones, redZones, cities]);
 
   // Fetch route when both coords available (only if destination required)
   const fetchRoute = async (pLat, pLon, dLat, dLon) => {
@@ -388,6 +409,23 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
   };
 
   const handleSubmit = async () => {
+    if (!pickupLat || !pickupLon) {
+      setError("Ingresa la dirección de recogida");
+      return;
+    }
+    const coverage = validateCoverageAvailability(pickupLat, pickupLon, {
+      zones: geoZones,
+      redZones,
+      cities,
+    });
+    if (!coverage.isCovered) {
+      if (coverage.reason === "red_zone") {
+        setError("No disponible por zona roja. Ciudad no disponible, pronto estaremos aquí.");
+      } else {
+        setError(coverage.message || "Ciudad no disponible, pronto estaremos aquí.");
+      }
+      return;
+    }
     setSubmitting(true);
     setError("");
     const estimated = estimatePrice(selectedService, distanceKm, durationMin, appliedCoupon, extrasTotal);
@@ -636,6 +674,9 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
             })}
           </div>
           {error && <p className="text-red-400 text-xs text-center mt-1 mb-1">{error}</p>}
+          {!error && pickupCoverage && !pickupCoverage.isCovered && (
+            <p className="text-amber-300 text-xs text-center mt-1 mb-1">Ciudad no disponible, pronto estaremos aquí.</p>
+          )}
           {/* Reintentar ruta — solo si tiene destino */}
           {!isVial && selectedService && destReady && !distanceKm && !routeLoading && (
             <button
@@ -958,6 +999,9 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
           </div>
 
           {error && <p className="text-red-400 text-xs bg-red-400/10 rounded-xl p-3 text-center">{error}</p>}
+          {!error && pickupCoverage && !pickupCoverage.isCovered && (
+            <p className="text-amber-300 text-xs bg-amber-400/10 rounded-xl p-3 text-center">Ciudad no disponible, pronto estaremos aquí.</p>
+          )}
 
           <Button onClick={() => {
             if (!pickupAddress) { setError("Ingresa la dirección de recogida"); return; }
@@ -1110,9 +1154,16 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
 
           {/* Error global */}
           {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+          {!error && pickupCoverage && !pickupCoverage.isCovered && (
+            <p className="text-amber-300 text-xs text-center">Ciudad no disponible, pronto estaremos aquí.</p>
+          )}
 
           <div className="pt-3">
             <Button onClick={async () => {
+              if (pickupCoverage && !pickupCoverage.isCovered) {
+                setError("Ciudad no disponible, pronto estaremos aquí.");
+                return;
+              }
               if (requireBeforeService) {
                 // Si el método requiere pago previo, intentar cobrar ahora
                 if (paymentMethod === 'card') {
@@ -1124,7 +1175,9 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
                 }
               }
               await handleSubmit();
-            }} className="w-full bg-emerald-500 hover:bg-emerald-400 rounded-2xl h-12 font-bold">
+            }}
+            disabled={submitting || (pickupCoverage ? !pickupCoverage.isCovered : false)}
+            className="w-full bg-emerald-500 hover:bg-emerald-400 rounded-2xl h-12 font-bold">
               Solicitar servicio
             </Button>
             <p className="text-white/40 text-xs text-center mt-2">Al solicitar confirmas que aceptas los términos y condiciones.</p>

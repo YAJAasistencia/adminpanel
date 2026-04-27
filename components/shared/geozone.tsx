@@ -48,3 +48,121 @@ export function calcZonePrice(zone, distanceKm) {
   const perKm = zone.tarifa_por_km || 0;
   return base + perKm * (distanceKm || 0);
 }
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function pointInCityCircle(lat, lng, city) {
+  const cLat = Number(city?.center_lat);
+  const cLng = Number(city?.center_lon);
+  const radiusKm = Number(city?.geofence_radius_km);
+  if (!Number.isFinite(cLat) || !Number.isFinite(cLng) || !Number.isFinite(radiusKm) || radiusKm <= 0) {
+    return false;
+  }
+  return haversineKm(lat, lng, cLat, cLng) <= radiusKm;
+}
+
+/**
+ * Validates if a pickup point is serviceable according to:
+ * 1) Active red zones (always block)
+ * 2) Active tariff zones (must be inside one)
+ * 3) Active city coverage (must belong to at least one active city, by geofence or zone city_id)
+ */
+export function validateCoverageAvailability(lat, lng, options = {}) {
+  const { zones = [], redZones = [], cities = [] } = options;
+  const unavailableMessage = "Ciudad no disponible, pronto estaremos aquí.";
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return {
+      isCovered: false,
+      reason: "invalid_coordinates",
+      message: unavailableMessage,
+      zone: null,
+      redZone: null,
+      city: null,
+    };
+  }
+
+  const redZone = detectRedZone(lat, lng, redZones);
+  if (redZone) {
+    return {
+      isCovered: false,
+      reason: "red_zone",
+      message: unavailableMessage,
+      zone: null,
+      redZone,
+      city: null,
+    };
+  }
+
+  const activeZones = (zones || []).filter(
+    (z) => z?.is_active && pointInPolygon({ lat, lng }, z.coordinates)
+  );
+  const zone = activeZones.sort((a, b) => (b.prioridad || 0) - (a.prioridad || 0))[0] || null;
+  if (!zone) {
+    return {
+      isCovered: false,
+      reason: "outside_zone",
+      message: unavailableMessage,
+      zone: null,
+      redZone: null,
+      city: null,
+    };
+  }
+
+  const activeCities = (cities || []).filter((c) => c?.is_active);
+  if (!activeCities.length) {
+    return {
+      isCovered: true,
+      reason: null,
+      message: "",
+      zone,
+      redZone: null,
+      city: null,
+    };
+  }
+
+  const cityByZone = zone?.city_id
+    ? activeCities.find((c) => c.id === zone.city_id) || null
+    : null;
+  if (cityByZone) {
+    return {
+      isCovered: true,
+      reason: null,
+      message: "",
+      zone,
+      redZone: null,
+      city: cityByZone,
+    };
+  }
+
+  const cityByCircle = activeCities.find((c) => pointInCityCircle(lat, lng, c)) || null;
+  if (cityByCircle) {
+    return {
+      isCovered: true,
+      reason: null,
+      message: "",
+      zone,
+      redZone: null,
+      city: cityByCircle,
+    };
+  }
+
+  return {
+    isCovered: false,
+    reason: "outside_city",
+    message: unavailableMessage,
+    zone,
+    redZone: null,
+    city: null,
+  };
+}
