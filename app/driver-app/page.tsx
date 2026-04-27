@@ -124,6 +124,7 @@ type AppSettings = {
   timezone?: string;
   platform_commission_pct?: number;
   auction_timeout_seconds?: number;
+    driver_offer_timeout_seconds?: number;
   rating_window_minutes?: number;
   driver_location_update_interval_seconds?: number;
   driver_inactivity_timeout_minutes?: number;
@@ -685,6 +686,15 @@ export default function DriverApp() {
     if (!ride) return "";
     return String(ride.assigned_at || ride.updated_at || ride.requested_at || "");
   }, []);
+  const getDriverOfferTimeoutMs = useCallback((ride?: Ride | null) => {
+    const configured = Number(settingsRef.current?.driver_offer_timeout_seconds ?? settingsRef.current?.auction_timeout_seconds ?? 30);
+    const safeSeconds = Math.max(5, configured);
+    if (ride?.status === "auction" && ride?.auction_expires_at) {
+      const remaining = Math.max(0, new Date(ride.auction_expires_at).getTime() - Date.now());
+      return remaining;
+    }
+    return safeSeconds * 1000;
+  }, []);
   const prefilledEmail = useRef(
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("driverEmail") || ""
   ).current;
@@ -1127,9 +1137,7 @@ export default function DriverApp() {
                 body: `${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`,
                 rideId: data.id,
               });
-              const auctionTimeoutMs = data.auction_expires_at
-                ? Math.max(0, new Date(data.auction_expires_at).getTime() - Date.now())
-                : (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+              const auctionTimeoutMs = getDriverOfferTimeoutMs(data);
               startSWRideTimer(data.id, auctionTimeoutMs, data.passenger_name, data.pickup_address);
               setIncomingRide(data);
             }
@@ -1159,7 +1167,7 @@ export default function DriverApp() {
                   : `Recoge a ${data.passenger_name || "Pasajero"} · ${data.pickup_address || ""}`,
                 rideId: data.id,
               });
-              const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+              const assignTimeoutMs = getDriverOfferTimeoutMs(data);
               startSWRideTimer(data.id, assignTimeoutMs, data.passenger_name, data.pickup_address);
               setIncomingRide(data);
             }
@@ -1252,7 +1260,7 @@ export default function DriverApp() {
           setIncomingRide(current);
         }
         startNewRideAlarm(rideId);
-        const assignTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+        const assignTimeoutMs = getDriverOfferTimeoutMs(current || rideData);
         startSWRideTimer(
           rideId,
           assignTimeoutMs,
@@ -1277,7 +1285,7 @@ export default function DriverApp() {
           setIncomingRide(current);
         }
         startNewRideAlarm(rideId);
-        const auctionTimeoutMs = (settingsRef.current?.auction_timeout_seconds || 30) * 1000;
+        const auctionTimeoutMs = getDriverOfferTimeoutMs(current || rideData);
         startSWRideTimer(
           rideId,
           auctionTimeoutMs,
@@ -1824,7 +1832,7 @@ export default function DriverApp() {
       const newAccumulated = (driver.accumulated_work_minutes || 0) + worked;
       const s = settingsRef.current;
       const workMaxMins = (s?.work_max_hours ?? 12) * 60;
-      const restRatioMins = s?.work_rest_ratio ?? 30;
+      const restRatio = Number(s?.work_rest_ratio ?? 0.5);
       const restTriggerMins = s?.work_rest_trigger_minutes ?? 60;
       const longRestMins = s?.work_long_rest_minutes ?? 360;
 
@@ -1835,7 +1843,8 @@ export default function DriverApp() {
         restUntil = futureCDMX(longRestMins * 60000);
         resetAccumulated = true;
       } else {
-        const earnedRestMins = Math.floor(worked / restTriggerMins) * restRatioMins;
+        const restPerTriggerMins = restRatio <= 1 ? restTriggerMins * restRatio : restRatio;
+        const earnedRestMins = Math.floor(worked / restTriggerMins) * restPerTriggerMins;
         if (earnedRestMins > 0) {
           restUntil = futureCDMX(earnedRestMins * 60000);
         }
@@ -2118,7 +2127,7 @@ export default function DriverApp() {
       <SuspendedScreen
         suspendedUntil={suspendedUntil}
         whatsapp={settings?.support_whatsapp_number}
-        reason="Cancelaste un servicio. Debes esperar antes de volver a conectarte."
+        reason={`Cancelaste un servicio. Debes esperar ${Number(settings?.driver_cancel_suspension_minutes ?? 30)} minutos antes de volver a conectarte.`}
         onReady={async () => {
           localStorage.removeItem("driver_suspended_until");
           setSuspendedUntil(null);
@@ -2155,7 +2164,7 @@ export default function DriverApp() {
         settings={settings}
         onAccept={handleAcceptRide}
         onReject={handleRejectRide}
-        timeoutSeconds={settings?.auction_timeout_seconds || 30}
+        timeoutSeconds={Math.max(5, Number(settings?.driver_offer_timeout_seconds ?? settings?.auction_timeout_seconds ?? 30))}
         rejectCountToday={Number(driver?.rejection_count || 0)}
       />
 
@@ -2400,7 +2409,7 @@ export default function DriverApp() {
 
       <AnimatePresence>
         {showHistory && (
-          <RideHistoryModal rides={completedRides} driver={driver} onClose={() => setShowHistory(false)} />
+          <RideHistoryModal rides={completedRides} driver={driver} settings={settings} onClose={() => setShowHistory(false)} />
         )}
       </AnimatePresence>
       <AnimatePresence>

@@ -79,13 +79,13 @@ function RideDetailMap({ ride }) {
   );
 }
 
-function RideDetailModal({ ride: initialRide, driver, onClose }) {
+function RideDetailModal({ ride: initialRide, driver, settings, onClose }) {
   const [showMap, setShowMap] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [ride, setRide] = React.useState(initialRide);
   const price = ride.final_price || ride.estimated_price || 0;
-  const commissionRate = ride.commission_rate ?? 20;
+  const commissionRate = ride.commission_rate ?? driver?.commission_rate ?? settings?.platform_commission_pct ?? 20;
   const earnings = ride.driver_earnings != null
     ? ride.driver_earnings
     : parseFloat((price * (1 - commissionRate / 100)).toFixed(2));
@@ -211,7 +211,7 @@ function RideDetailModal({ ride: initialRide, driver, onClose }) {
   );
 }
 
-export default function RideHistoryModal({ rides, driver, onClose }) {
+export default function RideHistoryModal({ rides, driver, settings, onClose }) {
   const [selectedRide, setSelectedRide] = useState(null);
   return (
     <>
@@ -233,7 +233,7 @@ export default function RideHistoryModal({ rides, driver, onClose }) {
             {rides.map(ride => {
               const isCancelled = ride.status === "cancelled";
               const _ridePrice = ride.final_price || ride.estimated_price || 0;
-              const _commRate = ride.commission_rate ?? 20;
+              const _commRate = ride.commission_rate ?? driver?.commission_rate ?? settings?.platform_commission_pct ?? 20;
               const earnings = ride.driver_earnings != null
                 ? ride.driver_earnings
                 : parseFloat((_ridePrice * (1 - _commRate / 100)).toFixed(2));
@@ -264,7 +264,7 @@ export default function RideHistoryModal({ rides, driver, onClose }) {
         </motion.div>
       </motion.div>
       <AnimatePresence>
-        {selectedRide && <RideDetailModal ride={selectedRide} driver={driver} onClose={() => setSelectedRide(null)} />}
+        {selectedRide && <RideDetailModal ride={selectedRide} driver={driver} settings={settings} onClose={() => setSelectedRide(null)} />}
       </AnimatePresence>
     </>
   );

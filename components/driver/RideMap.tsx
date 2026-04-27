@@ -116,10 +116,11 @@ export default function RideMap({ ride, fullScreen = false, driverLocation = nul
       return;
     }
 
-    // Throttle: re-fetch max every 30s (or when origin changes significantly)
+    // Throttle: configurable route refresh interval from settings.
+    const routeRefreshMs = Math.max(3000, Number(settings?.eta_update_interval_seconds ?? 15) * 1000);
     const key = `${originLat?.toFixed(3)},${originLon?.toFixed(3)},${destLat?.toFixed(3)},${destLon?.toFixed(3)}`;
     const now = Date.now();
-    if (lastRouteFetchRef.current?.key === key && now - lastRouteFetchRef.current.ts < 30000) return;
+    if (lastRouteFetchRef.current?.key === key && now - lastRouteFetchRef.current.ts < routeRefreshMs) return;
     lastRouteFetchRef.current = { key, ts: now };
 
     setLoadingRoute(true);
@@ -142,7 +143,7 @@ export default function RideMap({ ride, fullScreen = false, driverLocation = nul
     driverLocation?.lat, driverLocation?.lon,
     pickupCoords?.lat, pickupCoords?.lon,
     dropoffCoords?.lat, dropoffCoords?.lon,
-    settings?.maps_provider, settings?.google_maps_api_key,
+    settings?.maps_provider, settings?.google_maps_api_key, settings?.eta_update_interval_seconds,
   ]);
 
   // Determine map center: prioritize driver location, then pickup, then dropoff

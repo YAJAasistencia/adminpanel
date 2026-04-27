@@ -137,6 +137,7 @@ const defaults = {
   
   // Operaciones
   driver_inactivity_timeout_minutes: 30,
+  driver_offer_timeout_seconds: 30,
   driver_arrival_radius_meters: 50,
   driver_cancel_suspension_minutes: 30,
   rating_window_minutes: 1440,
@@ -315,6 +316,9 @@ export default function SettingsPage() {
       }
       if ((form.driver_cancel_suspension_minutes ?? 30) < 1 || (form.driver_cancel_suspension_minutes ?? 30) > 720) {
         throw new Error("La suspensión por cancelación debe estar entre 1 y 720 minutos");
+      }
+      if ((form.driver_offer_timeout_seconds ?? 30) < 5 || (form.driver_offer_timeout_seconds ?? 30) > 180) {
+        throw new Error("El tiempo de respuesta de oferta debe estar entre 5 y 180 segundos");
       }
       if ((form.total_search_window_seconds ?? 180) < 30) {
         throw new Error("La ventana total de búsqueda debe ser de al menos 30 segundos");
@@ -903,6 +907,11 @@ export default function SettingsPage() {
                   <Label>Fase de búsqueda (segundos)</Label>
                   <Input type="number" min={1} max={60} value={form.search_phase_seconds ?? 5} onChange={e => update("search_phase_seconds", parseFloat(e.target.value) || 5)} />
                   <p className="text-xs text-slate-500 mt-1">Segundos que dura la fase visual de "buscando conductor"</p>
+                </div>
+                <div>
+                  <Label>Tiempo de respuesta de oferta (seg)</Label>
+                  <Input type="number" min={5} max={180} value={form.driver_offer_timeout_seconds ?? 30} onChange={e => update("driver_offer_timeout_seconds", parseFloat(e.target.value) || 30)} />
+                  <p className="text-xs text-slate-500 mt-1">Tiempo para aceptar/rechazar una oferta en app conductor</p>
                 </div>
                 <div>
                   <Label>Radio de llegada a recogida (metros)</Label>
