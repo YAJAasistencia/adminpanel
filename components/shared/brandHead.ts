@@ -9,6 +9,9 @@ export type BrandHeadOptions = {
 
 function withCacheBust(url: string, seed: string | number) {
   if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
+  // Do not append query params to remote/signed URLs (e.g. Supabase signed links),
+  // as extra params can invalidate the signature.
+  if (/^https?:\/\//i.test(url)) return url;
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}v=${encodeURIComponent(String(seed))}`;
 }
@@ -42,9 +45,9 @@ export function syncBrandHead({ title, logoUrl, appName, cacheSeed }: BrandHeadO
   const seed = cacheSeed ?? Date.now();
   const iconHref = withCacheBust(logoUrl, seed);
 
-  upsertLink("icon", iconHref, { type: "image/png" });
-  upsertLink("shortcut icon", iconHref, { type: "image/png" });
-  upsertLink("apple-touch-icon", iconHref, { type: "image/png", sizes: "180x180" });
+  upsertLink("icon", iconHref);
+  upsertLink("shortcut icon", iconHref);
+  upsertLink("apple-touch-icon", iconHref, { sizes: "180x180" });
 
   const manifest = {
     name: appName || "YAJA Asistencia",
