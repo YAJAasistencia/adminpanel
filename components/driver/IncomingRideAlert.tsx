@@ -96,6 +96,12 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
   const [routeInfo, setRouteInfo] = useState(null);
   const [countdown, setCountdown] = useState(timeoutSeconds);
   const [showRejectionReasons, setShowRejectionReasons] = useState(false);
+  const featureFlags = settings?.features_enabled || {};
+  const rejectionModalEnabled = featureFlags?.driver_rejection_reason_modal_enabled !== false;
+  const rejectionWarningThreshold = Number(settings?.rejection_count_threshold || 3);
+  const rejectionReasonOptions = Array.isArray(featureFlags?.driver_rejection_reason_options)
+    ? featureFlags.driver_rejection_reason_options
+    : undefined;
   const totalSecs = timeoutSeconds > 0 ? timeoutSeconds : 30;
 
   useEffect(() => { injectLeafletCSS(); }, []);
@@ -413,7 +419,13 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
                       <CheckCircle2 className="w-5 h-5" /> Aceptar viaje
                     </button>
                     <button
-                      onClick={() => setShowRejectionReasons(true)}
+                      onClick={() => {
+                        if (!rejectionModalEnabled) {
+                          onReject(ride, "driver_declined");
+                          return;
+                        }
+                        setShowRejectionReasons(true);
+                      }}
                       className="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-sm flex items-center justify-center gap-2 transition-colors active:scale-95 w-full"
                     >
                       <XCircle className="w-4 h-4" /> Rechazar
@@ -436,6 +448,8 @@ export default function IncomingRideAlert({ ride, driver, settings, onAccept, on
           onReject(ride, reasonId);
         }}
         rejectCount={rejectCountToday}
+        warningThreshold={rejectionWarningThreshold}
+        reasons={rejectionReasonOptions}
         ride={ride}
       />
     </AnimatePresence>

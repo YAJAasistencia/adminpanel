@@ -1615,10 +1615,10 @@ export default function DriverApp() {
     }
 
     const isCancelByDriver = reason === "driver_cancelled";
-    const isOfferRejection = reason === "timeout" || reason === "driver_declined";
+    const isOfferRejection = !["wait_time_expired", "driver_cancelled", "assigned"].includes(String(reason || ""));
 
     if (isOfferRejection) {
-      await registerDriverOfferResult("rejected", "other");
+      await registerDriverOfferResult("rejected", reason || "other");
     }
 
     if (
@@ -1648,7 +1648,7 @@ export default function DriverApp() {
     }
 
     if (ride?.status === "auction") {
-      if (reason === "timeout" || reason === "driver_declined") {
+      if (isOfferRejection) {
         if (driver?.status !== "available") {
           await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
           setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
@@ -1686,7 +1686,7 @@ export default function DriverApp() {
       setDriver((prev) => (prev ? { ...prev, status: "offline", suspended_until: suspendUntilISO } : prev));
       setSuspendedUntil(suspendUntil);
       localStorage.setItem("driver_suspended_until", String(suspendUntil));
-    } else if (reason === "timeout" || reason === "driver_declined") {
+    } else if (isOfferRejection) {
       await supabaseApi.drivers.update(driver?.id || "", { status: "available" });
       setDriver((prev) => (prev ? { ...prev, status: "available" } : prev));
     } else if (reason && !["timeout", "assigned"].includes(reason)) {
@@ -2154,6 +2154,7 @@ export default function DriverApp() {
         onAccept={handleAcceptRide}
         onReject={handleRejectRide}
         timeoutSeconds={settings?.auction_timeout_seconds || 30}
+        rejectCountToday={Number(driver?.rejection_count || 0)}
       />
 
       {/* Header compacto flotante */}

@@ -82,6 +82,8 @@ interface RideRejectionReasonsProps {
   onClose: () => void;
   onConfirm: (reasonId: string) => void;
   rejectCount?: number; // Cuántos viajes ha rechazado hoy
+  warningThreshold?: number;
+  reasons?: string[];
   ride?: any;
 }
 
@@ -90,6 +92,8 @@ export default function RideRejectionReasons({
   onClose,
   onConfirm,
   rejectCount = 0,
+  warningThreshold = 3,
+  reasons,
   ride,
 }: RideRejectionReasonsProps) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -101,8 +105,22 @@ export default function RideRejectionReasons({
     }
   };
 
-  const showWarning = rejectCount >= 3;
-  const selectedReason = REJECTION_REASONS.find((r) => r.id === selected);
+  const configuredReasons: RejectionReason[] = Array.isArray(reasons) && reasons.length > 0
+    ? reasons
+        .map((label) => String(label || "").trim())
+        .filter(Boolean)
+        .map((label) => ({
+          id: label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "other",
+          label,
+          icon: <AlertTriangle className="w-5 h-5" />,
+          category: "other" as const,
+          description: "Razón seleccionada por configuración",
+          riskLevel: "medium" as const,
+        }))
+    : REJECTION_REASONS;
+
+  const showWarning = rejectCount >= warningThreshold;
+  const selectedReason = configuredReasons.find((r) => r.id === selected);
 
   if (!open) return null;
 
@@ -148,7 +166,7 @@ export default function RideRejectionReasons({
 
         {/* Reasons grid */}
         <div className="overflow-y-auto flex-1 px-4 py-4 space-y-2">
-          {REJECTION_REASONS.map((reason) => {
+          {configuredReasons.map((reason) => {
             const isSelected = selected === reason.id;
             const isRiskyReason = reason.riskLevel === "high";
 

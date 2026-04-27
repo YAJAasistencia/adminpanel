@@ -19,6 +19,7 @@ import {
 interface NavigationButtonProps {
   pickup?: NavigationTarget;
   dropoff?: NavigationTarget;
+  settings?: any;
   size?: "sm" | "md" | "lg";
   variant?: "default" | "outline" | "ghost";
   className?: string;
@@ -29,6 +30,7 @@ interface NavigationButtonProps {
 export default function NavigationButton({
   pickup,
   dropoff,
+  settings,
   size = "md",
   variant = "default",
   className,
@@ -42,7 +44,11 @@ export default function NavigationButton({
   if (!target) return null;
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator?.userAgent || "");
-  const isAndroid = /Android/.test(navigator?.userAgent || "");
+  const features = settings?.features_enabled || {};
+  const configuredApps = Array.isArray(features?.driver_navigation_enabled_apps)
+    ? features.driver_navigation_enabled_apps
+    : ["google_maps", "waze", "apple_maps"];
+  const defaultNavApp = String(features?.driver_navigation_default_app || "auto");
 
   // Define available navigation options based on platform
   const navOptions = [
@@ -51,14 +57,14 @@ export default function NavigationButton({
       label: "Google Maps",
       icon: "🗺️",
       onClick: () => openGoogleMaps(target),
-      available: true,
+      available: configuredApps.includes("google_maps"),
     },
     {
       id: "waze",
       label: "Waze",
       icon: "🛣️",
       onClick: () => openWaze(target),
-      available: true,
+      available: configuredApps.includes("waze"),
     },
     ...(isIOS
       ? [
@@ -67,14 +73,22 @@ export default function NavigationButton({
             label: "Apple Maps",
             icon: "🍎",
             onClick: () => openAppleMaps(target),
-            available: true,
+            available: configuredApps.includes("apple_maps"),
           },
         ]
       : []),
   ].filter((opt) => opt.available);
 
   const handleDefaultNav = () => {
-    openBestNavigationApp(target);
+    if (defaultNavApp === "google_maps") {
+      openGoogleMaps(target);
+    } else if (defaultNavApp === "waze") {
+      openWaze(target);
+    } else if (defaultNavApp === "apple_maps") {
+      openAppleMaps(target);
+    } else {
+      openBestNavigationApp(target);
+    }
     setOpen(false);
   };
 

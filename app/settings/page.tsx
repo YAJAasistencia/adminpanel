@@ -62,7 +62,29 @@ const defaults = {
   // Control de funciones
   require_admin_approval_to_start: true, auto_assign_nearest_driver: true,
   destination_required: false, allow_driver_cancel: true,
-  features_enabled: { scheduling: true, promotions: true, driver_earnings_panel: true, proof_photo: true, geo_assignment: true, show_app_install_section: false, auction_priority_mode: "distance" },
+  features_enabled: {
+    scheduling: true,
+    promotions: true,
+    driver_earnings_panel: true,
+    proof_photo: true,
+    geo_assignment: true,
+    show_app_install_section: false,
+    auction_priority_mode: "distance",
+    driver_rejection_reason_modal_enabled: true,
+    driver_rejection_reason_options: [
+      "Demasiado lejos de mí",
+      "Dirección opuesta a mi ruta",
+      "La tarifa es muy baja",
+      "No tengo tiempo ahora",
+      "Problema con mi vehículo",
+      "No me siento bien",
+      "Otra razón",
+    ],
+    driver_live_eta_enabled: true,
+    driver_external_navigation_enabled: true,
+    driver_navigation_enabled_apps: ["google_maps", "waze", "apple_maps"],
+    driver_navigation_default_app: "auto",
+  },
   promotions: [],
   
   // Configuración regional
@@ -695,6 +717,16 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-5">
+                <div className="col-span-2 flex items-center justify-between p-4 rounded-xl border border-slate-100">
+                  <div>
+                    <p className="font-medium text-slate-800">ETA dinámico en app de conductor</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Muestra ETA en vivo con refresco periódico durante el servicio</p>
+                  </div>
+                  <Switch
+                    checked={!!(form.features_enabled?.driver_live_eta_enabled ?? true)}
+                    onCheckedChange={v => updateFeature("driver_live_eta_enabled", v)}
+                  />
+                </div>
                 <div>
                   <Label>Velocidad promedio urbana (km/h)</Label>
                   <Input type="number" min={5} max={120} value={form.eta_speed_kmh ?? 30} onChange={e => update("eta_speed_kmh", parseFloat(e.target.value) || 30)} />
@@ -997,6 +1029,36 @@ export default function SettingsPage() {
                   </div>
                   <Switch checked={!!form.soft_block_low_acceptance_rate_enabled} onCheckedChange={v => update("soft_block_low_acceptance_rate_enabled", v)} />
                 </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 mt-3">
+                  <div>
+                    <p className="font-medium text-slate-800">Modal de razones de rechazo</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Permite al conductor elegir la razón del rechazo en cada oferta</p>
+                  </div>
+                  <Switch
+                    checked={!!(form.features_enabled?.driver_rejection_reason_modal_enabled ?? true)}
+                    onCheckedChange={v => updateFeature("driver_rejection_reason_modal_enabled", v)}
+                  />
+                </div>
+
+                <div className="mt-3">
+                  <Label>Razones de rechazo (una por línea)</Label>
+                  <Textarea
+                    rows={6}
+                    value={((form.features_enabled?.driver_rejection_reason_options || []) as string[]).join("\n")}
+                    onChange={e =>
+                      updateFeature(
+                        "driver_rejection_reason_options",
+                        e.target.value
+                          .split("\n")
+                          .map(s => s.trim())
+                          .filter(Boolean)
+                      )
+                    }
+                    placeholder={"Demasiado lejos de mí\nDirección opuesta a mi ruta\nLa tarifa es muy baja"}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Estas opciones aparecerán en la app de conductor al rechazar una oferta.</p>
+                </div>
               </div>
             </Card>
           </TabsContent>
@@ -1054,6 +1116,62 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div>
+                    <Label className="text-sm font-medium">Navegación externa en app conductor</Label>
+                    <div className="mt-2 flex items-center gap-3">
+                      <Switch
+                        checked={!!(form.features_enabled?.driver_external_navigation_enabled ?? true)}
+                        onCheckedChange={v => updateFeature("driver_external_navigation_enabled", v)}
+                      />
+                      <span className="text-xs text-slate-500">Mostrar botón para abrir apps externas</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">App de navegación por defecto</Label>
+                    <Select
+                      value={String(form.features_enabled?.driver_navigation_default_app || "auto")}
+                      onValueChange={v => updateFeature("driver_navigation_default_app", v)}
+                    >
+                      <SelectTrigger className="mt-2"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (mejor opción)</SelectItem>
+                        <SelectItem value="google_maps">Google Maps</SelectItem>
+                        <SelectItem value="waze">Waze</SelectItem>
+                        <SelectItem value="apple_maps">Apple Maps (iOS)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label className="text-sm font-medium mb-2 block">Apps permitidas</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { key: "google_maps", label: "Google Maps" },
+                        { key: "waze", label: "Waze" },
+                        { key: "apple_maps", label: "Apple Maps" },
+                      ].map((item) => {
+                        const apps = (form.features_enabled?.driver_navigation_enabled_apps || []) as string[];
+                        const checked = apps.includes(item.key);
+                        return (
+                          <div key={item.key} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <span className="text-sm text-slate-700">{item.label}</span>
+                            <Switch
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                const next = v
+                                  ? [...new Set([...(apps || []), item.key])]
+                                  : (apps || []).filter(a => a !== item.key);
+                                updateFeature("driver_navigation_enabled_apps", next);
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <Label className="text-sm font-medium mb-3 block">Proveedor de mapas</Label>
                   <div className="grid grid-cols-2 gap-4">

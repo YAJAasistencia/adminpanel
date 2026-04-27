@@ -238,6 +238,10 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
   // Wait time limit from settings (default 5 min = 300s)
   const waitTimeLimit = settings?.wait_time_limit_seconds ?? 300;
   const waitTimeLimitExpired = ride.status === "arrived" && waitTime >= waitTimeLimit;
+  const features = settings?.features_enabled || {};
+  const liveEtaEnabled = features?.driver_live_eta_enabled !== false;
+  const externalNavigationEnabled = features?.driver_external_navigation_enabled !== false;
+  const etaRefreshSeconds = Number(settings?.eta_update_interval_seconds || 15);
 
   // Find applicable cancellation policy for "arrived" status
   const arrivedPolicy = policies.find((p: any) =>
@@ -330,7 +334,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                 </div>
 
                 {/* Live ETA during active ride */}
-                {(ride.status === "en_route" || ride.status === "in_progress") && 
+                {liveEtaEnabled && (ride.status === "en_route" || ride.status === "in_progress") && 
                  driverLocation && 
                  ride.pickup_lat && 
                  ride.pickup_lon &&
@@ -340,7 +344,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                     originLng={driverLocation.lon}
                     destLat={ride.status === "in_progress" ? ride.dropoff_lat : ride.pickup_lat}
                     destLng={ride.status === "in_progress" ? ride.dropoff_lon : ride.pickup_lon}
-                    updateIntervalSec={30}
+                    updateIntervalSec={etaRefreshSeconds}
                     mapsProvider={settings?.maps_provider || "osrm"}
                     googleMapsApiKey={settings?.google_maps_api_key}
                   />
@@ -405,10 +409,11 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                 )}
 
                 {/* Navigation buttons */}
-                <div className="flex gap-2">
+                {externalNavigationEnabled && <div className="flex gap-2">
                   {/* Navigate to pickup (when en_route) */}
                   {ride.status === "en_route" && ride.pickup_lat && ride.pickup_lon && (
                     <NavigationButton
+                      settings={settings}
                       pickup={{
                         lat: ride.pickup_lat,
                         lng: ride.pickup_lon,
@@ -425,6 +430,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                   {/* Navigate to dropoff (when in_progress) */}
                   {ride.status === "in_progress" && ride.dropoff_lat && ride.dropoff_lon && (
                     <NavigationButton
+                      settings={settings}
                       dropoff={{
                         lat: ride.dropoff_lat,
                         lng: ride.dropoff_lon,
@@ -437,7 +443,7 @@ export default function RideCard({ ride, onUpdateStatus, onRejectRide, settings,
                       label="🎯 Destino"
                     />
                   )}
-                </div>
+                </div>}
 
                 {/* Main action button */}
                 {action && (
