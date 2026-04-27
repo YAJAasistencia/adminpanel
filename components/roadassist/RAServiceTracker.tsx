@@ -129,6 +129,27 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const [distKm, setDistKm] = useState(null);
   const queryClient = useQueryClient();
 
+  const { data: settings } = useQuery({
+    queryKey: ["appSettings"],
+    queryFn: async () => {
+      const list = await supabaseApi.settings.list();
+      return list[0];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const offlineSyncIntervalMs = Math.max(10000, Number(settings?.passenger_offline_sync_interval_seconds ?? 45) * 1000);
+  const liveRideRefetchMs = Math.max(5000, Number(settings?.passenger_live_ride_refetch_seconds ?? 30) * 1000);
+  const driverRefetchMs = Math.max(5000, Number(settings?.passenger_driver_refetch_seconds ?? 15) * 1000);
+  const searchingTitle = settings?.passenger_searching_title || "Buscando conductor";
+  const searchingSubtitle = settings?.passenger_searching_subtitle || "Estamos encontrando el conductor más cercano para ti";
+  const noDriversTitle = settings?.passenger_no_drivers_title || "Sin conductores disponibles";
+  const noDriversSubtitle = settings?.passenger_no_drivers_subtitle || "No encontramos conductores disponibles en tu zona en este momento.";
+  const manualPromptTitle = settings?.passenger_manual_assignment_prompt_title || "¿Solicitar asignación manual?";
+  const manualPromptSubtitle = settings?.passenger_manual_assignment_prompt_subtitle || "Un operador asignará el conductor manualmente.";
+  const manualWaitTitle = settings?.passenger_manual_assignment_wait_title || "Esperando asignación";
+  const manualWaitSubtitle = settings?.passenger_manual_assignment_wait_subtitle || "Tu solicitud fue enviada. Un agente asignará tu conductor en breve.";
+
   const processOfflineAction = React.useCallback(async (action: OfflineOutboxAction) => {
     if (action.actionType !== "ride_update") return true;
     const current = await supabaseApi.rideRequests.get(action.rideId).catch(() => null);
@@ -154,17 +175,17 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
       toast.success("Conexion recuperada. Sincronizando acciones pendientes...");
     };
     window.addEventListener("online", onOnline);
-    const iv = setInterval(sync, 45 * 1000);
+    const iv = setInterval(sync, offlineSyncIntervalMs);
     return () => {
       window.removeEventListener("online", onOnline);
       clearInterval(iv);
     };
-  }, [user?.id, processOfflineAction, queryClient]);
+  }, [user?.id, processOfflineAction, queryClient, offlineSyncIntervalMs]);
 
   const { data: liveRide } = useQuery({
     queryKey: ["ra_live_ride", ride?.id],
     enabled: !!ride?.id,
-    refetchInterval: 30000,
+    refetchInterval: liveRideRefetchMs,
     queryFn: async () => {
       const byId = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
       return byId || ride;
@@ -189,7 +210,7 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const { data: driverData } = useQuery({
     queryKey: ["ra_driver", currentRide?.driver_id],
     enabled: !!currentRide?.driver_id,
-    refetchInterval: 15000,
+    refetchInterval: driverRefetchMs,
     queryFn: async () => {
       const list = await supabaseApi.drivers.list();
       return list.find(d => d.id === currentRide.driver_id);
@@ -206,15 +227,6 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     }).subscribe();
     return () => { channel.unsubscribe(); };
   }, [currentRide?.driver_id, queryClient]);
-
-  const { data: settings } = useQuery({
-    queryKey: ["appSettings"],
-    queryFn: async () => {
-      const list = await supabaseApi.settings.list();
-      return list[0];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
 
   const { data: policies = [] } = useQuery({
     queryKey: ["cancellationPolicies"],
@@ -295,12 +307,23 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   // Fetch route for map polyline
   useEffect(() => {
     if (!currentRide?.pickup_lat || !driverData?.latitude) return;
-    fetch(`https://router.project-osrm.org/route/v1/driving/${driverData.longitude},${driverData.latitude};${currentRide.pickup_lon},${currentRide.pickup_lat}?overview=full&geometries=geojson`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.routes?.[0]) setMapRoute(data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]));
-      }).catch(() => {});
-  }, [driverData?.latitude, driverData?.longitude, currentRide?.pickup_lat]);
+    const provider = settings?.maps_provider || "osrm";
+    const apiKey = settings?.google_maps_api_key;
+    getRoute(
+      driverData.latitude,
+      driverData.longitude,
+      currentRide.pickup_lat,
+      currentRide.pickup_lon,
+      provider,
+      apiKey
+    )
+      .then((route) => {
+        if (route?.polyline?.length) {
+          setMapRoute(route.polyline);
+        }
+      })
+      .catch(() => {});
+  }, [driverData?.latitude, driverData?.longitude, currentRide?.pickup_lat, currentRide?.pickup_lon, settings?.maps_provider, settings?.google_maps_api_key]);
 
   // Single effect to show summary on ride completion/cancellation
   useEffect(() => {
@@ -425,15 +448,15 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
         <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-5">
           <XCircle className="w-10 h-10 text-red-400" />
         </div>
-        <h2 className="text-white font-black text-2xl mb-2">Sin conductores disponibles</h2>
-        <p className="text-white/50 text-sm leading-relaxed mb-4">No encontramos conductores disponibles en tu zona en este momento.</p>
+        <h2 className="text-white font-black text-2xl mb-2">{noDriversTitle}</h2>
+        <p className="text-white/50 text-sm leading-relaxed mb-4">{noDriversSubtitle}</p>
         <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-4 text-left">
           <div className="flex items-start gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" /><p className="text-white/70 text-sm">{currentRide.pickup_address}</p></div>
           <div className="flex items-center justify-between pt-2 border-t border-white/10"><span className="text-white/40 text-xs">{currentRide.service_type_name}</span><span className="text-emerald-400 font-bold text-sm">${(currentRide.estimated_price || 0).toFixed(0)}</span></div>
         </div>
         <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-5">
-          <p className="text-amber-200 font-semibold text-sm mb-1">¿Solicitar asignación manual?</p>
-          <p className="text-amber-300/60 text-xs">Un operador asignará el conductor manualmente.</p>
+          <p className="text-amber-200 font-semibold text-sm mb-1">{manualPromptTitle}</p>
+          <p className="text-amber-300/60 text-xs">{manualPromptSubtitle}</p>
         </div>
         <div className="flex gap-3 w-full">
           <button onClick={handleCancelNoDrivers} className="flex-1 py-3.5 text-sm font-semibold text-red-400 border border-red-500/30 rounded-2xl bg-red-500/10">No, cancelar</button>
@@ -452,8 +475,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
         <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mb-5">
           <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
         </div>
-        <h2 className="text-white font-black text-xl mb-2">Esperando asignación</h2>
-        <p className="text-white/50 text-sm leading-relaxed mb-6">Tu solicitud fue enviada. Un agente asignará tu conductor en breve.</p>
+        <h2 className="text-white font-black text-xl mb-2">{manualWaitTitle}</h2>
+        <p className="text-white/50 text-sm leading-relaxed mb-6">{manualWaitSubtitle}</p>
         <div className="w-full bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
           <div className="flex items-start gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" /><p className="text-white/70 text-sm">{currentRide.pickup_address}</p></div>
           <div className="flex items-center justify-between pt-2 border-t border-white/10"><span className="text-white/40 text-xs">{currentRide.service_type_name}</span><span className="text-emerald-400 font-bold text-sm">${(currentRide.estimated_price || 0).toFixed(0)}</span></div>
@@ -600,7 +623,13 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
           {!sheetExpanded && !showCancelConfirm && (
             <div className="px-4 pb-4 space-y-3">
               {isSearching ? (
-                <SearchingPhase ride={currentRide} onCancel={() => setShowCancelConfirm(true)} cancelling={cancelling} />
+                <SearchingPhase
+                  ride={currentRide}
+                  onCancel={() => setShowCancelConfirm(true)}
+                  cancelling={cancelling}
+                  title={searchingTitle}
+                  subtitle={searchingSubtitle}
+                />
               ) : (
                 <>
                   {/* Driver info row */}
@@ -672,7 +701,13 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
               </div>
 
               {isSearching ? (
-                <SearchingPhase ride={currentRide} onCancel={() => setShowCancelConfirm(true)} cancelling={cancelling} />
+                <SearchingPhase
+                  ride={currentRide}
+                  onCancel={() => setShowCancelConfirm(true)}
+                  cancelling={cancelling}
+                  title={searchingTitle}
+                  subtitle={searchingSubtitle}
+                />
               ) : (
                 <>
                   {/* Driver card */}

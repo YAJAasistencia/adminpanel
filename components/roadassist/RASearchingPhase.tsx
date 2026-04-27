@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Car, CheckCircle, XCircle } from "lucide-react";
 
-export default function SearchingPhase({ ride, onCancel, cancelling }) {
+export default function SearchingPhase({
+  ride,
+  onCancel,
+  cancelling,
+  title = "Buscando conductor",
+  subtitle = "Estamos encontrando el conductor más cercano para ti",
+}) {
   const [dots, setDots] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setDots(d => (d + 1) % 4), 500);
@@ -20,8 +26,8 @@ export default function SearchingPhase({ ride, onCancel, cancelling }) {
         </div>
       </div>
       <div>
-        <h2 className="text-slate-900 font-black text-xl">Buscando conductor{".".repeat(dots)}</h2>
-        <p className="text-slate-500 text-sm mt-1.5 leading-relaxed">Estamos encontrando el conductor más cercano para ti</p>
+        <h2 className="text-slate-900 font-black text-xl">{title}{".".repeat(dots)}</h2>
+        <p className="text-slate-500 text-sm mt-1.5 leading-relaxed">{subtitle}</p>
       </div>
       <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-left space-y-1.5">
         <div className="flex items-center gap-2">

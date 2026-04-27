@@ -249,6 +249,8 @@ export default function RoadAssistApp() {
   const [showMenu, setShowMenu] = useState(false);
   const [raTab, setRaTab] = useState("home");
   const { settings } = useAppSettings();
+  const activeRidesRefetchMs = Math.max(5000, Number(settings?.passenger_active_rides_refetch_seconds ?? 30) * 1000);
+  const allRidesRefetchMs = Math.max(10000, Number(settings?.passenger_all_rides_refetch_seconds ?? 60) * 1000);
   const queryClient = useQueryClient();
   const prevStatusRef = useRef(null);
   useWakeLock();
@@ -302,7 +304,7 @@ export default function RoadAssistApp() {
     enabled: !!user?.id,
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 30000,
+    refetchInterval: activeRidesRefetchMs,
     queryFn: async () => {
       const all = await supabaseApi.rideRequests.list({ passenger_phone: user.phone });
       const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
@@ -322,7 +324,7 @@ export default function RoadAssistApp() {
     enabled: !!user?.id,
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 60000,
+    refetchInterval: allRidesRefetchMs,
     queryFn: () => supabaseApi.rideRequests.list({ passenger_phone: user.phone }),
   });
 

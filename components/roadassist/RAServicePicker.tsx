@@ -16,6 +16,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { nowCDMX } from "@/components/shared/dateUtils";
 import { validateCoverageAvailability } from "@/components/shared/geozone";
+import { getRoute } from "@/components/shared/mapsUtils";
 
 const iconMap = {
   car: Car, crown: Crown, truck: Truck, ambulance: Ambulance, wrench: Wrench,
@@ -211,21 +212,18 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
     setRoutePolyline(null);
     setRouteLoading(true);
     const trafficFactor = appSettings?.city_traffic_factor ?? 1.0;
+    const provider = appSettings?.maps_provider || "osrm";
+    const apiKey = appSettings?.google_maps_api_key;
     try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${pLon},${pLat};${dLon},${dLat}?overview=full&geometries=geojson`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-      const data = await res.json();
-      if (data.routes?.[0]) {
-        const route = data.routes[0];
-        const distKm = parseFloat((route.distance / 1000).toFixed(1));
-        const rawMins = Math.round(route.duration / 60);
-        const adjustedMins = Math.round(rawMins * trafficFactor);
+      const route = await getRoute(pLat, pLon, dLat, dLon, provider, apiKey);
+      if (route) {
+        const distKm = parseFloat(route.distKm.toFixed(1));
+        const adjustedMins = Math.round(route.durationMin * trafficFactor);
         setDistanceKm(distKm);
         setDurationMin(adjustedMins);
-        setRoutePolyline(route.geometry.coordinates.map(([lng, lat]) => [lat, lng]));
+        if (route.polyline?.length) {
+          setRoutePolyline(route.polyline);
+        }
       } else {
         // Fallback: distancia en línea recta
         const d = calcDistance(pLat, pLon, dLat, dLon);

@@ -140,6 +140,19 @@ const defaults = {
   driver_offer_timeout_seconds: 30,
   driver_arrival_radius_meters: 50,
   driver_cancel_suspension_minutes: 30,
+  passenger_active_rides_refetch_seconds: 30,
+  passenger_all_rides_refetch_seconds: 60,
+  passenger_live_ride_refetch_seconds: 30,
+  passenger_driver_refetch_seconds: 15,
+  passenger_offline_sync_interval_seconds: 45,
+  passenger_searching_title: "Buscando conductor",
+  passenger_searching_subtitle: "Estamos encontrando el conductor más cercano para ti",
+  passenger_no_drivers_title: "Sin conductores disponibles",
+  passenger_no_drivers_subtitle: "No encontramos conductores disponibles en tu zona en este momento.",
+  passenger_manual_assignment_prompt_title: "¿Solicitar asignación manual?",
+  passenger_manual_assignment_prompt_subtitle: "Un operador asignará el conductor manualmente.",
+  passenger_manual_assignment_wait_title: "Esperando asignación",
+  passenger_manual_assignment_wait_subtitle: "Tu solicitud fue enviada. Un agente asignará tu conductor en breve.",
   rating_window_minutes: 1440,
   payment_timeout_hours: 24,
   search_phase_seconds: 5,
@@ -319,6 +332,21 @@ export default function SettingsPage() {
       }
       if ((form.driver_offer_timeout_seconds ?? 30) < 5 || (form.driver_offer_timeout_seconds ?? 30) > 180) {
         throw new Error("El tiempo de respuesta de oferta debe estar entre 5 y 180 segundos");
+      }
+      if ((form.passenger_active_rides_refetch_seconds ?? 30) < 5 || (form.passenger_active_rides_refetch_seconds ?? 30) > 300) {
+        throw new Error("Refresco de viajes activos (pasajero) debe estar entre 5 y 300 segundos");
+      }
+      if ((form.passenger_all_rides_refetch_seconds ?? 60) < 10 || (form.passenger_all_rides_refetch_seconds ?? 60) > 600) {
+        throw new Error("Refresco de historial (pasajero) debe estar entre 10 y 600 segundos");
+      }
+      if ((form.passenger_live_ride_refetch_seconds ?? 30) < 5 || (form.passenger_live_ride_refetch_seconds ?? 30) > 300) {
+        throw new Error("Refresco de viaje en vivo (pasajero) debe estar entre 5 y 300 segundos");
+      }
+      if ((form.passenger_driver_refetch_seconds ?? 15) < 5 || (form.passenger_driver_refetch_seconds ?? 15) > 180) {
+        throw new Error("Refresco de conductor (pasajero) debe estar entre 5 y 180 segundos");
+      }
+      if ((form.passenger_offline_sync_interval_seconds ?? 45) < 10 || (form.passenger_offline_sync_interval_seconds ?? 45) > 600) {
+        throw new Error("Sincronización offline (pasajero) debe estar entre 10 y 600 segundos");
       }
       if ((form.total_search_window_seconds ?? 180) < 30) {
         throw new Error("La ventana total de búsqueda debe ser de al menos 30 segundos");
@@ -922,6 +950,63 @@ export default function SettingsPage() {
                   <Label>Suspensión por cancelación de conductor (min)</Label>
                   <Input type="number" min={1} max={720} value={form.driver_cancel_suspension_minutes ?? 30} onChange={e => update("driver_cancel_suspension_minutes", parseFloat(e.target.value) || 30)} />
                   <p className="text-xs text-slate-500 mt-1">Tiempo offline automático cuando el conductor cancela</p>
+                </div>
+                <div>
+                  <Label>Refresco viajes activos pasajero (seg)</Label>
+                  <Input type="number" min={5} max={300} value={form.passenger_active_rides_refetch_seconds ?? 30} onChange={e => update("passenger_active_rides_refetch_seconds", parseFloat(e.target.value) || 30)} />
+                  <p className="text-xs text-slate-500 mt-1">Frecuencia de actualización de viajes activos en app pasajero</p>
+                </div>
+                <div>
+                  <Label>Refresco historial pasajero (seg)</Label>
+                  <Input type="number" min={10} max={600} value={form.passenger_all_rides_refetch_seconds ?? 60} onChange={e => update("passenger_all_rides_refetch_seconds", parseFloat(e.target.value) || 60)} />
+                  <p className="text-xs text-slate-500 mt-1">Frecuencia de actualización del historial en app pasajero</p>
+                </div>
+                <div>
+                  <Label>Refresco viaje en vivo pasajero (seg)</Label>
+                  <Input type="number" min={5} max={300} value={form.passenger_live_ride_refetch_seconds ?? 30} onChange={e => update("passenger_live_ride_refetch_seconds", parseFloat(e.target.value) || 30)} />
+                  <p className="text-xs text-slate-500 mt-1">Frecuencia de actualización del viaje actual del pasajero</p>
+                </div>
+                <div>
+                  <Label>Refresco conductor en vivo pasajero (seg)</Label>
+                  <Input type="number" min={5} max={180} value={form.passenger_driver_refetch_seconds ?? 15} onChange={e => update("passenger_driver_refetch_seconds", parseFloat(e.target.value) || 15)} />
+                  <p className="text-xs text-slate-500 mt-1">Frecuencia de actualización de datos del conductor en app pasajero</p>
+                </div>
+                <div>
+                  <Label>Sync offline pasajero (seg)</Label>
+                  <Input type="number" min={10} max={600} value={form.passenger_offline_sync_interval_seconds ?? 45} onChange={e => update("passenger_offline_sync_interval_seconds", parseFloat(e.target.value) || 45)} />
+                  <p className="text-xs text-slate-500 mt-1">Intervalo para sincronizar acciones offline en app pasajero</p>
+                </div>
+                <div className="col-span-2">
+                  <Label>Título pantalla búsqueda pasajero</Label>
+                  <Input value={form.passenger_searching_title || ""} onChange={e => update("passenger_searching_title", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Subtítulo pantalla búsqueda pasajero</Label>
+                  <Input value={form.passenger_searching_subtitle || ""} onChange={e => update("passenger_searching_subtitle", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Título sin conductores</Label>
+                  <Input value={form.passenger_no_drivers_title || ""} onChange={e => update("passenger_no_drivers_title", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Mensaje sin conductores</Label>
+                  <Input value={form.passenger_no_drivers_subtitle || ""} onChange={e => update("passenger_no_drivers_subtitle", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Título prompt asignación manual</Label>
+                  <Input value={form.passenger_manual_assignment_prompt_title || ""} onChange={e => update("passenger_manual_assignment_prompt_title", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Mensaje prompt asignación manual</Label>
+                  <Input value={form.passenger_manual_assignment_prompt_subtitle || ""} onChange={e => update("passenger_manual_assignment_prompt_subtitle", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Título espera de asignación manual</Label>
+                  <Input value={form.passenger_manual_assignment_wait_title || ""} onChange={e => update("passenger_manual_assignment_wait_title", e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Mensaje espera de asignación manual</Label>
+                  <Input value={form.passenger_manual_assignment_wait_subtitle || ""} onChange={e => update("passenger_manual_assignment_wait_subtitle", e.target.value)} />
                 </div>
               </div>
             </Card>
