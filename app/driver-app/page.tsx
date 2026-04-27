@@ -929,6 +929,69 @@ export default function DriverApp() {
     locationIntervalMsRef.current = (settings?.driver_location_update_interval_seconds ?? 5) * 1000;
   }, [settings?.driver_location_update_interval_seconds]);
 
+  const computeRideFinalPricing = useCallback(async (ride: Ride) => {
+    const fareProtectionEnabled = !!settingsRef.current?.fare_protection_enabled;
+    const estimated = Number(ride.estimated_price || 0);
+
+    if (fareProtectionEnabled) {
+      return {
+        finalPrice: parseFloat(estimated.toFixed(2)),
+        distanceKm: Number(ride.distance_km || 0),
+        durationMin: 0,
+        base: estimated,
+        perKm: 0,
+        perMinute: 0,
+        minimumFare: estimated,
+        surgeMultiplier: 1,
+        protectedFare: true,
+      };
+    }
+
+    const serviceType = ride.service_type_id
+      ? await supabaseApi.serviceTypes.get(ride.service_type_id).catch(() => null)
+      : null;
+
+    const base = Number(serviceType?.base_price ?? settingsRef.current?.base_fare ?? 0);
+    const perKm = Number(serviceType?.price_per_km ?? settingsRef.current?.price_per_km ?? 0);
+    const perMinute = Number(serviceType?.price_per_minute ?? settingsRef.current?.price_per_minute ?? 0);
+    const minimumFare = Number(serviceType?.minimum_fare ?? 0);
+    const surgeMultiplier = Number(serviceType?.surge_multiplier ?? 1);
+
+    let durationMin = 0;
+    const inProgressAt = ride.in_progress_at || ride.arrived_at || ride.en_route_at;
+    if (inProgressAt) {
+      const elapsedMs = Date.now() - new Date(inProgressAt).getTime();
+      if (Number.isFinite(elapsedMs) && elapsedMs > 0) {
+        durationMin = Math.max(1, Math.round(elapsedMs / 60000));
+      }
+    }
+
+    let distanceKm = Number(ride.distance_km || 0);
+    if ((!distanceKm || distanceKm <= 0) && ride.pickup_lat && ride.pickup_lon && ride.dropoff_lat && ride.dropoff_lon) {
+      distanceKm = getDistance(ride.pickup_lat, ride.pickup_lon, ride.dropoff_lat, ride.dropoff_lon);
+    }
+
+    const selectedExtras = Array.isArray(ride.selected_extras)
+      ? ride.selected_extras.reduce((sum: number, extra: any) => sum + Number(extra?.price || 0), 0)
+      : 0;
+
+    const variable = (base + perKm * Math.max(0, distanceKm) + perMinute * Math.max(0, durationMin)) * Math.max(1, surgeMultiplier);
+    const computedFare = Math.max(variable, minimumFare) + selectedExtras;
+    const finalPrice = parseFloat((computedFare > 0 ? computedFare : estimated).toFixed(2));
+
+    return {
+      finalPrice,
+      distanceKm,
+      durationMin,
+      base,
+      perKm,
+      perMinute,
+      minimumFare,
+      surgeMultiplier,
+      protectedFare: false,
+    };
+  }, []);
+
   const { data: rides = [] } = useQuery({
     queryKey: ["driverRides", driver?.id],
     queryFn: async () => {
@@ -1380,14 +1443,28 @@ export default function DriverApp() {
       if (newStatus === "arrived") updates.arrived_at = now;
       if (newStatus === "in_progress") updates.in_progress_at = now;
       if (newStatus === "completed") {
+        const pricing = await computeRideFinalPricing(ride);
         updates.completed_at = now;
         const commissionRate = driver?.commission_rate ?? settings?.platform_commission_pct ?? 20;
-        const price = ride.final_price || ride.estimated_price || 0;
+        const price = pricing.finalPrice;
         const driverEarnings = parseFloat((price * (1 - commissionRate / 100)).toFixed(2));
         updates.final_price = price;
         updates.driver_earnings = driverEarnings;
         updates.platform_commission = parseFloat((price * (commissionRate / 100)).toFixed(2));
         updates.rating_window_expires_at = futureCDMX((settings?.rating_window_minutes ?? 1440) * 60000);
+        updates.extra_charges = {
+          ...(ride.extra_charges && typeof ride.extra_charges === "object" ? ride.extra_charges : {}),
+          pricing_audit: {
+            mode: pricing.protectedFare ? "protected" : "dynamic",
+            distance_km: pricing.distanceKm,
+            duration_min: pricing.durationMin,
+            base: pricing.base,
+            per_km: pricing.perKm,
+            per_minute: pricing.perMinute,
+            minimum_fare: pricing.minimumFare,
+            surge_multiplier: pricing.surgeMultiplier,
+          },
+        };
 
         await supabaseApi.drivers.update(driver?.id || "", {
             status: "available",
@@ -1481,9 +1558,10 @@ export default function DriverApp() {
       }
       await updateStatusMutation.mutateAsync({ ride, newStatus });
       if (newStatus === "completed") {
+        const pricing = await computeRideFinalPricing(ride);
         const pmConfig = getPaymentMethodConfig(ride.payment_method || "cash");
         const commissionRate = driver?.commission_rate ?? settings?.platform_commission_pct ?? 20;
-        const price = ride.final_price || ride.estimated_price || 0;
+        const price = pricing.finalPrice;
         const driverEarnings = parseFloat((price * (1 - commissionRate / 100)).toFixed(2));
         const platformCommission = parseFloat((price * (commissionRate / 100)).toFixed(2));
         const completedRide = {
@@ -1497,7 +1575,7 @@ export default function DriverApp() {
         setRideSummary({ ride: completedRide, paymentMethodConfig: pmConfig });
       }
     },
-    [updateStatusMutation, surveys, getPaymentMethodConfig, driver?.id, settings, queryClient]
+    [updateStatusMutation, surveys, getPaymentMethodConfig, driver?.id, settings, queryClient, computeRideFinalPricing]
   );
 
   const handleAcceptRide = async () => {

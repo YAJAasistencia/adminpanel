@@ -144,6 +144,8 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
 
   const totalPrice = ride.final_price || ride.estimated_price || 0;
   const walletUsed = ride.wallet_amount_used || 0;
+  const fareProtectionEnabled = !!settings?.fare_protection_enabled;
+  const fareProtectionLabel = settings?.fare_protection_label || "Tarifa protegida";
 
   // Determine if payment needs driver confirmation
   const paymentMethods = settings?.payment_methods || [];
@@ -190,6 +192,14 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
       pollRef.current = null;
     }
   }, [isPaid]);
+
+  // Auto-open rating after showing summary for completed rides.
+  useEffect(() => {
+    if (!isCompleted || waitingForPayment || step !== "summary") return;
+    if (ride.passenger_rating_for_driver) return;
+    const t = setTimeout(() => setStep("rating"), 2200);
+    return () => clearTimeout(t);
+  }, [isCompleted, waitingForPayment, step, ride.passenger_rating_for_driver, ride.id]);
 
   const amountRemainingToPay = walletUsed > 0
     ? Math.max(0, totalPrice - walletUsed)
@@ -354,6 +364,11 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
               <span className="text-white/40 text-sm">Costo total</span>
               <span className="text-white font-black text-2xl">${totalPrice.toFixed(2)}</span>
             </div>
+            {fareProtectionEnabled && (
+              <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2">
+                <p className="text-emerald-300 text-xs font-semibold">✅ {fareProtectionLabel}</p>
+              </div>
+            )}
             {walletUsed > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-violet-300 text-sm">💜 Cubierto con wallet</span>

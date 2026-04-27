@@ -376,6 +376,8 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
 
   const walletBalance = user?.wallet_balance || 0;
   const walletAmountNum = +walletAmountToUse || 0;
+  const fareProtectionEnabled = !!appSettings?.fare_protection_enabled;
+  const fareProtectionLabel = appSettings?.fare_protection_label || "Tarifa protegida";
 
   // When wallet is selected as main method, check if it covers the full amount
   const walletIsInsufficient = (estimated) => paymentMethod === "wallet" && walletBalance < estimated;
@@ -624,7 +626,9 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
               <div className="mb-3 bg-blue-500/15 border border-blue-500/30 rounded-2xl px-3 py-2.5 flex items-start gap-2">
                 <Navigation className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
                 <p className="text-blue-200 text-xs leading-snug">
-                  <span className="font-bold">{distanceKm} km · ~{durationMin} min</span> · Las tarifas son aproximadas, el costo final se cobra al concluir el servicio
+                  <span className="font-bold">{distanceKm} km · ~{durationMin} min</span> · {fareProtectionEnabled
+                    ? `${fareProtectionLabel}: pagarás exactamente el estimado mostrado.`
+                    : "Las tarifas son aproximadas, el costo final se cobra al concluir el servicio"}
                 </p>
               </div>
             ) : (
@@ -1041,6 +1045,9 @@ export default function RAServicePicker({ user, onRequestCreated, onRefreshUser 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <p className="text-white/40 text-xs mb-1">Tarifa estimada</p>
             <p className="text-white font-black text-3xl">${estimated.toFixed(0)} <span className="text-white/30 text-sm font-normal">MXN</span></p>
+            {fareProtectionEnabled && (
+              <p className="text-emerald-300 text-xs mt-1 font-semibold">✅ {fareProtectionLabel}</p>
+            )}
             {distanceKm ? (
               <p className="text-white/30 text-xs mt-1">{distanceKm} km · {durationMin} min</p>
             ) : (

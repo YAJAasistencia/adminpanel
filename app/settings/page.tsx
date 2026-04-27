@@ -58,6 +58,8 @@ const defaults = {
   
   // Tarifas
   base_fare: 30, price_per_km: 8, price_per_minute: 1.5, platform_commission_pct: 20,
+  fare_protection_enabled: false,
+  fare_protection_label: "Tarifa protegida",
   
   // Control de funciones
   require_admin_approval_to_start: true, auto_assign_nearest_driver: true,
@@ -625,6 +627,20 @@ export default function SettingsPage() {
                   <Label>Comisión de la plataforma (%)</Label>
                   <Input type="number" value={form.platform_commission_pct} onChange={e => update("platform_commission_pct", parseFloat(e.target.value) || 0)} />
                   <p className="text-xs text-slate-400 mt-1">El conductor recibe el {100 - (form.platform_commission_pct || 0)}% del viaje</p>
+                </div>
+                <div className="col-span-2 flex items-start justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">Protección de tarifa</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Si está activa, el precio final se congela al estimado y no se recalcula por tiempo/distancia real.
+                    </p>
+                  </div>
+                  <Switch checked={!!form.fare_protection_enabled} onCheckedChange={v => update("fare_protection_enabled", v)} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Leyenda de tarifa protegida</Label>
+                  <Input value={form.fare_protection_label || "Tarifa protegida"} onChange={e => update("fare_protection_label", e.target.value)} />
+                  <p className="text-xs text-slate-400 mt-1">Texto que se mostrará en apps cuando la protección esté activa.</p>
                 </div>
               </div>
             </Card>

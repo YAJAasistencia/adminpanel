@@ -109,6 +109,46 @@ const STATUS_INFO = {
   cancelled:      { label: "Cancelado",             color: "text-red-400",     bg: "bg-red-500/20",     icon: XCircle },
 };
 
+const STATUS_RANK = {
+  pending: 1,
+  auction: 2,
+  assigned: 3,
+  admin_approved: 4,
+  en_route: 5,
+  arrived: 6,
+  in_progress: 7,
+  completed: 8,
+  cancelled: 8,
+};
+
+const getRideTimestamp = (rideObj) => {
+  if (!rideObj) return 0;
+  const ts = rideObj.updated_at
+    || rideObj.completed_at
+    || rideObj.cancelled_at
+    || rideObj.in_progress_at
+    || rideObj.arrived_at
+    || rideObj.en_route_at
+    || rideObj.assigned_at
+    || rideObj.requested_at
+    || rideObj.created_date;
+  const value = ts ? new Date(ts).getTime() : 0;
+  return Number.isFinite(value) ? value : 0;
+};
+
+const mergeRideCandidates = (candidates) => {
+  const list = candidates.filter(Boolean);
+  if (!list.length) return null;
+
+  const ordered = [...list].sort((a, b) => {
+    const diff = getRideTimestamp(a) - getRideTimestamp(b);
+    if (diff !== 0) return diff;
+    return (STATUS_RANK[a?.status] || 0) - (STATUS_RANK[b?.status] || 0);
+  });
+
+  return ordered.reduce((acc, item) => ({ ...acc, ...item }), {});
+};
+
 export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded }) {
   useEffect(() => {
     if (user?.id) initPassengerPush(user.id);
@@ -149,6 +189,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   const manualPromptSubtitle = settings?.passenger_manual_assignment_prompt_subtitle || "Un operador asignará el conductor manualmente.";
   const manualWaitTitle = settings?.passenger_manual_assignment_wait_title || "Esperando asignación";
   const manualWaitSubtitle = settings?.passenger_manual_assignment_wait_subtitle || "Tu solicitud fue enviada. Un agente asignará tu conductor en breve.";
+  const fareProtectionEnabled = !!settings?.fare_protection_enabled;
+  const fareProtectionLabel = settings?.fare_protection_label || "Tarifa protegida";
 
   const processOfflineAction = React.useCallback(async (action: OfflineOutboxAction) => {
     if (action.actionType !== "ride_update") return true;
@@ -188,9 +230,14 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     refetchInterval: liveRideRefetchMs,
     queryFn: async () => {
       const byId = await supabaseApi.rideRequests.get(ride.id).catch(() => null);
-      return byId || ride;
+      return byId || null;
     },
   });
+
+  useEffect(() => {
+    if (!liveRide?.id) return;
+    setRideSnapshot((prev) => ({ ...(prev || {}), ...liveRide }));
+  }, [liveRide?.id, liveRide?.status, liveRide?.updated_at, liveRide?.completed_at, liveRide?.cancelled_at]);
 
   useEffect(() => {
     if (!ride?.id) return;
@@ -205,7 +252,10 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     return () => { channel.unsubscribe(); };
   }, [ride?.id, queryClient]);
 
-  const currentRide = liveRide || rideSnapshot || ride;
+  const currentRide = React.useMemo(
+    () => mergeRideCandidates([ride, rideSnapshot, liveRide]),
+    [ride, rideSnapshot, liveRide]
+  );
 
   const { data: driverData } = useQuery({
     queryKey: ["ra_driver", currentRide?.driver_id],
@@ -330,14 +380,17 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     const status = currentRide?.status;
     if (!status) return;
     const isTerminal = status === "completed" || status === "cancelled";
-    if (isTerminal && !summaryShownRef.current) {
+    const isNewTerminalState = !summaryRide
+      || summaryRide.id !== currentRide.id
+      || summaryRide.status !== status;
+    if (isTerminal && (!summaryShownRef.current || isNewTerminalState)) {
       summaryShownRef.current = true;
       setSummaryRide(currentRide);
       setShowSummary(true);
     }
     prevStatusRef.current = status;
    
-  }, [currentRide?.status]);
+  }, [currentRide?.status, currentRide?.id, summaryRide?.id, summaryRide?.status]);
 
   const isNoDrivers = currentRide?.status === "no_drivers";
   useEffect(() => {
@@ -765,6 +818,12 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
                       <span className="text-slate-500 text-xs">Tarifa estimada</span>
                       <span className="text-emerald-600 font-bold">${(currentRide.estimated_price || 0).toFixed(0)}</span>
                     </div>
+                    {fareProtectionEnabled && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 text-xs">Modalidad</span>
+                        <span className="text-emerald-700 text-xs font-bold">✅ {fareProtectionLabel}</span>
+                      </div>
+                    )}
                     {currentRide.final_price > 0 && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500 text-xs">Tarifa final</span>

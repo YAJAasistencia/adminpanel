@@ -367,13 +367,28 @@ export default function RoadAssistApp() {
 
   // Capture ride when completed/cancelled so tracker stays mounted until user dismisses
   useEffect(() => {
-    if (!activeRide) return;
-    if (activeRide.status === "completed" || activeRide.status === "cancelled") {
-      setEndedRide(activeRide);
-    } else {
-      setEndedRide(null);
+    if (activeRide) {
+      if (activeRide.status === "completed" || activeRide.status === "cancelled") {
+        setEndedRide(activeRide);
+      }
+      return;
     }
-  }, [activeRide?.status, activeRide?.id]);
+
+    const now = Date.now();
+    const fallbackTerminalRide = [...(allRides || [])]
+      .sort((a, b) => new Date(b.updated_at || b.completed_at || b.requested_at || b.created_date).getTime() - new Date(a.updated_at || a.completed_at || a.requested_at || a.created_date).getTime())
+      .find((r) => {
+        const isTerminal = r.status === "completed" || r.status === "cancelled";
+        if (!isTerminal) return false;
+        const rideTs = new Date(r.completed_at || r.updated_at || r.requested_at || r.created_date).getTime();
+        const recentEnough = Number.isFinite(rideTs) ? (now - rideTs) <= 2 * 60 * 60 * 1000 : true;
+        if (!recentEnough) return false;
+        if (r.status === "completed") return !r.passenger_rating_for_driver;
+        return true;
+      });
+
+    setEndedRide(fallbackTerminalRide || null);
+  }, [activeRide?.status, activeRide?.id, allRides]);
 
   // Notify passenger of driver status changes with sound + push notification
   useEffect(() => {
