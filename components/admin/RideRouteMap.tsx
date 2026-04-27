@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Person icon for pickup
+// Person icon for pickup (requested origin)
 const pickupIcon = L.divIcon({
   html: `<div style="background:#10B981;width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">
@@ -23,7 +23,7 @@ const pickupIcon = L.divIcon({
   className: "", iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -38],
 });
 
-// Flag icon for dropoff
+// Flag icon for dropoff (requested destination)
 const dropoffIcon = L.divIcon({
   html: `<div style="background:#EF4444;width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">
@@ -31,6 +31,26 @@ const dropoffIcon = L.divIcon({
     </svg>
   </div>`,
   className: "", iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -38],
+});
+
+// Car icon for actual trip start (GPS when driver pressed "Iniciar")
+const actualStartIcon = L.divIcon({
+  html: `<div style="background:#6366F1;width:34px;height:34px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0.5">
+      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
+    </svg>
+  </div>`,
+  className: "", iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -36],
+});
+
+// Check icon for actual trip end (GPS when driver pressed "Completar")
+const actualEndIcon = L.divIcon({
+  html: `<div style="background:#F59E0B;width:34px;height:34px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  </div>`,
+  className: "", iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -36],
 });
 
 // Auto-fit bounds when both points are present
@@ -98,11 +118,32 @@ export default function RideRouteMap({ ride }) {
 
   const hasPickup = ride && ride.pickup_lat && ride.pickup_lon;
   const hasDropoff = ride && ride.dropoff_lat && ride.dropoff_lon;
+
+  // Actual GPS coords recorded by driver when trip started/ended
+  const audit = ride?.extra_charges?.pricing_audit;
+  const hasActualStart = !!(audit?.actual_start_lat && audit?.actual_start_lon)
+    || !!(ride?.actual_start_lat && ride?.actual_start_lon);
+  const hasActualEnd = !!(audit?.actual_end_lat && audit?.actual_end_lon)
+    || !!(ride?.actual_end_lat && ride?.actual_end_lon);
+
+  const actualStartPos: LatLngTuple | null = hasActualStart
+    ? [(audit?.actual_start_lat ?? ride.actual_start_lat), (audit?.actual_start_lon ?? ride.actual_start_lon)]
+    : null;
+  const actualEndPos: LatLngTuple | null = hasActualEnd
+    ? [(audit?.actual_end_lat ?? ride.actual_end_lat), (audit?.actual_end_lon ?? ride.actual_end_lon)]
+    : null;
+
+  // For route polyline: prefer actual GPS points, fall back to pickup/dropoff addresses
+  const routeFromLat = actualStartPos ? actualStartPos[0] : ride?.pickup_lat;
+  const routeFromLon = actualStartPos ? actualStartPos[1] : ride?.pickup_lon;
+  const routeToLat = actualEndPos ? actualEndPos[0] : ride?.dropoff_lat;
+  const routeToLon = actualEndPos ? actualEndPos[1] : ride?.dropoff_lon;
+
   const events = ride ? buildEventLog(ride) : [];
 
   useEffect(() => {
-    if (!hasPickup || !hasDropoff) return;
-    const url = `https://router.project-osrm.org/route/v1/driving/${ride.pickup_lon},${ride.pickup_lat};${ride.dropoff_lon},${ride.dropoff_lat}?overview=full&geometries=geojson`;
+    if (!routeFromLat || !routeFromLon || !routeToLat || !routeToLon) return;
+    const url = `https://router.project-osrm.org/route/v1/driving/${routeFromLon},${routeFromLat};${routeToLon},${routeToLat}?overview=full&geometries=geojson`;
     fetch(url)
       .then(r => r.json())
       .then(data => {
@@ -110,18 +151,18 @@ export default function RideRouteMap({ ride }) {
         if (coords) setRoute(coords.map(([lng, lat]) => [lat, lng]));
       })
       .catch(() => {});
-  }, [ride?.pickup_lat, ride?.pickup_lon, ride?.dropoff_lat, ride?.dropoff_lon]);
+  }, [routeFromLat, routeFromLon, routeToLat, routeToLon]);
 
   if (!ride) return null;
 
-  const center: LatLngTuple | null = hasPickup
-    ? [ride.pickup_lat, ride.pickup_lon]
-    : hasDropoff
-    ? [ride.dropoff_lat, ride.dropoff_lon]
-    : null;
+  const center: LatLngTuple | null = actualStartPos ?? (hasPickup ? [ride.pickup_lat, ride.pickup_lon] : hasDropoff ? [ride.dropoff_lat, ride.dropoff_lon] : null);
 
   const pickupPos: LatLngTuple | null = hasPickup ? [ride.pickup_lat, ride.pickup_lon] : null;
   const dropoffPos: LatLngTuple | null = hasDropoff ? [ride.dropoff_lat, ride.dropoff_lon] : null;
+
+  // FitBounds: prefer actual start/end, else pickup/dropoff
+  const fitA = actualStartPos ?? pickupPos;
+  const fitB = actualEndPos ?? dropoffPos;
 
   return (
     <div className="space-y-4">
@@ -129,22 +170,38 @@ export default function RideRouteMap({ ride }) {
       {center ? (
         <>
           {/* Legend */}
-          <div className="flex gap-3 text-[11px] text-slate-500">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /> Recogida</span>
-            {hasDropoff && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Destino</span>}
+          <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
+            {hasActualStart && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-indigo-500 inline-block" /> Inicio real</span>}
+            {hasActualEnd && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block" /> Fin real</span>}
+            {hasPickup && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /> Origen solicitado</span>}
+            {hasDropoff && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Destino solicitado</span>}
           </div>
           <div className="rounded-xl overflow-hidden border border-slate-200 h-52">
             <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-              <FitBounds pickup={pickupPos} dropoff={dropoffPos} />
-              {hasPickup && (
-                <Marker position={pickupPos} icon={pickupIcon}>
-                  <Popup><span className="text-xs font-medium">👤 Recogida<br />{ride.pickup_address}</span></Popup>
+              <FitBounds pickup={fitA} dropoff={fitB} />
+              {/* Actual GPS start marker (purple/indigo) */}
+              {actualStartPos && (
+                <Marker position={actualStartPos} icon={actualStartIcon}>
+                  <Popup><span className="text-xs font-medium">🚗 Inicio real del viaje<br />GPS conductor al presionar iniciar</span></Popup>
                 </Marker>
               )}
-              {hasDropoff && (
+              {/* Actual GPS end marker (amber) */}
+              {actualEndPos && (
+                <Marker position={actualEndPos} icon={actualEndIcon}>
+                  <Popup><span className="text-xs font-medium">✅ Fin real del viaje<br />GPS conductor al completar</span></Popup>
+                </Marker>
+              )}
+              {/* Requested pickup (green) — show only if different from actual start or no actual start */}
+              {hasPickup && !hasActualStart && (
+                <Marker position={pickupPos} icon={pickupIcon}>
+                  <Popup><span className="text-xs font-medium">👤 Origen solicitado<br />{ride.pickup_address}</span></Popup>
+                </Marker>
+              )}
+              {/* Requested dropoff (red) — show only if different from actual end or no actual end */}
+              {hasDropoff && !hasActualEnd && (
                 <Marker position={dropoffPos} icon={dropoffIcon}>
-                  <Popup><span className="text-xs font-medium">🏁 Destino<br />{ride.dropoff_address}</span></Popup>
+                  <Popup><span className="text-xs font-medium">🏁 Destino solicitado<br />{ride.dropoff_address}</span></Popup>
                 </Marker>
               )}
               {route && <Polyline positions={route} color="#6366F1" weight={4} opacity={0.8} />}

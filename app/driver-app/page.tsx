@@ -929,7 +929,7 @@ export default function DriverApp() {
     locationIntervalMsRef.current = (settings?.driver_location_update_interval_seconds ?? 5) * 1000;
   }, [settings?.driver_location_update_interval_seconds]);
 
-  const computeRideFinalPricing = useCallback(async (ride: Ride) => {
+  const computeRideFinalPricing = useCallback(async (ride: Ride, actualEndCoords?: { lat: number; lon: number }) => {
     const fareProtectionEnabled = !!settingsRef.current?.fare_protection_enabled;
     const estimated = Number(ride.estimated_price || 0);
 
@@ -967,7 +967,14 @@ export default function DriverApp() {
     }
 
     let distanceKm = Number(ride.distance_km || 0);
-    if ((!distanceKm || distanceKm <= 0) && ride.pickup_lat && ride.pickup_lon && ride.dropoff_lat && ride.dropoff_lon) {
+    // Prefer actual GPS start/end if available for accurate real distance
+    const startLat = (ride as any).actual_start_lat;
+    const startLon = (ride as any).actual_start_lon;
+    const endLat = actualEndCoords?.lat ?? (ride as any).actual_end_lat;
+    const endLon = actualEndCoords?.lon ?? (ride as any).actual_end_lon;
+    if (startLat && startLon && endLat && endLon) {
+      distanceKm = getDistance(startLat, startLon, endLat, endLon);
+    } else if ((!distanceKm || distanceKm <= 0) && ride.pickup_lat && ride.pickup_lon && ride.dropoff_lat && ride.dropoff_lon) {
       distanceKm = getDistance(ride.pickup_lat, ride.pickup_lon, ride.dropoff_lat, ride.dropoff_lon);
     }
 
@@ -1441,9 +1448,23 @@ export default function DriverApp() {
         updates.en_route_at = now;
       }
       if (newStatus === "arrived") updates.arrived_at = now;
-      if (newStatus === "in_progress") updates.in_progress_at = now;
+      if (newStatus === "in_progress") {
+        updates.in_progress_at = now;
+        try {
+          const pos = await getCurrentLiveLocation();
+          updates.actual_start_lat = pos.coords.latitude;
+          updates.actual_start_lon = pos.coords.longitude;
+        } catch { /* GPS optional */ }
+      }
       if (newStatus === "completed") {
-        const pricing = await computeRideFinalPricing(ride);
+        let actualEndCoords: { lat: number; lon: number } | undefined;
+        try {
+          const pos = await getCurrentLiveLocation();
+          actualEndCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          updates.actual_end_lat = pos.coords.latitude;
+          updates.actual_end_lon = pos.coords.longitude;
+        } catch { /* GPS optional */ }
+        const pricing = await computeRideFinalPricing(ride, actualEndCoords);
         updates.completed_at = now;
         const commissionRate = driver?.commission_rate ?? settings?.platform_commission_pct ?? 20;
         const price = pricing.finalPrice;
@@ -1463,6 +1484,10 @@ export default function DriverApp() {
             per_minute: pricing.perMinute,
             minimum_fare: pricing.minimumFare,
             surge_multiplier: pricing.surgeMultiplier,
+            actual_start_lat: updates.actual_start_lat ?? (ride as any).actual_start_lat,
+            actual_start_lon: updates.actual_start_lon ?? (ride as any).actual_start_lon,
+            actual_end_lat: updates.actual_end_lat,
+            actual_end_lon: updates.actual_end_lon,
           },
         };
 

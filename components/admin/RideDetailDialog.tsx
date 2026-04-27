@@ -346,24 +346,50 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             {showBreakdown && (
               <div className="mt-2 bg-white border border-slate-200 rounded-xl p-3 space-y-1.5 text-xs">
                 <p className="font-semibold text-slate-600 mb-1">Desglose completo</p>
-                <div className="flex justify-between text-slate-600"><span>Precio base:</span><span>${basePrice.toFixed(2)}</span></div>
-                {extras.length > 0 && (
+                {/* If fare protection was active, show simplified protected fare label */}
+                {(ride.extra_charges?.pricing_audit?.mode === "protected" || settings?.fare_protection_enabled) ? (
+                  <div className="flex items-center gap-2 py-1 text-emerald-700 font-semibold">
+                    <span>✅ {settings?.fare_protection_label || "Tarifa protegida"}</span>
+                    <span className="ml-auto">${finalPrice.toFixed(2)}</span>
+                  </div>
+                ) : (
                   <>
-                    <div className="font-medium text-slate-700 mt-1">Extras ({extras.length}):</div>
-                    {extras.map((e, i) => (
-                      <div key={i} className={`flex justify-between pl-2 ${e.paid_to_driver ? "text-blue-700" : "text-slate-500"}`}>
-                        <span>{e.concept} {e.paid_to_driver ? "(→ conductor, sin comisión)" : "(con comisión)"}</span>
-                        <span>+${parseFloat(e.amount || 0).toFixed(2)}</span>
+                    <div className="flex justify-between text-slate-600"><span>Precio base:</span><span>${basePrice.toFixed(2)}</span></div>
+                    {ride.extra_charges?.pricing_audit && (
+                      <div className="bg-slate-50 rounded-lg px-2 py-1.5 space-y-0.5 text-[10px] text-slate-500">
+                        {ride.extra_charges.pricing_audit.distance_km > 0 && (
+                          <div className="flex justify-between"><span>Distancia real:</span><span>{Number(ride.extra_charges.pricing_audit.distance_km).toFixed(2)} km</span></div>
+                        )}
+                        {ride.extra_charges.pricing_audit.duration_min > 0 && (
+                          <div className="flex justify-between"><span>Duración real:</span><span>{ride.extra_charges.pricing_audit.duration_min} min</span></div>
+                        )}
+                        {ride.extra_charges.pricing_audit.per_km > 0 && (
+                          <div className="flex justify-between"><span>Tarifa/km:</span><span>${Number(ride.extra_charges.pricing_audit.per_km).toFixed(2)}</span></div>
+                        )}
+                        {ride.extra_charges.pricing_audit.per_minute > 0 && (
+                          <div className="flex justify-between"><span>Tarifa/min:</span><span>${Number(ride.extra_charges.pricing_audit.per_minute).toFixed(2)}</span></div>
+                        )}
                       </div>
-                    ))}
+                    )}
+                    {extras.length > 0 && (
+                      <>
+                        <div className="font-medium text-slate-700 mt-1">Extras ({extras.length}):</div>
+                        {extras.map((e, i) => (
+                          <div key={i} className={`flex justify-between pl-2 ${e.paid_to_driver ? "text-blue-700" : "text-slate-500"}`}>
+                            <span>{e.concept} {e.paid_to_driver ? "(→ conductor, sin comisión)" : "(con comisión)"}</span>
+                            <span>+${parseFloat(e.amount || 0).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {totalExtras > 0 && <div className="flex justify-between font-bold text-emerald-700 border-t pt-1"><span>Precio final:</span><span>${finalPrice.toFixed(2)}</span></div>}
+                    <div className="border-t pt-1 space-y-1">
+                      <div className="flex justify-between text-violet-600"><span>Comisión plataforma ({commissionRate}%):</span><span>-${commission.toFixed(2)}</span></div>
+                      {extrasForDriver > 0 && <div className="flex justify-between text-blue-500 text-[10px]"><span>  (extras al conductor sin comisión: +${extrasForDriver.toFixed(2)})</span></div>}
+                      <div className="flex justify-between text-blue-700 font-semibold"><span>Ganancia conductor:</span><span>${driverEarnings.toFixed(2)}</span></div>
+                    </div>
                   </>
                 )}
-                {totalExtras > 0 && <div className="flex justify-between font-bold text-emerald-700 border-t pt-1"><span>Precio final:</span><span>${finalPrice.toFixed(2)}</span></div>}
-                <div className="border-t pt-1 space-y-1">
-                  <div className="flex justify-between text-violet-600"><span>Comisión plataforma ({commissionRate}%):</span><span>-${commission.toFixed(2)}</span></div>
-                  {extrasForDriver > 0 && <div className="flex justify-between text-blue-500 text-[10px]"><span>  (extras al conductor sin comisión: +${extrasForDriver.toFixed(2)})</span></div>}
-                  <div className="flex justify-between text-blue-700 font-semibold"><span>Ganancia conductor:</span><span>${driverEarnings.toFixed(2)}</span></div>
-                </div>
               </div>
             )}
 
