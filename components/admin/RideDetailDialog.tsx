@@ -19,6 +19,22 @@ function hasDriverAccepted(ride) {
   return !!(ride?.driver_accepted_at || ride?.en_route_at || ride?.arrived_at || ride?.in_progress_at);
 }
 
+function getAssignmentModeLabel(ride) {
+  const mode = (ride?.assignment_mode || "auto").toLowerCase();
+  if (mode === "manual") return "Asignación manual";
+  if (mode === "auction") return "Asignación por subasta";
+  return "Asignación automática";
+}
+
+function getCancelledByLabel(cancelledBy) {
+  const who = (cancelledBy || "").toLowerCase();
+  if (who === "admin") return "panel";
+  if (who === "passenger") return "cliente";
+  if (who === "driver") return "conductor";
+  if (who === "system") return "sistema";
+  return "panel";
+}
+
 function calcTotals(ride) {
   const extras = Array.isArray(ride.extra_charges) ? ride.extra_charges : [];
   const basePrice = ride.estimated_price || 0;
@@ -401,14 +417,16 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
             // Hora de solicitud: requested_at es guardado como hora local (no UTC real), usar formatCDMX directo
             const solicitudTs = ride.requested_at || ride.created_date;
             // Los demás timestamps (en_route_at, in_progress_at, completed_at) son UTC reales → formatCDMX correcto
+            const assignmentTs = ride.driver_id && ride.assigned_at ? ride.assigned_at : null;
+            const assignmentLabel = getAssignmentModeLabel(ride);
             const steps = [
               { label: "Solicitud", ts: solicitudTs, icon: "📨" },
-              { label: "Asignación / Aceptación", ts: ride.en_route_at ? null : (ride.driver_id && ride.assigned_at ? ride.assigned_at : null), icon: "📋", hide: true },
+              { label: assignmentLabel, ts: assignmentTs, icon: "📋" },
               { label: "Conductor en camino", ts: ride.en_route_at, icon: "🚗" },
               { label: "Inicio del servicio", ts: ride.in_progress_at, icon: "▶️" },
               { label: "Finalización", ts: ride.completed_at, icon: "✅" },
               { label: "Cancelación", ts: ride.status === "cancelled" ? ride.updated_date : null, icon: "❌" },
-            ].filter(s => s.ts && !s.hide);
+            ].filter(s => s.ts);
             if (steps.length === 0) return null;
             return (
               <div className="bg-slate-50 rounded-xl p-4">
@@ -427,7 +445,27 @@ export default function RideDetailDialog({ ride, open, onOpenChange, onAssign })
           })()}
 
           {ride.notes && <div className="bg-amber-50 rounded-xl p-3 text-sm text-amber-700">📝 {ride.notes}</div>}
-          {ride.cancellation_reason && <div className="bg-red-50 rounded-xl p-3 text-sm text-red-600">❌ Cancelado por {ride.cancelled_by}: {ride.cancellation_reason}</div>}
+          {(() => {
+            const hasAssignment = !!(ride.driver_id || ride.assigned_at || ride.en_route_at || ride.in_progress_at || ride.completed_at);
+            const isNoDrivers = ride.status === "no_drivers";
+            const isCancelled = ride.status === "cancelled";
+
+            if (isNoDrivers) {
+              return <div className="bg-red-50 rounded-xl p-3 text-sm text-red-600">❌ Cancelado por: Sin conductores disponibles</div>;
+            }
+
+            if (isCancelled) {
+              const cancelledBy = getCancelledByLabel(ride.cancelled_by);
+              const reason = ride.cancellation_reason || "Sin motivo especificado";
+              return <div className="bg-red-50 rounded-xl p-3 text-sm text-red-600">❌ Cancelado por {cancelledBy}: {reason}</div>;
+            }
+
+            if (hasAssignment) {
+              return <div className="bg-blue-50 rounded-xl p-3 text-sm text-blue-700">✅ {getAssignmentModeLabel(ride)}</div>;
+            }
+
+            return null;
+          })()}
           {ride.proof_photo_url && <a href={ride.proof_photo_url} target="_blank" rel="noreferrer" className="block"><img src={ride.proof_photo_url} alt="Foto de servicio" className="w-full rounded-xl object-cover max-h-40" /></a>}
 
           {/* Chat history */}
