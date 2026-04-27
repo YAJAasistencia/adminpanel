@@ -36,7 +36,9 @@ function StarRating({ value, onChange }) {
 
 function DebtPaymentSection({ ride, pendingBalance, settings }) {
   const [copied, setCopied] = useState(false);
-  const paymentMethods = (settings?.payment_methods || []).filter(m => m.is_active);
+  const paymentMethods = Array.isArray(settings?.payment_methods)
+    ? settings.payment_methods.filter((m) => m && m.is_active)
+    : [];
   const transferMethods = paymentMethods.filter(m => m.clabe || m.bank_name);
   const whatsappNumber = settings?.support_whatsapp_number;
   const debtAmount = pendingBalance > 0 ? pendingBalance : (ride.cancellation_fee || ride.final_price || 0);
@@ -147,9 +149,13 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
   const fareProtectionEnabled = !!settings?.fare_protection_enabled;
   const fareProtectionLabel = settings?.fare_protection_label || "Tarifa protegida";
 
-  // Determine if payment needs driver confirmation
-  const paymentMethods = settings?.payment_methods || [];
-  const pmCfg = paymentMethods.find(m => m.key === (ride.payment_method || "cash"));
+  // Determine if payment needs driver confirmation.
+  // Be defensive with settings payload to avoid runtime crashes from malformed entries.
+  const paymentMethods = Array.isArray(settings?.payment_methods)
+    ? settings.payment_methods.filter((m) => m && typeof m === "object")
+    : [];
+  const paymentMethodKey = ride.payment_method || "cash";
+  const pmCfg = paymentMethods.find((m) => m.key === paymentMethodKey);
   const requireDriverConfirmation = pmCfg
     ? !!pmCfg.require_driver_confirmation && !pmCfg.auto_charge
     : (ride.payment_method === "cash" || !ride.payment_method);
@@ -193,13 +199,7 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
     }
   }, [isPaid]);
 
-  // Auto-open rating after showing summary for completed rides.
-  useEffect(() => {
-    if (!isCompleted || waitingForPayment || step !== "summary") return;
-    if (ride.passenger_rating_for_driver) return;
-    const t = setTimeout(() => setStep("rating"), 2200);
-    return () => clearTimeout(t);
-  }, [isCompleted, waitingForPayment, step, ride.passenger_rating_for_driver, ride.id]);
+  // Keep the summary visible until the passenger explicitly continues to rating.
 
   const amountRemainingToPay = walletUsed > 0
     ? Math.max(0, totalPrice - walletUsed)
