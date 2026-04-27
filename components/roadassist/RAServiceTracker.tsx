@@ -317,51 +317,46 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
   });
 
   // Subscribe to chat messages for unread badge + sound notification
-   useEffect(() => {
-     if (!ride?.id) return;
-     
-     // Use a unique channel name with timestamp to avoid collisions
-     const channelName = `chat_live:${ride.id}:${Date.now()}`;
-     const channel = supabase.channel(channelName);
-     
-     const unsubscribe = channel
-       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
-         const msg = event.new;
-         if (!msg || msg.ride_id !== ride.id) return;
-         if ((msg.sender_role === "driver" || msg.sender_role === "admin") && !msg.read_by_passenger) {
-           if (!showChat) {
-             setUnreadDriverMessages(prev => prev + 1);
-          // Play notification sound
-          try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            const ctx = new AudioCtx();
-            const osc = ctx.createOscillator(); const gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.frequency.value = 880; gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-            osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
-            setTimeout(() => ctx.close(), 500);
-          } catch (_) {}
+  useEffect(() => {
+    if (!ride?.id) return;
+
+    // Use a unique channel name with timestamp to avoid collisions
+    const channelName = `chat_live:${ride.id}:${Date.now()}`;
+    const channel = supabase.channel(channelName);
+
+    channel
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `ride_id=eq.${ride.id}` }, (event) => {
+        const msg = event.new;
+        if (!msg || msg.ride_id !== ride.id) return;
+        if ((msg.sender_role === "driver" || msg.sender_role === "admin") && !msg.read_by_passenger) {
+          if (!showChat) {
+            setUnreadDriverMessages(prev => prev + 1);
+            // Play notification sound
+            try {
+              const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+              const ctx = new AudioCtx();
+              const osc = ctx.createOscillator(); const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.frequency.value = 880; gain.gain.setValueAtTime(0.3, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+              osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
+              setTimeout(() => ctx.close(), 500);
+            } catch (_) {}
+          }
         }
-      }
-    }).subscribe();
-    return () => { channel.unsubscribe(); };
+      })
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.warn("[RAServiceTracker] Realtime subscription failed for chat", ride.id);
+        }
+      });
+
+    return () => {
+      try {
+        channel.unsubscribe();
+      } catch (_) {}
+    };
   }, [ride?.id, showChat]);
-       }
-     }
-   })
-   .subscribe((status) => {
-     if (status === "CHANNEL_ERROR") {
-       console.warn("[RAServiceTracker] Realtime subscription failed for chat", ride.id);
-     }
-   });
-   
-   return () => { 
-     try {
-       channel.unsubscribe();
-     } catch (_) {}
-   };
- }, [ride?.id, showChat]);
   const pushSentRef = useRef(new Set());
 
   useEffect(() => {

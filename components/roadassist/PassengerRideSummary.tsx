@@ -125,7 +125,6 @@ export default function PassengerRideSummary({ ride: initialRide, user, onDone }
   const [rating, setRating] = useState(0);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(null);
-  const pollRef = useRef(null);
 
   useEffect(() => {
     (async () => {
