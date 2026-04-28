@@ -227,21 +227,10 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
             <h1 className="text-white font-black text-2xl">
               {isWaitTimeExpired ? "Tiempo de espera agotado" : "Servicio cancelado"}
             </h1>
-            {isWaitTimeExpired ? (
+            {isWaitTimeExpired && (
               <p className="text-amber-400/80 text-sm">El pasajero no se presentó a tiempo. Se aplicó cargo por espera.</p>
-            ) : (
-              <>
-                {ride.cancelled_by && (
-                  <p className="text-white/50 text-sm">
-                    Cancelado por:{" "}
-                    {cancelledByPassenger ? "🧑 Pasajero" : cancelledByAdmin ? "🛡️ Administrador" : "🚗 Conductor"}
-                  </p>
-                )}
-                {ride.cancellation_reason && (
-                  <p className="text-red-400/80 text-sm italic">"{ride.cancellation_reason}"</p>
-                )}
-              </>
             )}
+            <p className="text-white/40 text-xs">Folio #{ride.service_id || ride.id?.slice(-6)}</p>
           </div>
         ) : null}
 
@@ -293,32 +282,57 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
         )}
 
         {/* Cancellation fee card */}
-        {isCancelled && hasCancellationFee && (
-          <div className={`border rounded-2xl p-4 text-center space-y-2 ${isWaitTimeExpired ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
-            <p className="text-amber-300 text-xs font-medium uppercase tracking-wide">
-              {isWaitTimeExpired ? "⏰ Cargo por tiempo de espera" : "Cargo por cancelación"}
+        {isCancelled && (
+          <div className={`border rounded-2xl p-4 space-y-2 ${hasCancellationFee ? 'bg-amber-500/10 border-amber-500/20' : 'bg-white/5 border-white/10'}`}>
+            <p className={`text-xs font-medium uppercase tracking-wide text-center ${hasCancellationFee ? 'text-amber-300' : 'text-white/40'}`}>
+              {isWaitTimeExpired ? "⏰ Cargo por tiempo de espera" : hasCancellationFee ? "💰 Cargo por cancelación" : "Cancelación sin cargo"}
             </p>
-            <p className="text-amber-400 font-black text-3xl">${ride.cancellation_fee.toFixed(2)}</p>
-            {ride.driver_earnings > 0 && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 mt-1">
-                <p className="text-emerald-300 text-xs">Tu ganancia</p>
-                <p className="text-emerald-400 font-black text-xl">${ride.driver_earnings.toFixed(2)}</p>
-              </div>
-            )}
-            {cancelledByPassenger && !isWaitTimeExpired && (
-              <p className="text-white/40 text-xs">El pasajero canceló con cargo.</p>
-            )}
-          </div>
-        )}
 
-        {isCancelled && !hasCancellationFee && (
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-            <p className="text-white/40 text-sm">Sin cargo por cancelación</p>
-            {cancelledByPassenger && (
-              <p className="text-white/30 text-xs mt-1">El pasajero canceló sin costo</p>
-            )}
-            {cancelledByAdmin && (
-              <p className="text-white/30 text-xs mt-1">Cancelado por el administrador</p>
+            {/* Who cancelled + reason */}
+            <div className="text-center space-y-1">
+              {ride.cancelled_by && (
+                <p className="text-white/50 text-sm">
+                  Cancelado por:{" "}
+                  {cancelledByPassenger ? "🧑 Pasajero" : cancelledByAdmin ? "🛡️ Administrador" : "🚗 Conductor"}
+                </p>
+              )}
+              {ride.cancellation_reason && (
+                <p className="text-red-400/80 text-sm italic">"{ride.cancellation_reason}"</p>
+              )}
+            </div>
+
+            {/* Fee breakdown */}
+            {hasCancellationFee ? (
+              <div className="bg-white/5 rounded-xl px-4 py-3 space-y-2 mt-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/50">Cargo por cancelación</span>
+                  <span className="text-amber-300 font-bold">${ride.cancellation_fee.toFixed(2)}</span>
+                </div>
+                {(ride.commission_rate || 0) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/40">Comisión plataforma ({ride.commission_rate}%)</span>
+                    <span className="text-red-400/80">
+                      -${(ride.platform_commission != null && ride.platform_commission > 0
+                        ? ride.platform_commission
+                        : parseFloat((ride.cancellation_fee * (ride.commission_rate / 100)).toFixed(2))
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="border-t border-emerald-500/30 pt-2 flex justify-between">
+                  <span className="text-emerald-300 font-bold text-sm">✅ TU GANANCIA</span>
+                  <span className="text-emerald-400 font-black text-xl">
+                    ${(ride.driver_earnings > 0
+                      ? ride.driver_earnings
+                      : parseFloat((ride.cancellation_fee * (1 - (ride.commission_rate || 0) / 100)).toFixed(2))
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-white/30 text-xs text-center mt-1">
+                {cancelledByPassenger ? "El pasajero canceló sin costo para ti." : cancelledByAdmin ? "El administrador canceló sin costo para ti." : "Sin cargo aplicado."}
+              </p>
             )}
           </div>
         )}
@@ -440,9 +454,13 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
                 onDone();
               }
             }}
-            className="w-full bg-blue-600 hover:bg-blue-700 rounded-2xl h-14 font-bold text-base"
+            className={`w-full rounded-2xl h-14 font-bold text-base ${isCancelled && !cancelledByDriver ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
           >
-            {isCompleted && !ride.driver_rating_for_passenger ? "Calificar al pasajero" : "Volver al inicio"}
+            {isCancelled && !cancelledByDriver
+              ? "✅ Aceptar — Volver en línea"
+              : isCompleted && !ride.driver_rating_for_passenger
+              ? "Calificar al pasajero"
+              : "Volver al inicio"}
           </Button>
         </div>
       )}

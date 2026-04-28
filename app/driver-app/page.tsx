@@ -1189,7 +1189,7 @@ export default function DriverApp() {
             queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
           }
 
-          // Cancellation from passenger/admin should always release the driver.
+          // Cancellation from passenger/admin: show breakdown and let driver accept before going online.
           if (eventType === "UPDATE" && data?.status === "cancelled" && belongsToDriver) {
             setIncomingRide((prev) => {
               if (prev?.id === rideId) {
@@ -1198,12 +1198,14 @@ export default function DriverApp() {
               return prev?.id === rideId ? null : prev;
             });
 
-            if (data.cancelled_by !== "driver" && data.cancellation_reason) {
+            if (data.cancelled_by !== "driver") {
+              // Show cancellation notice with breakdown; driver must tap "Aceptar" to go back online.
               const pmConfig = { auto_charge: false, require_driver_confirmation: false };
-              setRideSummary({ ride: data, paymentMethodConfig: pmConfig });
+              setRideSummary({ ride: data, paymentMethodConfig: pmConfig, needsRelease: true });
+            } else {
+              // Driver cancelled themselves — release immediately (handled elsewhere too).
+              void releaseDriverToAvailable();
             }
-
-            void releaseDriverToAvailable();
             queryClient.invalidateQueries({ queryKey: ["driverRides", driverId] });
             return;
           }
@@ -2640,11 +2642,15 @@ export default function DriverApp() {
             paymentMethodConfig={rideSummary.paymentMethodConfig}
             onDone={() => {
               const finishedRideId = rideSummary.ride?.id;
+              const needsRelease = rideSummary.needsRelease;
               setRideSummary(null);
               if (finishedRideId) {
                 queryClient.setQueryData(["driverRides", driver?.id], (old: any[] = []) =>
                   old.filter((r) => r.id !== finishedRideId)
                 );
+              }
+              if (needsRelease) {
+                void releaseDriverToAvailable();
               }
               queryClient.invalidateQueries({ queryKey: ["driverRides", driver?.id] });
             }}
