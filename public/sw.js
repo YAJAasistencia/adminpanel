@@ -18,8 +18,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "YAJA";
   const options = {
     body: data.body || "",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: "/next.svg",
+    badge: "/next.svg",
     tag: data.tag || "yaja-notification",
     data: { url: data.url || "/driver-app" },
     requireInteraction: !!data.requireInteraction,
@@ -57,8 +57,8 @@ self.addEventListener("message", (event) => {
     const data = event.data || {};
     self.registration.showNotification(data.title || "YAJA", {
       body: data.body || "",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: "/next.svg",
+      badge: "/next.svg",
       tag: data.tag || `notif-${Date.now()}`,
       requireInteraction: true,
       data: { url: data.url || "/driver-app", ride: data.ride || null },
@@ -82,7 +82,7 @@ self.addEventListener("message", (event) => {
       self.registration.showNotification("⏱️ Tiempo de espera", {
         body: `No se acepto a tiempo: ${passengerName || "Pasajero"}${pickupAddress ? ` · ${pickupAddress}` : ""}`,
         tag: `ride-timer-${rideId}`,
-        icon: "/icon-192.png",
+        icon: "/next.svg",
         data: { url: "/driver-app" },
       });
       delete rideTimers[rideId];
@@ -103,7 +103,7 @@ self.addEventListener("message", (event) => {
       self.registration.showNotification("⚠️ Desconexion por inactividad", {
         body: "No detectamos actividad del conductor. Se desconectara automaticamente.",
         tag: "driver-inactivity-timeout",
-        icon: "/icon-192.png",
+        icon: "/next.svg",
         data: { url: "/driver-app" },
       });
       inactivityTimer = null;

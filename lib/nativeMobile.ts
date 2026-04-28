@@ -87,22 +87,33 @@ export async function getNotificationPermissionState(): Promise<AppPermissionSta
 }
 
 let registeredDriverId: string | null = null;
+let registeredPassengerId: string | null = null;
 let lastNativePushToken: string | null = null;
 let nativePushListenersReady = false;
 
-async function persistNativeDriverPushToken() {
-  if (!registeredDriverId || !lastNativePushToken) return;
+async function persistNativePushTokenForRole(role: "driver" | "passenger") {
+  if (!lastNativePushToken) return;
+
   try {
-    await supabaseApi.drivers.update(registeredDriverId, {
+    const payload = {
       push_subscription: {
         platform: "android-native",
         provider: "fcm",
         token: lastNativePushToken,
         registered_at: nowCDMX(),
       },
-    });
+    };
+
+    if (role === "driver") {
+      if (!registeredDriverId) return;
+      await supabaseApi.drivers.update(registeredDriverId, payload);
+      return;
+    }
+
+    if (!registeredPassengerId) return;
+    await supabaseApi.passengers.update(registeredPassengerId, payload);
   } catch (error) {
-    console.warn("[NativePush] Could not save FCM token", error);
+    console.warn(`[NativePush] Could not save FCM token (${role})`, error);
   }
 }
 
@@ -115,7 +126,11 @@ async function ensureNativePushListeners() {
 
   await PushNotifications.addListener("registration", async (token) => {
     lastNativePushToken = token.value;
-    await persistNativeDriverPushToken();
+    // Persist for whichever role has an active session in this device.
+    await Promise.allSettled([
+      persistNativePushTokenForRole("driver"),
+      persistNativePushTokenForRole("passenger"),
+    ]);
   });
 
   await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
@@ -145,10 +160,35 @@ export async function initNativeDriverPush(driverId?: string): Promise<AppPermis
     }
 
     await PushNotifications.register();
-    await persistNativeDriverPushToken();
+    await persistNativePushTokenForRole("driver");
     return "granted";
   } catch (error) {
     console.warn("[NativePush] Init failed", error);
+    return "denied";
+  }
+}
+
+export async function initNativePassengerPush(passengerId?: string): Promise<AppPermissionState> {
+  if (!isNativePlatform()) return "unsupported";
+  if (passengerId) registeredPassengerId = passengerId;
+
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    await ensureNativePushListeners();
+
+    let permissions = await PushNotifications.checkPermissions();
+    if (permissions.receive !== "granted") {
+      permissions = await PushNotifications.requestPermissions();
+    }
+    if (permissions.receive !== "granted") {
+      return normalizePermission(permissions.receive);
+    }
+
+    await PushNotifications.register();
+    await persistNativePushTokenForRole("passenger");
+    return "granted";
+  } catch (error) {
+    console.warn("[NativePush] Passenger init failed", error);
     return "denied";
   }
 }

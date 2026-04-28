@@ -1,5 +1,10 @@
 import { supabaseApi } from "@/lib/supabaseApi";
-import { initNativeDriverPush, isNativePlatform, showNativeDriverNotification } from "@/lib/nativeMobile";
+import {
+  initNativeDriverPush,
+  initNativePassengerPush,
+  isNativePlatform,
+  showNativeDriverNotification,
+} from "@/lib/nativeMobile";
 
 const VAPID_PUBLIC_KEY =
   "BJAiNTakC4wPq6j1Lv0xAPTvkybNTCga9BcPYSMzzrhjILPv88w8pQMyZTW7D1Qa25de5oLjcnlrRkboGFyq15w";
@@ -119,6 +124,9 @@ export async function initDriverPush(driverId?: string): Promise<PushPermissionR
 }
 
 export async function initPassengerPush(userId?: string): Promise<PushPermissionResult> {
+  if (isNativePlatform()) {
+    return initNativePassengerPush(userId) as Promise<PushPermissionResult>;
+  }
   if (typeof window === "undefined") return "unsupported";
   if (!("Notification" in window)) return "unsupported";
 
