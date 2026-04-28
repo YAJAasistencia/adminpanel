@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Car, MapPin, Clock, Navigation, X, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
+import { Car, MapPin, Navigation, X, Search, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 import { supabaseApi } from "@/lib/supabaseApi";
 import { supabase } from "@/lib/supabase";
 import { getRoute, getHaverDist } from "@/components/shared/mapsUtils";
@@ -18,24 +18,11 @@ function formatETA(minutes) {
 // ─── Searching Phase: compact modal ─────────────────────────────────────────
 function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = false, onAssignManual = undefined }) {
   const [dots, setDots] = useState(0);
-  const [auctionSecsLeft, setAuctionSecsLeft] = useState(null);
 
   useEffect(() => {
     const t = setInterval(() => setDots(d => (d + 1) % 4), 500);
     return () => clearInterval(t);
   }, []);
-
-  // Show countdown if auction has an expiry
-  useEffect(() => {
-    if (!ride?.auction_expires_at) { setAuctionSecsLeft(null); return; }
-    const update = () => {
-      const remaining = Math.max(0, Math.round((new Date(ride.auction_expires_at).getTime() - Date.now()) / 1000));
-      setAuctionSecsLeft(remaining);
-    };
-    update();
-    const t = setInterval(update, 1000);
-    return () => clearInterval(t);
-  }, [ride?.auction_expires_at]);
 
   const modeLabels = { auto: "Automática", auction: "Subasta", manual: "Manual" };
   const mode = ride?.assignment_mode || "auto";
@@ -63,7 +50,7 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = f
   const notifiedCount = ride?.auction_driver_ids?.length || 0;
 
   return (
-    <div className="text-white relative" style={bgStyle}>
+    <div className="p-5 text-white relative" style={bgStyle}>
       <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20">
         <X className="w-4 h-4" />
       </button>
@@ -81,17 +68,12 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = f
         <div className="min-w-0 flex-1">
           <p className="font-bold text-base leading-tight">{headingText}</p>
           <p className="text-white/70 text-xs mt-0.5">{subText}</p>
-          {/* Auction countdown + notified count */}
+          {/* Auction summary */}
           {mode === "auction" && !waitingAcceptance && (
             <div className="flex items-center gap-2 mt-1">
               {notifiedCount > 0 && (
                 <span className="text-[11px] bg-white/20 rounded-full px-2 py-0.5 font-semibold">
                   {notifiedCount} conductor{notifiedCount !== 1 ? "es" : ""} notificado{notifiedCount !== 1 ? "s" : ""}
-                </span>
-              )}
-              {auctionSecsLeft !== null && (
-                <span className={`text-[11px] rounded-full px-2 py-0.5 font-bold ${auctionSecsLeft <= 5 ? "bg-red-500/50" : "bg-white/20"}`}>
-                  <Clock className="w-3 h-3 inline mr-0.5" />{auctionSecsLeft}s
                 </span>
               )}
             </div>

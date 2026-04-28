@@ -1388,6 +1388,60 @@ export default function DriverApp() {
     };
   }, [driver?.id, queryClient]);
 
+  // Fallback: if realtime misses an auction UPDATE/INSERT, poll active auctions briefly
+  // and surface the offer to drivers included in auction_driver_ids.
+  useEffect(() => {
+    if (!driver?.id) return;
+    const driverId = driver.id;
+    let cancelled = false;
+
+    const pollAuctionOffers = async () => {
+      try {
+        const auctions = await supabaseApi.rideRequests.list({ status: "auction" });
+        if (cancelled || !Array.isArray(auctions) || auctions.length === 0) return;
+
+        const now = Date.now();
+        const candidate = auctions
+          .filter((r: any) => Array.isArray(r?.auction_driver_ids) && r.auction_driver_ids.includes(driverId))
+          .filter((r: any) => {
+            if (!r?.auction_expires_at) return true;
+            return new Date(r.auction_expires_at).getTime() > now;
+          })
+          .sort((a: any, b: any) => {
+            const ta = new Date(a.updated_at || a.requested_at || 0).getTime();
+            const tb = new Date(b.updated_at || b.requested_at || 0).getTime();
+            return tb - ta;
+          })[0];
+
+        if (!candidate) return;
+
+        const signature = candidate.auction_expires_at || candidate.requested_at || "";
+        const prevShown = shownRideAssignmentsRef.current[candidate.id];
+        if (prevShown === signature) return;
+
+        shownRideAssignmentsRef.current[candidate.id] = signature;
+        stopNewRideAlarm(candidate.id);
+        startNewRideAlarm(candidate.id);
+        showDriverNotification({
+          title: "🚗 ¡Nuevo servicio disponible!",
+          body: `${candidate.passenger_name || "Pasajero"} · ${candidate.pickup_address || ""}`,
+          rideId: candidate.id,
+        });
+        const auctionTimeoutMs = getDriverOfferTimeoutMs(candidate);
+        startSWRideTimer(candidate.id, auctionTimeoutMs, candidate.passenger_name, candidate.pickup_address);
+        setIncomingRide((prev) => (prev?.id === candidate.id ? { ...prev, ...candidate } : candidate));
+      } catch {
+      }
+    };
+
+    void pollAuctionOffers();
+    const iv = setInterval(pollAuctionOffers, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, [driver?.id, getDriverOfferTimeoutMs]);
+
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],
     queryFn: async () => {
