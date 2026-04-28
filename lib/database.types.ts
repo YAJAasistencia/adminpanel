@@ -992,7 +992,7 @@ export type Database = {
           admin_rating_comment: string | null
           arrived_at: string | null
           assignment_mode: string | null
-          auction_driver_ids: Json | null
+          auction_driver_ids: string[] | null
           auction_expires_at: string | null
           cancellation_fee: number | null
           cancellation_reason: string | null
@@ -1062,7 +1062,7 @@ export type Database = {
           admin_rating_comment?: string | null
           arrived_at?: string | null
           assignment_mode?: string | null
-          auction_driver_ids?: Json | null
+          auction_driver_ids?: string[] | null
           auction_expires_at?: string | null
           cancellation_fee?: number | null
           cancellation_reason?: string | null
@@ -1132,7 +1132,7 @@ export type Database = {
           admin_rating_comment?: string | null
           arrived_at?: string | null
           assignment_mode?: string | null
-          auction_driver_ids?: Json | null
+          auction_driver_ids?: string[] | null
           auction_expires_at?: string | null
           cancellation_fee?: number | null
           cancellation_reason?: string | null
