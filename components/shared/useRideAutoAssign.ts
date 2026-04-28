@@ -382,12 +382,31 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
     const auctionExpiresAt = futureCDMX((s?.auction_timeout_seconds ?? 30) * 1000);
     const selectedDriverIds = notifyDrivers.map((driver) => driver.id);
 
-    await supabaseApi.rideRequests.update(ride.id, {
-      auction_driver_ids: selectedDriverIds,
-      auction_expires_at: auctionExpiresAt,
-      status: "auction",
-      cancellation_reason: null,
-    });
+    try {
+      await supabaseApi.rideRequests.update(ride.id, {
+        auction_driver_ids: selectedDriverIds,
+        auction_expires_at: auctionExpiresAt,
+        status: "auction",
+        cancellation_reason: null,
+      });
+    } catch (err: any) {
+      const msg = String(err?.message || "");
+      const isAuctionIdsTypeMismatch = msg.includes("FOREACH expression must yield an array") || msg.includes("jsonb");
+      if (!isAuctionIdsTypeMismatch) throw err;
+
+      // DB workaround: some environments have trigger/procedure logic that expects
+      // array semantics over auction_driver_ids and fails when the column is jsonb.
+      // Persist selected candidates in extra_charges and continue flow.
+      await supabaseApi.rideRequests.update(ride.id, {
+        auction_expires_at: auctionExpiresAt,
+        status: "auction",
+        cancellation_reason: null,
+        extra_charges: {
+          ...(ride.extra_charges && typeof ride.extra_charges === "object" ? ride.extra_charges : {}),
+          auction_candidate_driver_ids: selectedDriverIds,
+        },
+      });
+    }
 
     // Push a direct realtime broadcast to each selected driver.
     // This avoids relying only on row visibility policies for auction rides.
@@ -399,6 +418,10 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
         status: "auction",
         auction_driver_ids: selectedDriverIds,
         auction_expires_at: auctionExpiresAt,
+        extra_charges: {
+          ...(ride.extra_charges && typeof ride.extra_charges === "object" ? ride.extra_charges : {}),
+          auction_candidate_driver_ids: selectedDriverIds,
+        },
       },
     };
 

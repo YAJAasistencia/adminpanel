@@ -697,6 +697,15 @@ export default function DriverApp() {
     }
     return safeSeconds * 1000;
   }, []);
+  const isAuctionTargetedToDriver = useCallback((ride: any, driverId: string) => {
+    if (!ride || !driverId) return false;
+    const directIds = Array.isArray(ride.auction_driver_ids) ? ride.auction_driver_ids : [];
+    if (directIds.includes(driverId)) return true;
+    const fallbackIds = Array.isArray(ride?.extra_charges?.auction_candidate_driver_ids)
+      ? ride.extra_charges.auction_candidate_driver_ids
+      : [];
+    return fallbackIds.includes(driverId);
+  }, []);
   const prefilledEmail = useRef(
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("driverEmail") || ""
   ).current;
@@ -1205,8 +1214,7 @@ export default function DriverApp() {
           if (
             (eventType === "INSERT" || eventType === "UPDATE") &&
             data.status === "auction" &&
-            Array.isArray(data.auction_driver_ids) &&
-            data.auction_driver_ids.includes(driverId)
+            isAuctionTargetedToDriver(data, driverId)
           ) {
             const prevShown = shownRideAssignmentsRef.current[data.id];
             const isNew = !prevShown || prevShown !== (data.auction_expires_at || data.requested_at);
@@ -1315,8 +1323,7 @@ export default function DriverApp() {
           notificationType = "ride_assigned";
         } else if (
           broadcastRide.status === "auction" &&
-          Array.isArray(broadcastRide.auction_driver_ids) &&
-          broadcastRide.auction_driver_ids.includes(driverId)
+          isAuctionTargetedToDriver(broadcastRide, driverId)
         ) {
           notificationType = "ride_offer";
         }
@@ -1361,8 +1368,7 @@ export default function DriverApp() {
         const current = await supabaseApi.rideRequests.get(rideId).catch(() => null);
         if (
           current?.status === "auction" &&
-          Array.isArray(current?.auction_driver_ids) &&
-          current.auction_driver_ids.includes(driverId)
+          isAuctionTargetedToDriver(current, driverId)
         ) {
           setIncomingRide(current);
         }
@@ -1402,7 +1408,7 @@ export default function DriverApp() {
 
         const now = Date.now();
         const candidate = auctions
-          .filter((r: any) => Array.isArray(r?.auction_driver_ids) && r.auction_driver_ids.includes(driverId))
+          .filter((r: any) => isAuctionTargetedToDriver(r, driverId))
           .filter((r: any) => {
             if (!r?.auction_expires_at) return true;
             return new Date(r.auction_expires_at).getTime() > now;
@@ -1440,7 +1446,7 @@ export default function DriverApp() {
       cancelled = true;
       clearInterval(iv);
     };
-  }, [driver?.id, getDriverOfferTimeoutMs]);
+  }, [driver?.id, getDriverOfferTimeoutMs, isAuctionTargetedToDriver]);
 
   const { data: surveys = [] } = useQuery({
     queryKey: ["surveys"],

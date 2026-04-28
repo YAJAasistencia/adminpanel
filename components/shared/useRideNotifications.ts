@@ -404,6 +404,15 @@ export function useAdminNotifications() {
 export function useDriverNotifications(driverId?: string) {
   const prevRides = useRef<Record<string, Ride>>({});
 
+  const isAuctionTargetedToDriver = (ride: Ride, currentDriverId: string) => {
+    const directIds = Array.isArray((ride as any)?.auction_driver_ids) ? (ride as any).auction_driver_ids : [];
+    if (directIds.includes(currentDriverId)) return true;
+    const fallbackIds = Array.isArray((ride as any)?.extra_charges?.auction_candidate_driver_ids)
+      ? (ride as any).extra_charges.auction_candidate_driver_ids
+      : [];
+    return fallbackIds.includes(currentDriverId);
+  };
+
   useEffect(() => {
     if (!driverId) return;
 
@@ -416,8 +425,7 @@ export function useDriverNotifications(driverId?: string) {
         if (
           (payload.eventType === "INSERT" || payload.eventType === "UPDATE") &&
           ride.status === "auction" &&
-          Array.isArray(ride.auction_driver_ids) &&
-          ride.auction_driver_ids.includes(driverId)
+          isAuctionTargetedToDriver(ride, driverId)
         ) {
           showNotification({
             title: "🚗 ¡Nuevo servicio disponible!",
