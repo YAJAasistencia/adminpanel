@@ -380,13 +380,44 @@ export default function useRideAutoAssign(settings: AppSettings | undefined, cit
 
     const notifyDrivers = sorted.slice(0, maxDrivers);
     const auctionExpiresAt = futureCDMX((s?.auction_timeout_seconds ?? 30) * 1000);
+    const selectedDriverIds = notifyDrivers.map((driver) => driver.id);
 
     await supabaseApi.rideRequests.update(ride.id, {
-      auction_driver_ids: notifyDrivers.map((driver) => driver.id),
+      auction_driver_ids: selectedDriverIds,
       auction_expires_at: auctionExpiresAt,
       status: "auction",
       cancellation_reason: null,
     });
+
+    // Push a direct realtime broadcast to each selected driver.
+    // This avoids relying only on row visibility policies for auction rides.
+    const rideOfferPayload = {
+      notification_type: "ride_offer",
+      ride_id: ride.id,
+      ride_data: {
+        ...ride,
+        status: "auction",
+        auction_driver_ids: selectedDriverIds,
+        auction_expires_at: auctionExpiresAt,
+      },
+    };
+
+    await Promise.allSettled(
+      selectedDriverIds.map(async (driverId) => {
+        const ch = supabase.channel(`driver:${driverId}:incoming-rides`);
+        try {
+          await ch.subscribe();
+          await ch.send({
+            type: "broadcast",
+            event: "new_ride_notification",
+            payload: rideOfferPayload,
+          });
+        } finally {
+          supabase.removeChannel(ch);
+        }
+      })
+    );
+
     queryClient.invalidateQueries({ queryKey: ["rides"] });
   };
 
