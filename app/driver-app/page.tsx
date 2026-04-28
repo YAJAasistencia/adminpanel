@@ -229,7 +229,7 @@ function useInactivityAutoDisconnect({
       } else if (idleMin < warnMins) {
         warned = false;
       }
-    }, 30000);
+    }, 10000); // check every 10s for better precision
     return () => clearInterval(iv);
   }, [settings?.driver_inactivity_timeout_minutes]);
 }
@@ -843,10 +843,7 @@ export default function DriverApp() {
     const now = Date.now();
     if (now - lastLocationSaveRef.current < locationIntervalMsRef.current) return;
     lastLocationSaveRef.current = now;
-    if (d.status === "available") {
-      _lastActivity.t = now;
-      setInactivityWarning(false);
-    }
+    // NOTE: GPS movement does NOT reset inactivity timer — only screen touch does.
 
     // Stream GPS instantly to admin UIs via websocket broadcast.
     gpsChannelRef.current?.send({
@@ -2410,21 +2407,13 @@ export default function DriverApp() {
           </div>
         )}
         {inactivityWarning && driver.status === "available" && (
-          <div className="mx-4 mt-1 bg-orange-500/90 backdrop-blur-sm rounded-xl px-3 py-2 text-xs text-white flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Wifi className="w-3.5 h-3.5" />
-              <span>¿Sigues activo? Te desconectarás en ~3 min.</span>
-            </div>
-            <button
-              onClick={() => {
-                _lastActivity.t = Date.now();
-                setInactivityWarning(false);
-              }}
-              className="bg-white/20 rounded-lg px-2 py-0.5 text-[10px] font-bold ml-2 whitespace-nowrap"
-            >
-              Sigo aquí
-            </button>
-          </div>
+          <InactivityWarningBanner
+            timeoutMinutes={settings?.driver_inactivity_timeout_minutes ?? 30}
+            onStillHere={() => {
+              _lastActivity.t = Date.now();
+              setInactivityWarning(false);
+            }}
+          />
         )}
         <div className="mx-4">
           <InstallAppBanner settings={settings} />
@@ -2778,6 +2767,58 @@ function BlockedScreen({ driver, onLogout }: { driver: Driver; onLogout: () => v
           Cerrar sesión
         </button>
       </motion.div>
+    </div>
+  );
+}
+
+// ─── Inactivity Warning Banner ────────────────────────────────────────────────
+function InactivityWarningBanner({
+  timeoutMinutes,
+  onStillHere,
+}: {
+  timeoutMinutes: number;
+  onStillHere: () => void;
+}) {
+  const [secsLeft, setSecsLeft] = React.useState(() => {
+    const idleSec = (Date.now() - _lastActivity.t) / 1000;
+    return Math.max(0, Math.round(timeoutMinutes * 60 - idleSec));
+  });
+
+  React.useEffect(() => {
+    const iv = setInterval(() => {
+      const idleSec = (Date.now() - _lastActivity.t) / 1000;
+      const left = Math.max(0, Math.round(timeoutMinutes * 60 - idleSec));
+      setSecsLeft(left);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [timeoutMinutes]);
+
+  const mm = Math.floor(secsLeft / 60);
+  const ss = secsLeft % 60;
+  const countdown = secsLeft > 60
+    ? `${mm} min ${ss.toString().padStart(2, "0")} s`
+    : `${secsLeft} seg`;
+
+  return (
+    <div className="mx-4 mt-1 bg-orange-500/90 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs text-white">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-base shrink-0">⚠️</span>
+          <div>
+            <p className="font-semibold">¿Sigues activo?</p>
+            <p className="text-white/80 text-[11px]">
+              Sin actividad en pantalla. Te desconectarás en{" "}
+              <span className="font-bold text-white">{countdown}</span>.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onStillHere}
+          className="shrink-0 bg-white text-orange-600 rounded-lg px-3 py-1.5 text-[11px] font-bold whitespace-nowrap active:scale-95 transition-transform"
+        >
+          Sigo aquí
+        </button>
+      </div>
     </div>
   );
 }
