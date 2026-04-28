@@ -358,6 +358,8 @@ export default function RAServiceTracker({ ride, user, onRefresh, onRideEnded })
     };
   }, [ride?.id, showChat]);
   const pushSentRef = useRef(new Set());
+    const prevStatusRef = useRef<string | null>(null);
+    const summaryShownRef = useRef(false);
 
   useEffect(() => {
     const status = currentRide?.status;

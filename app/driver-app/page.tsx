@@ -618,7 +618,6 @@ export default function DriverApp() {
   const [helpRideContext, setHelpRideContext] = useState<Ride | null>(null);
   const [showTickets, setShowTickets] = useState(false);
   const [pendingSurvey, setPendingSurvey] = useState<any>(null);
-  const [pendingPassengerRating, setPendingPassengerRating] = useState<any>(null);
   const [rideSummary, setRideSummary] = useState<any>(null);
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -2561,11 +2560,12 @@ export default function DriverApp() {
             survey={pendingSurvey.survey}
             ride={pendingSurvey.ride}
             driver={driver}
-            onComplete={() => {
+            onComplete={async () => {
               const { ride } = pendingSurvey;
               setPendingSurvey(null);
-              updateStatusMutation.mutate({ ride, newStatus: "completed" });
-              if (!ride.driver_rating_for_passenger) setPendingPassengerRating({ ride });
+              // Route through handleUpdateStatus so final pricing is computed
+              // and setRideSummary is called (showing payment confirmation to driver).
+              await handleUpdateStatus(ride, "completed");
             }}
             onClose={() => setPendingSurvey(null)}
           />
