@@ -63,7 +63,7 @@ function SearchingPhase({ ride, onClose, waitingAcceptance = false, rejected = f
   const notifiedCount = ride?.auction_driver_ids?.length || 0;
 
   return (
-    <div className="p-5 text-white relative" style={bgStyle}>
+    <div className="text-white relative" style={bgStyle}>
       <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20">
         <X className="w-4 h-4" />
       </button>

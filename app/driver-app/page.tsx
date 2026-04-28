@@ -1203,7 +1203,7 @@ export default function DriverApp() {
 
           // ── 2. Auction ride: show alert to this driver ────────────────────────
           if (
-            eventType === "UPDATE" &&
+            (eventType === "INSERT" || eventType === "UPDATE") &&
             data.status === "auction" &&
             Array.isArray(data.auction_driver_ids) &&
             data.auction_driver_ids.includes(driverId)

@@ -414,7 +414,7 @@ export function useDriverNotifications(driverId?: string) {
         if (!ride?.id) return;
 
         if (
-          payload.eventType === "UPDATE" &&
+          (payload.eventType === "INSERT" || payload.eventType === "UPDATE") &&
           ride.status === "auction" &&
           Array.isArray(ride.auction_driver_ids) &&
           ride.auction_driver_ids.includes(driverId)
