@@ -44,13 +44,13 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
   // Wallet + complementary: wallet covered part, remaining paid by another method
   const walletUsed = ride.wallet_amount_used || 0;
   const totalPrice = ride.final_price || ride.estimated_price || 0;
-  const complementaryAmount = walletUsed > 0 ? Math.max(0, totalPrice - walletUsed) : 0;
-  const hasComplementaryPayment = complementaryAmount > 0;
+  const transferDistanceKm = ride.distance_km ?? ride?.extra_charges?.pricing_audit?.distance_km ?? null;
+  const transferMinutes = ride.duration_minutes ?? ride?.extra_charges?.pricing_audit?.duration_min ?? null;
+  const isProtectedFare = ride?.extra_charges?.pricing_audit?.mode === "protected";
 
-  // require_driver_confirmation: si está activo, el conductor DEBE confirmar el pago
-  // Si no está activo → auto-paid
-  // Para pago combinado (wallet + otro método): si el método complementario requiere confirmación, mostrar el monto faltante
-  const requireConfirmation = !!paymentMethodConfig?.require_driver_confirmation || hasComplementaryPayment;
+  // require_driver_confirmation: depende de la configuración del método de pago.
+  // Si no requiere confirmación, se marca como pagado automático para conductor y pasajero.
+  const requireConfirmation = !!paymentMethodConfig?.require_driver_confirmation;
 
   // Monto que el cliente debe pagar al conductor:
   // - Si hay wallet: solo el faltante (el resto ya fue cubierto)
@@ -268,7 +268,9 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
             {/* Si no requiere confirmación (auto) o ya fue confirmado: pagado */}
             {(!requireConfirmation || paymentAction === "confirmed" || paymentAction === "auto") && (
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-2 mt-1">
-                <p className="text-emerald-400 font-semibold text-sm">✅ Pagado automáticamente</p>
+                <p className="text-emerald-400 font-semibold text-sm">
+                  {paymentAction === "confirmed" ? "✅ Pago confirmado por conductor" : "✅ Pagado automáticamente"}
+                </p>
               </div>
             )}
 
@@ -375,6 +377,28 @@ export default function RideSummaryScreen({ ride, driver, paymentMethodConfig, o
           <p className="text-white/40 text-xs font-medium uppercase tracking-wide">Detalle del servicio</p>
           <div className="flex justify-between"><span className="text-white/40">Pasajero</span><span className="text-white font-medium">{ride.passenger_name}</span></div>
           <div className="flex justify-between"><span className="text-white/40">Tipo de servicio</span><span className="text-white font-medium">{ride.service_type_name || "—"}</span></div>
+          <div className="flex justify-between"><span className="text-white/40">Origen</span><span className="text-white font-medium text-right max-w-[65%]">{ride.pickup_address || "—"}</span></div>
+          <div className="flex justify-between"><span className="text-white/40">Destino</span><span className="text-white font-medium text-right max-w-[65%]">{ride.dropoff_address || "—"}</span></div>
+          {transferDistanceKm != null && (
+            <div className="flex justify-between"><span className="text-white/40">Distancia</span><span className="text-white font-medium">{Number(transferDistanceKm).toFixed(2)} km</span></div>
+          )}
+          {transferMinutes != null && (
+            <div className="flex justify-between"><span className="text-white/40">Tiempo de traslado</span><span className="text-white font-medium">{Math.round(Number(transferMinutes))} min</span></div>
+          )}
+          {(ride.pickup_lat && ride.pickup_lon) && (
+            <div className="flex justify-between"><span className="text-white/40">Coordenadas origen</span><span className="text-white/70 text-right max-w-[65%] font-mono text-xs">{ride.pickup_lat}, {ride.pickup_lon}</span></div>
+          )}
+          {(ride.dropoff_lat && ride.dropoff_lon) && (
+            <div className="flex justify-between"><span className="text-white/40">Coordenadas destino</span><span className="text-white/70 text-right max-w-[65%] font-mono text-xs">{ride.dropoff_lat}, {ride.dropoff_lon}</span></div>
+          )}
+          {isCompleted && (
+            <div className="flex justify-between">
+              <span className="text-white/40">Modalidad de cálculo</span>
+              <span className={`text-xs font-bold ${isProtectedFare ? "text-emerald-300" : "text-blue-300"}`}>
+                {isProtectedFare ? "Tarifa protegida" : "Tarifa dinámica"}
+              </span>
+            </div>
+          )}
           {isCompleted && (
             <div className="border-t border-white/10 pt-2 mt-2 space-y-1.5">
               <p className="text-white/40 text-xs font-medium uppercase tracking-wide mb-1">Desglose de pago</p>

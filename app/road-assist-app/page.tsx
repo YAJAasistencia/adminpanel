@@ -254,6 +254,7 @@ export default function RoadAssistApp() {
   const allRidesRefetchMs = Math.max(10000, Number(settings?.passenger_all_rides_refetch_seconds ?? 60) * 1000);
   const queryClient = useQueryClient();
   const prevStatusRef = useRef(null);
+  const dismissedTerminalRideIdsRef = useRef<Set<string>>(new Set());
   useWakeLock();
 
   const { data: cities = [] } = useQuery({
@@ -369,7 +370,9 @@ export default function RoadAssistApp() {
   useEffect(() => {
     if (activeRide) {
       if (activeRide.status === "completed" || activeRide.status === "cancelled") {
-        setEndedRide(activeRide);
+        if (!dismissedTerminalRideIdsRef.current.has(activeRide.id)) {
+          setEndedRide(activeRide);
+        }
       }
       return;
     }
@@ -380,6 +383,7 @@ export default function RoadAssistApp() {
       .find((r) => {
         const isTerminal = r.status === "completed" || r.status === "cancelled";
         if (!isTerminal) return false;
+        if (dismissedTerminalRideIdsRef.current.has(r.id)) return false;
         const rideTs = new Date(r.completed_at || r.updated_at || r.requested_at || r.created_date).getTime();
         const recentEnough = Number.isFinite(rideTs) ? (now - rideTs) <= 2 * 60 * 60 * 1000 : true;
         if (!recentEnough) return false;
@@ -439,6 +443,9 @@ export default function RoadAssistApp() {
         user={user}
         onRefresh={refetchRides}
         onRideEnded={() => {
+          if (trackerRide?.id) {
+            dismissedTerminalRideIdsRef.current.add(trackerRide.id);
+          }
           setEndedRide(null);
           refetchRides();
           queryClient.invalidateQueries({ queryKey: ["ra_active_rides", user?.id] });
