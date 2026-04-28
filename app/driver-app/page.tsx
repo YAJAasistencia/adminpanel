@@ -129,6 +129,7 @@ type AppSettings = {
   rating_window_minutes?: number;
   driver_location_update_interval_seconds?: number;
   driver_inactivity_timeout_minutes?: number;
+  driver_inactivity_warn_minutes?: number;
   payment_methods?: any[];
   driver_required_docs?: any[];
   driver_vehicle_docs?: any[];
@@ -212,7 +213,7 @@ function useInactivityAutoDisconnect({
   useEffect(() => {
     const mins = settings?.driver_inactivity_timeout_minutes ?? 30;
     if (!mins || mins <= 0) return;
-    const warnMins = Math.max(1, mins - 3);
+    const warnMins = Math.min(mins - 1, settings?.driver_inactivity_warn_minutes ?? Math.max(1, mins - 3));
     let warned = false;
     const iv = setInterval(() => {
       const d = driverRef.current;
@@ -231,7 +232,7 @@ function useInactivityAutoDisconnect({
       }
     }, 10000); // check every 10s for better precision
     return () => clearInterval(iv);
-  }, [settings?.driver_inactivity_timeout_minutes]);
+  }, [settings?.driver_inactivity_timeout_minutes, settings?.driver_inactivity_warn_minutes]);
 }
 
 function useWakeLock() {
@@ -2409,6 +2410,7 @@ export default function DriverApp() {
         {inactivityWarning && driver.status === "available" && (
           <InactivityWarningBanner
             timeoutMinutes={settings?.driver_inactivity_timeout_minutes ?? 30}
+            warnMinutes={settings?.driver_inactivity_warn_minutes ?? Math.max(1, (settings?.driver_inactivity_timeout_minutes ?? 30) - 3)}
             onStillHere={() => {
               _lastActivity.t = Date.now();
               setInactivityWarning(false);
@@ -2774,9 +2776,11 @@ function BlockedScreen({ driver, onLogout }: { driver: Driver; onLogout: () => v
 // ─── Inactivity Warning Banner ────────────────────────────────────────────────
 function InactivityWarningBanner({
   timeoutMinutes,
+  warnMinutes,
   onStillHere,
 }: {
   timeoutMinutes: number;
+  warnMinutes: number;
   onStillHere: () => void;
 }) {
   const [secsLeft, setSecsLeft] = React.useState(() => {

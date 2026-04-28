@@ -139,6 +139,7 @@ const defaults = {
   
   // Operaciones
   driver_inactivity_timeout_minutes: 30,
+  driver_inactivity_warn_minutes: 3,
   driver_offer_timeout_seconds: 30,
   driver_arrival_radius_meters: 50,
   driver_cancel_suspension_minutes: 30,
@@ -939,6 +940,11 @@ export default function SettingsPage() {
                   <Label>Inactividad conductor (min)</Label>
                   <Input type="number" min={5} value={form.driver_inactivity_timeout_minutes ?? 30} onChange={e => update("driver_inactivity_timeout_minutes", parseFloat(e.target.value) || 30)} />
                   <p className="text-xs text-slate-500 mt-1">Minutos sin actividad antes de logout</p>
+                </div>
+                <div>
+                  <Label>Advertencia inactividad (min antes)</Label>
+                  <Input type="number" min={1} value={form.driver_inactivity_warn_minutes ?? 3} onChange={e => update("driver_inactivity_warn_minutes", parseFloat(e.target.value) || 3)} />
+                  <p className="text-xs text-slate-500 mt-1">Minutos antes del logout para mostrar aviso</p>
                 </div>
                 <div>
                   <Label>Ventana de calificación (min)</Label>
